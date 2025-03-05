@@ -1799,115 +1799,141 @@ button {
 /*---==========================
    End About Section css 
 =========================---*/
+/*==============================
+   05. Start Service Section CSS (Improved but Retaining Original Design)
+==============================*/
 
-/*---==============================
-   05. Start Service Section css 
-==============================---*/
+.service-area {
+    padding: 80px 0;
+    background-color: #f8f9ff;
+}
 
-.service-item{
-    position: relative;
-    z-index: 1;
-    padding: 50px 55px 40px;
-    border-radius: 7px;
-    background-color: #fff;
-    border: 1px solid rgba(88, 86, 233, 0.2);
-    -webkit-transition: all .3s;
-    -o-transition: all .3s;
-    transition: all .3s;
-}
-.service-style-one:hover{
-    background-color: #fff;
-    border-color: transparent;
-    -webkit-box-shadow: 0px 10px 60px 0px rgba(89, 86, 233, 0.1);
-            box-shadow: 0px 10px 60px 0px rgba(89, 86, 233, 0.1);
-}
-.service-item .icon{
-    margin-bottom: 10px;
-}
-.service-item .icon i{
-    font-size: 75px;
-    line-height: 1;
-    color: var(--blue-dark);
-}
-.service-item .text h3.title{
-    margin-bottom: 15px;
-    font-size: 24px;
-    line-height: 35px;
-}
-.service-item .text p{
-    margin-bottom: 10px;
-}
-.service-item:hover .list-style-two li{
-    color: var(--heading);
-}
-.service-item .text .list-style-two li{
-    margin-bottom: 10px;
-}
-.service-area-v1 .service-wrapper{
-    padding-left: 90px;
-    padding-right: 90px;
-    background-color: #fff;
-}
-.service-style-three:hover,
-.service-style-two:hover{
-    background-color: var(--blue-dark);
-    border-color: transparent;
-}
-.service-style-three:hover:after,
-.service-style-two:hover:after{
-    visibility: visible;
-    opacity: 1;
-    -webkit-transform: translateY(0px);
-        -ms-transform: translateY(0px);
-            transform: translateY(0px);
-}
-.service-style-three:after,
-.service-style-two:after{
-    position: absolute;
-    content: '';
-    bottom: 60px;
-    right: 40px;
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.05);
-    -webkit-transform: translateY(-30px);
-        -ms-transform: translateY(-30px);
-            transform: translateY(-30px);
-    z-index: -1;
-    visibility: hidden;
-    opacity: 0;
-    -webkit-transition: all .4s;
-    -o-transition: all .4s;
-    transition: all .4s;
-}
-.service-style-three{
-    -webkit-box-shadow: 0px 10px 60px 0px rgba(89, 86, 233, 0.1);
-            box-shadow: 0px 10px 60px 0px rgba(89, 86, 233, 0.1);
-    border: none;
-}
-.service-style-three:hover .text .btn-link-two,
-.service-style-three:hover .text p,
-.service-style-three:hover .text h3.title,
-.service-style-three:hover .text .list-style-two li,
-.service-style-three:hover .btn-link,
-.service-style-three:hover .icon i,
-.service-style-two:hover .text h3.title,
-.service-style-two:hover .text .list-style-two li,
-.service-style-two:hover .btn-link,
-.service-style-two:hover .icon i{
-    color: #fff;
-}
-.service-area-v2 .service-wrapper{
+/* Service Wrapper */
+.service-wrapper {
     position: relative;
     z-index: 2;
     margin-top: -150px;
     padding: 80px 90px 50px;
-    border-radius: 7px;
-}
-.service-style-three:hover .text .btn-link-two:before{
+    border-radius: 10px;
     background-color: #fff;
+    box-shadow: 0px 10px 40px rgba(0, 0, 0, 0.08);
 }
+
+/* Service Grid: Keep 3 Columns */
+.service-area .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* Ensures 3 boxes per row on desktop */
+.service-area .col-lg-4 {
+    flex: 0 0 calc(33.333% - 20px); /* Maintain 3 columns */
+    max-width: calc(33.333% - 20px);
+}
+
+/* Service Item */
+.service-item {
+    position: relative;
+    z-index: 1;
+    padding: 50px 40px;
+    border-radius: 10px;
+    background-color: #fff;
+    border: 1px solid rgba(88, 86, 233, 0.2);
+    transition: all 0.3s ease-in-out;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 280px; /* Ensures equal height */
+    box-shadow: 0px 5px 20px rgba(89, 86, 233, 0.05);
+}
+
+/* Service Icon */
+.service-item .icon {
+    margin-bottom: 15px;
+}
+
+.service-item .icon img {
+    max-width: 65px; /* Ensures icon fits well */
+}
+
+/* Service Title */
+.service-item .text h3.title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #162542;
+}
+
+/* Service Description */
+.service-item .text p {
+    font-size: 16px;
+    color: #555;
+}
+
+/* Hover Effects */
+.service-item:hover {
+    background-color: #f8f9ff;
+    border-color: rgba(88, 86, 233, 0.4);
+    box-shadow: 0px 10px 30px rgba(89, 86, 233, 0.15);
+    transform: translateY(-5px);
+}
+
+/* ✅ Responsive Fixes for All Screen Sizes */
+
+/* Tablet View: 2 Columns */
+@media (max-width: 1024px) {
+    .service-wrapper {
+        padding: 60px 40px 40px;
+    }
+
+    .service-area .col-lg-4 {
+        flex: 0 0 calc(50% - 20px); /* 2 Columns on Tablets */
+        max-width: calc(50% - 20px);
+    }
+
+    .service-item {
+        padding: 40px 30px;
+        min-height: auto;
+    }
+}
+
+/* Mobile View: 1 Column */
+@media (max-width: 768px) {
+    .service-area {
+        padding: 60px 0;
+    }
+
+    .service-wrapper {
+        padding: 30px 20px;
+    }
+
+    .service-area .col-lg-4 {
+        flex: 0 0 100%; /* 1 Column on Mobile */
+        max-width: 100%;
+    }
+
+    .service-item {
+        width: 100%;
+        min-height: auto;
+    }
+
+    .service-item .icon img {
+        max-width: 55px; /* Adjust icon size */
+    }
+
+    .service-item .text h3.title {
+        font-size: 20px;
+    }
+
+    .service-item .text p {
+        font-size: 14px;
+    }
+}
+
 /*---==========================
    End Service Section css 
 =========================---*/
