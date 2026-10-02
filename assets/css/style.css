@@ -136,6 +136,7 @@ textarea:focus{
 }
 img {
 	max-width: 100%;
+	height: auto;
 }
 blockquote{
 	margin: 0;
@@ -847,7 +848,9 @@ button {
     margin-left: 0px;
 }
 .site-branding .brand-logo{
-    max-width: 200px;
+    display: inline-block;
+    width: 200px;
+    max-width: 100%;
 }
 .site-branding .brand-logo picture,
 .panel-logo picture,
@@ -857,7 +860,12 @@ button {
     max-width: 100%;
     line-height: 0;
 }
-.site-branding .brand-logo img,
+.site-branding .brand-logo img{
+    width: 200px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1000 / 359;
+}
 .panel-logo img,
 .footer-logo img{
     height: auto;
