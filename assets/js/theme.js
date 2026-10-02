@@ -98,9 +98,26 @@
     });
 
     //===== Prealoder
-    $(window).on('load', function(event) {
-        $('.preloader').delay(500).fadeOut('500');
-    })
+    // Hide once the page is ready, with a short cap so large images
+    // do not keep the overlay up until every file has downloaded.
+    function hidePreloader() {
+        var $preloader = $('.preloader');
+        if (!$preloader.length || $preloader.hasClass('is-done')) {
+            return;
+        }
+        $preloader.addClass('is-done').fadeOut(400);
+    }
+    $(function () {
+        setTimeout(hidePreloader, 400);
+    });
+    $(window).on('load', hidePreloader);
+
+    //===== Copyright year (static fallback stays in the HTML)
+    var yearNodes = document.querySelectorAll('[data-copyright-year]');
+    var copyrightYear = String(new Date().getFullYear());
+    for (var yi = 0; yi < yearNodes.length; yi++) {
+        yearNodes[yi].textContent = copyrightYear;
+    }
     
     //===== Sticky
     $(window).on('scroll', function(event) {

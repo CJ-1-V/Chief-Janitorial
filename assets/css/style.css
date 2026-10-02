@@ -35,23 +35,10 @@
 /*---==========================
    01. Start Common  css 
 =========================---*/
-/* Google Font */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&amp;display=swap');
-
-/* Animate css */
-@import url(../vendor/animate.css);
-/* Flaticon css */
-@import url(../fonts/flaticon/flaticon.css);
-/* Fontawesome css */
-@import url(../fonts/fontawesome/css/all.min.css);
-/* Bootstrap css */
-@import url(../vendor/bootstrap/css/bootstrap.min.css);
-/* Slick css */
-@import url(../vendor/slick/slick.css);
-/* Magnific css */
-@import url(../vendor/magnific-popup/dist/magnific-popup.css);
-/* Nice-select css */
-@import url(../vendor/nice-select/css/nice-select.css);
+/*
+  Vendor stylesheets (Google Fonts, Bootstrap, Font Awesome, and the rest)
+  are linked from each page so the browser can download them in parallel.
+*/
 
 /* Root css */
 :root {
@@ -862,6 +849,19 @@ button {
 .site-branding .brand-logo{
     max-width: 200px;
 }
+.site-branding .brand-logo picture,
+.panel-logo picture,
+.footer-logo picture,
+.footer-area picture{
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+}
+.site-branding .brand-logo img,
+.panel-logo img,
+.footer-logo img{
+    height: auto;
+}
 .header-navigation .primary-menu{
     display: -webkit-box;
     display: -ms-flexbox;
@@ -1464,6 +1464,14 @@ button {
 }
 .hero-banner-v2 .hero-content p{
     margin-bottom: 30px;
+}
+.hero-banner-v2 .hero-content .hero-actions{
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+    gap: 12px 15px;
 }
 .hero-banner-v2 .hero-img{
     position: relative;
