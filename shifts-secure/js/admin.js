@@ -17,7 +17,7 @@
   const dayRange = (from, to) => [T().zoned(from, 0, 0).toISOString(), T().zoned(T().addDays(to, 1), 0, 0).toISOString()];
 
   async function sitesInScope() { return q(sb.from('sites').select('*').in('company_id', scope()).order('site_no')); }
-  async function people() { const r = await q(sb.from('profiles').select('id, full_name, nickname, phone, company_id, status, is_staff, created_at, decided_at').order('created_at', { ascending: false })); const m = {}; r.forEach((p) => (m[p.id] = p)); return { list: r.filter((p) => scope().includes(p.company_id)), byId: m }; }  // byId also holds workers from the other office who worked at our sites (RLS decides)
+  async function people() { const r = await q(sb.from('profiles').select('id, full_name, nickname, phone, company_id, status, is_staff, created_at, decided_at, removed_at, removed_reason').order('created_at', { ascending: false })); const m = {}; r.forEach((p) => (m[p.id] = p)); return { list: r.filter((p) => scope().includes(p.company_id)), byId: m }; }  // byId also holds workers from the other office who worked at our sites (RLS decides)
   async function shiftsBetween(from, to, siteId) {
     const [a, b] = dayRange(from, to);
     let qq = sb.from('shifts').select('*').in('company_id', scope()).gte('clock_in', a).lt('clock_in', b).order('clock_in', { ascending: false }).limit(2000);
@@ -43,9 +43,58 @@
         <div class="topbar-r">${ST.themeBtn()}${switcher}<span class="who">${esc(ST.who(me.profile))} <em>${esc(top[0].toUpperCase() + top.slice(1))}</em></span><button class="btn small ghost" data-act="chpw" title="Change my password">Password</button><button class="btn small ghost" data-act="logout">Log out</button></div>
       </div></header>
       ${sc.length === 1 && allowed().length > 1 ? `<div class="co-band co-${sc[0]}">Showing <b>${COMPANIES[sc[0]].name}</b> only · <a href="#" data-cof="all">show all companies</a></div>` : ''}
-      <main class="adm-main">${body}</main></div>`;
+      <main class="adm-main">${body}</main>${mobileTabs(active, pendingN, billing)}</div>`;
+  }
+  // ---------- phone layout (≤760 px): sticky bottom tab bar + "More" sheet; tables become cards (see cardify) ----------
+  function mobileTabs(active, pendingN, billing) {
+    const sc = scope(); const canSites = sc.some((c) => ST.can(c, ['owner', 'admin']));
+    const tab = (k, ico, label, on, extra) => `<a href="#/admin/${k}" class="${on ? 'on' : ''}"><span class="ti">${ico}</span>${label}${extra || ''}</a>`;
+    const pay = ['timesheets', 'invoices', 'rates'].includes(active);
+    const f = filter();
+    return `<nav class="adm-tabs no-print" aria-label="Admin sections">
+      ${tab('shifts', '🕒', 'Shifts', active === 'shifts')}
+      ${tab('employees', '👥', 'Employees', active === 'employees', pendingN ? `<span class="count">${pendingN}</span>` : '')}
+      ${canSites ? tab('sites', '📍', 'Sites', active === 'sites' || active === 'addsite') : tab('dashboard', '🏠', 'Home', active === 'dashboard')}
+      ${tab('timesheets', '🧾', billing ? 'Pay & bills' : 'Timesheets', pay)}
+      <button type="button" class="${active === 'dashboard' && canSites ? 'on' : ''}" id="moreBtn" aria-haspopup="true"><span class="ti">☰</span>More</button>
+    </nav>
+    <div class="more-sheet" id="moreSheet" hidden><div class="more-in" role="menu">
+      <div class="more-who">${esc(ST.who(ST.me.profile))}</div>
+      ${canSites ? '<a href="#/admin/dashboard" class="more-item">🏠 Dashboard</a>' : ''}
+      ${billing ? '<a href="#/admin/invoices" class="more-item">💵 Invoices</a><a href="#/admin/rates" class="more-item">💲 Rates</a>' : ''}
+      ${allowed().length > 1 ? `<label class="more-item">Company <select class="coFilterM"><option value="all" ${f === 'all' ? 'selected' : ''}>All companies</option><option value="cj" ${f === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${f === 'us' ? 'selected' : ''}>Unscramble</option></select></label>` : ''}
+      <button type="button" class="more-item" data-act="theme">◐ Dark / light</button>
+      <button type="button" class="more-item" data-act="chpw">🔑 Change my password</button>
+      <button type="button" class="more-item" data-act="logout">↩ Log out</button>
+      <button type="button" class="btn ghost big" id="moreClose">Close</button></div></div>`;
+  }
+  // stacked cards on phones: every td gets its column name; the action cell gets a ⋯ menu when it holds 2+ buttons
+  const paySeg = (on) => (scope().some((c) => ST.canBill(c)) ? `<nav class="seg mob-only no-print">${[['timesheets', 'Timesheets'], ['invoices', 'Invoices'], ['rates', 'Rates']].map(([k, l]) => `<a href="#/admin/${k}" class="${on === k ? 'on' : ''}">${l}</a>`).join('')}</nav>` : '');
+  function cardify(root) {
+    root.querySelectorAll('table.tbl').forEach((t) => {
+      const rows = [...t.querySelectorAll('tr')]; const head = rows.find((r) => r.querySelector('th')); if (!head) return;
+      t.classList.add('cards');
+      const labels = [...head.children].map((th) => th.textContent.trim());
+      rows.forEach((r) => {
+        if (r === head) return; const cells = [...r.children]; if (cells.length === 1) { r.classList.add('solo'); return; }
+        cells.forEach((td, i) => { if (labels[i]) td.dataset.label = labels[i]; if (!td.textContent.trim() && !td.querySelector('input,button,img')) td.classList.add('empty-cell'); });
+        const last = cells[cells.length - 1]; const btns = last.querySelectorAll('button, a.btn');
+        if (btns.length && !labels[cells.length - 1]) {
+          last.classList.add('act');
+          if (btns.length >= 2) {
+            const m = document.createElement('button'); m.type = 'button'; m.className = 'actbtn'; m.textContent = '⋯ Actions'; m.setAttribute('aria-expanded', 'false');
+            m.addEventListener('click', () => { const o = r.classList.toggle('open'); m.setAttribute('aria-expanded', String(o)); m.textContent = o ? '✕ Close' : '⋯ Actions'; });
+            last.prepend(m);
+          }
+        }
+        const c0 = cells[0]; if (c0 && c0.querySelector('input[type=checkbox]')) c0.classList.add('sel');
+      });
+    });
   }
   function bindShell(root) {
+    const sh = root.querySelector('#moreSheet'); const mb = root.querySelector('#moreBtn');
+    if (sh && mb) { mb.addEventListener('click', () => { sh.hidden = false; }); root.querySelector('#moreClose').addEventListener('click', () => { sh.hidden = true; }); sh.addEventListener('click', (e) => { if (e.target === sh) sh.hidden = true; }); }
+    root.querySelectorAll('.coFilterM').forEach((x) => x.addEventListener('change', () => { localStorage.setItem('st-co', x.value); ST.render(); }));
     const s = root.querySelector('#coFilter'); s && s.addEventListener('change', () => { localStorage.setItem('st-co', s.value); ST.render(); });
     root.querySelectorAll('[data-cof]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); localStorage.setItem('st-co', a.dataset.cof); ST.render(); }));
   }
@@ -95,19 +144,25 @@
     const pp = await people();
     // workers of the other office who worked at our sites are visible too (RLS decides); any admin may reset any worker's password
     const extra = Object.values(pp.byId).filter((p) => !p.is_staff && !pp.list.includes(p) && !allowed().includes(p.company_id));
-    const emp = pp.list.filter((p) => !p.is_staff).concat(extra);
+    const showRemoved = params().get('removed') === '1';
+    const allEmp = pp.list.filter((p) => !p.is_staff).concat(extra); const nRemoved = allEmp.filter((p) => p.removed_at).length + Object.values(pp.byId).filter((p) => p.is_staff && p.removed_at).length;
+    const emp = allEmp.filter((p) => showRemoved || !p.removed_at);
+    // migration 011: remove (= ban + deactivate, history kept) / restore. Workers: home-office owner/admin; office accounts: owner only; never yourself.
+    const canRemove = (p) => p.id !== ST.me.id && (p.is_staff ? ST.me.roles.some((r) => r.role === 'owner') : ST.can(p.company_id, ['owner', 'admin']));
+    const remBtn = (p) => (!canRemove(p) ? '' : p.removed_at ? ` <button class="btn small" data-restore="${p.id}" data-label="${esc(ST.who(p))}">Restore</button>` : ` <button class="btn small danger-ghost" data-remove="${p.id}" data-label="${esc(ST.who(p))}" data-staff="${p.is_staff ? 1 : 0}">Remove</button>`);
     const canResetWorkers = ['cj', 'us'].some((c) => ST.can(c, ['owner', 'admin']));
     const isOwner = ST.me.roles.some((r) => r.role === 'owner');
-    const staff = isOwner ? Object.values(pp.byId).filter((p) => p.is_staff && p.id !== ST.me.id) : [];
+    const staff = isOwner ? Object.values(pp.byId).filter((p) => p.is_staff && p.id !== ST.me.id && (showRemoved || !p.removed_at)) : [];
     const resetBtn = (p) => `<button class="btn small ghost" data-reset="${p.id}" data-label="${esc(ST.who(p))}" title="Set a temporary password; they choose a new one at their next login">Reset password</button>`;
     const pending = emp.filter((p) => p.status === 'pending');
-    const row = (p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${!p.is_staff && ST.canOps(p.company_id) ? ` <button class="linkbtn small" data-reroll="${p.id}" title="Give this worker a new random nickname">🎲</button> <button class="linkbtn small" data-nick="${p.id}" data-cur="${esc(ST.who(p))}" title="Edit this nickname">✎</button>` : ''}</td><td>${esc(p.phone || '')}</td><td><span class="tag ${p.status === 'active' ? 'on' : p.status === 'disabled' ? 'bad' : ''}">${p.status}</span></td><td>${fmtDT(p.created_at)}</td>
-      <td>${ST.canOps(p.company_id) ? (p.status === 'pending' ? `<button class="btn small primary" data-appr="${p.id}" data-ok="1">Approve</button> <button class="btn small ghost" data-appr="${p.id}" data-ok="0">Reject</button>` : p.status === 'active' ? `<button class="btn small ghost" data-appr="${p.id}" data-ok="0">Turn off</button>` : `<button class="btn small ghost" data-appr="${p.id}" data-ok="1">Turn back on</button>`) : ''}${canResetWorkers && p.status !== 'pending' ? ' ' + resetBtn(p) : ''}</td></tr>`;
+    const row = (p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${!p.is_staff && ST.canOps(p.company_id) ? ` <button class="linkbtn small" data-reroll="${p.id}" title="Give this worker a new random nickname">🎲</button> <button class="linkbtn small" data-nick="${p.id}" data-cur="${esc(ST.who(p))}" title="Edit this nickname">✎</button>` : ''}</td><td>${esc(p.phone || '')}</td><td>${p.removed_at ? `<span class="tag bad" title="${esc(p.removed_reason || '')}">removed ${fmtDate(p.removed_at)}</span>` : ''}${p.removed_at ? '' : `<span class="tag ${p.status === 'active' ? 'on' : p.status === 'disabled' ? 'bad' : ''}">${p.status}</span>`}</td><td>${fmtDT(p.created_at)}</td>
+      <td>${!p.removed_at && ST.canOps(p.company_id) ? (p.status === 'pending' ? `<button class="btn small primary" data-appr="${p.id}" data-ok="1">Approve</button> <button class="btn small ghost" data-appr="${p.id}" data-ok="0">Reject</button>` : p.status === 'active' ? `<button class="btn small ghost" data-appr="${p.id}" data-ok="0">Turn off</button>` : `<button class="btn small ghost" data-appr="${p.id}" data-ok="1">Turn back on</button>`) : ''}${canResetWorkers && p.status !== 'pending' && !p.removed_at ? ' ' + resetBtn(p) : ''}${p.status !== 'pending' ? remBtn(p) : ''}</td></tr>`;
     return [shell('employees', `<div class="page-h"><h1>Employees</h1><span class="muted">${emp.length} accounts · ${pending.length} waiting</span></div>
+      <div class="stat-row" id="empTotals"><div class="st"><b>${allEmp.filter((p) => p.status === 'active' && !p.removed_at).length}</b><span>active</span></div><div class="st ${pending.length ? 'warn' : ''}"><b>${pending.length}</b><span>waiting</span></div><div class="st"><b>${allEmp.filter((p) => p.status === 'disabled' && !p.removed_at).length}</b><span>turned off</span></div><div class="st"><b>${nRemoved}</b><span>removed</span></div></div>
       <section class="panel"><h2>Sign-up approvals</h2>${pending.length ? `<table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${pending.map(row).join('')}</table>` : '<div class="empty">No sign-ups waiting.</div>'}</section>
-      <section class="panel"><h2>All employees</h2><table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${emp.filter((p) => p.status !== 'pending').map(row).join('') || '<tr><td colspan="6" class="empty">None yet.</td></tr>'}</table>
+      <section class="panel"><div class="row-between"><h2>All employees</h2><label class="chk small"><input type="checkbox" id="showRem" ${showRemoved ? 'checked' : ''}> Show removed (${nRemoved})</label></div><table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${emp.filter((p) => p.status !== 'pending').map(row).join('') || '<tr><td colspan="6" class="empty">None yet.</td></tr>'}</table>
       <p class="muted small">Forgot password? Use <b>Reset password</b>: a temporary password is shown once; give it to the worker. They must choose a new password at their next login.</p></section>
-      ${isOwner ? `<section class="panel"><h2>Office accounts</h2><p class="muted small">Only the owner can reset an office account.</p><table class="tbl"><tr><th></th><th>Account</th><th></th></tr>${staff.map((p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}</td><td>${resetBtn(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No other office accounts.</td></tr>'}</table></section>` : ''}`, pending.length), (root) => {
+      ${isOwner ? `<section class="panel"><h2>Office accounts</h2><p class="muted small">Only the owner can reset an office account.</p><table class="tbl"><tr><th></th><th>Account</th><th></th></tr>${staff.map((p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${p.removed_at ? ` <span class="tag bad">removed ${fmtDate(p.removed_at)}</span>` : ''}</td><td>${p.removed_at ? '' : resetBtn(p)}${remBtn(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No other office accounts.</td></tr>'}</table></section>` : ''}`, pending.length), (root) => {
       root.querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', () => {
         const label = b.dataset.label;
         modal(`<h2>Reset password</h2><p>Give <b>${esc(label)}</b> a temporary password? Their old password stops working and they are logged out on every device. They must choose a new password at their next login.</p>
@@ -124,6 +179,24 @@
               });
             } catch (e) { close(); toast(errMsg(e), 'bad'); }
           });
+        });
+      }));
+      const sr = root.querySelector('#showRem'); sr && sr.addEventListener('change', () => go('employees', sr.checked ? { removed: 1 } : null));
+      root.querySelectorAll('[data-remove]').forEach((b) => b.addEventListener('click', () => {
+        modal(`<h2>Remove ${esc(b.dataset.label)}?</h2><p>${b.dataset.staff === '1' ? 'This office account' : 'This employee'} can't log in any more and is logged out on every device. Their past shifts stay for payroll and invoices. You can restore the account later (Show removed → Restore).</p>
+          <label class="field"><span>Reason (optional)</span><input id="remWhy" maxlength="200" placeholder="e.g. left the company"></label>
+          <div class="err" id="remErr"></div><div class="row-between"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" data-go>Remove account</button></div>`, (w, close) => {
+          w.querySelector('[data-go]').addEventListener('click', async (ev) => { ev.target.disabled = true;
+            try { await q(sb.rpc('admin_remove_user', { p_user: b.dataset.remove, p_reason: w.querySelector('#remWhy').value.trim() || null })); close(); toast('Removed ✓', 'good'); ST.render(); }
+            catch (e) { w.querySelector('#remErr').textContent = errMsg(e); ev.target.disabled = false; } });
+        });
+      }));
+      root.querySelectorAll('[data-restore]').forEach((b) => b.addEventListener('click', () => {
+        modal(`<h2>Restore ${esc(b.dataset.label)}?</h2><p>The account can log in again (same phone/email and password). Office roles come back as they were.</p>
+          <div class="err" id="resErr"></div><div class="row-between"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" data-go>Restore</button></div>`, (w, close) => {
+          w.querySelector('[data-go]').addEventListener('click', async () => {
+            try { await q(sb.rpc('admin_restore_user', { p_user: b.dataset.restore })); close(); toast('Restored ✓', 'good'); ST.render(); }
+            catch (e) { w.querySelector('#resErr').textContent = errMsg(e); } });
         });
       }));
       root.querySelectorAll('[data-reroll]').forEach((b) => b.addEventListener('click', async () => {
@@ -147,43 +220,85 @@
   // ---------- Shifts ----------
   async function shiftsPage() {
     const p = params(); const tk = T().todayKey();
-    const range = p.get('r') || 'week';
-    const from = range === 'today' ? tk : range === 'last' ? T().addDays(T().weekStart(tk), -7) : range === '30' ? T().addDays(tk, -30) : T().weekStart(tk);
-    const to = range === 'last' ? T().addDays(T().weekStart(tk), -1) : tk;
+    const range = p.get('r') || 'week'; const dayF = /^\d{4}-\d{2}-\d{2}$/.test(p.get('d') || '') ? p.get('d') : '';
+    const from = dayF || (range === 'today' ? tk : range === 'last' ? T().addDays(T().weekStart(tk), -7) : range === '30' ? T().addDays(tk, -30) : T().weekStart(tk));
+    const to = dayF || (range === 'last' ? T().addDays(T().weekStart(tk), -1) : tk);
     const [sites, pp] = await Promise.all([sitesInScope(), people()]);
-    const siteF = p.get('site') || ''; const site = sites.find((s) => String(s.site_no) === siteF);
-    const rows = await shiftsBetween(from, to, site && site.id);
+    const siteF = p.get('site') || ''; const site = sites.find((s) => String(s.site_no) === siteF); const sitesById = {}; sites.forEach((x) => { sitesById[x.id] = x; });
+    const unkOnly = p.get('unk') === '1';
+    const rows = (await shiftsBetween(from, to, site && site.id)).filter((s) => !unkOnly || ST.isUnknownSite(sitesById[s.site_id]));
     const sn = {}; const sno = {}; sites.forEach((s) => { sn[s.id] = ST.siteName(s); sno[s.id] = s; });
     const name = (id) => esc(ST.who(pp.byId[id]));
     const loc = (s) => (s.loc_status === 'ok' ? '<span class="tag on">at site</span>' : s.loc_status === 'off' ? `<span class="tag bad">${s.loc_distance_m} m away</span>` : '<span class="muted small">no GPS point</span>');
-    const exp = () => download(`shifts-${from}-to-${to}.csv`, csv([['company', 'employee', 'phone', 'site_code', 'site_no', 'date', 'clock_in', 'clock_out', 'worked_h', 'crew', 'role', 'edited', 'location', 'in_note', 'out_note', 'site_unknown'], ...rows.map((s) => [s.company_id.toUpperCase(), ST.who(pp.byId[s.user_id]), (pp.byId[s.user_id] || {}).phone, (sno[s.site_id] || {}).site_code || '', (sno[s.site_id] || {}).site_no, T().dayKey(s.clock_in), fmtTime(s.clock_in), s.clock_out ? fmtTime(s.clock_out) : '', s.clock_out ? h2(hours(s.clock_in, s.clock_out)) : '', s.crew_count, s.work_role, s.inM || s.outM ? 'M' : '', s.loc_status, s.in_note, s.out_note, ST.isUnknownSite(sno[s.site_id]) ? 'yes' : ''])]));
+    const exp = () => download(`shifts-${from}-to-${to}.csv`, csv([['company', 'employee', 'phone', 'site_code', 'site_no', 'date', 'clock_in', 'clock_out', 'worked_h', 'crew', 'role', 'edited', 'location', 'in_note', 'out_note', 'site_unknown', 'added_by_worker_at'], ...rows.map((s) => [s.company_id.toUpperCase(), ST.who(pp.byId[s.user_id]), (pp.byId[s.user_id] || {}).phone, (sno[s.site_id] || {}).site_code || '', (sno[s.site_id] || {}).site_no, T().dayKey(s.clock_in), fmtTime(s.clock_in), s.clock_out ? fmtTime(s.clock_out) : '', s.clock_out ? h2(hours(s.clock_in, s.clock_out)) : '', s.crew_count, s.work_role, s.inM || s.outM ? 'M' : '', s.loc_status, s.in_note, s.out_note, ST.isUnknownSite(sno[s.site_id]) ? 'yes' : '', s.entered_at ? fmtDT(s.entered_at) : ''])]));
+    const added = (s) => (s.entered_at ? ` <span class="flag added" title="Whole shift typed in by ${esc(ST.who(pp.byId[s.entered_by]))} on ${esc(fmtDT(s.entered_at))}">added by worker ${esc(fmtDate(s.entered_at))}</span>` : '');
+    const canDel = (s) => ST.can(s.company_id, ['owner', 'admin']) && (!s.locked || ST.can(s.company_id, ['owner']));
     const unk = (s) => ST.isUnknownSite(sno[s.site_id]); const nUnk = rows.filter(unk).length;
+    // 015: change the site of any shift. Known site: owner/admin; unknown site: owner/admin/ops. Locked shifts never move.
+    const canMove = (s) => !s.locked && (ST.can(s.company_id, ['owner', 'admin']) || (unk(s) && ST.canOps(s.company_id)));
+    const nMovable = rows.filter(canMove).length;
+    const totH = rows.filter((s) => s.clock_out).reduce((a, s) => a + hours(s.clock_in, s.clock_out), 0); const nOpen = rows.filter((s) => !s.clock_out).length;
+    const fco = filter();
+    const coSel = allowed().length > 1 ? `<label class="mob-only">Company<select class="coFilterM"><option value="all" ${fco === 'all' ? 'selected' : ''}>All</option><option value="cj" ${fco === 'cj' ? 'selected' : ''}>CJ</option><option value="us" ${fco === 'us' ? 'selected' : ''}>US</option></select></label>` : '';
     const opt = (v, l) => `<option value="${v}" ${range === v ? 'selected' : ''}>${l}</option>`;
     return [shell('shifts', `<div class="page-h"><h1>Shifts</h1><button class="btn primary" id="exportBtn">⤓ Export CSV</button></div>
-      <div class="filters form-row"><label>Period<select id="rF">${opt('today', 'Today')}${opt('week', 'This week')}${opt('last', 'Last week')}${opt('30', 'Last 30 days')}</select></label>
-        <label>Site<select id="sF"><option value="">All sites</option>${sites.map((s) => `<option value="${s.site_no}" ${String(s.site_no) === siteF ? 'selected' : ''}>${esc(ST.siteName(s))}</option>`).join('')}</select></label><span class="muted">${rows.length} shifts · ${fmtDay(from)} – ${fmtDay(to)}</span></div>
+      <div class="stat-row" id="shiftTotals"><div class="st"><b>${rows.length}</b><span>shifts</span></div><div class="st"><b>${fmtDur(totH)}</b><span>hours worked</span></div><div class="st"><b>${nOpen}</b><span>on shift now</span></div><div class="st ${nUnk ? 'warn' : ''}"><b>${nUnk}</b><span>unknown site</span></div></div>
+      <div class="filters form-row">${coSel}<label>Period<select id="rF">${opt('today', 'Today')}${opt('week', 'This week')}${opt('last', 'Last week')}${opt('30', 'Last 30 days')}</select></label><label>Day<input type="date" id="dF" value="${dayF}" max="${tk}"></label>
+        <label>Site<select id="sF"><option value="">All sites</option>${sites.map((s) => `<option value="${s.site_no}" ${String(s.site_no) === siteF ? 'selected' : ''}>${esc(ST.siteName(s))}</option>`).join('')}</select></label><label class="chk"><input type="checkbox" id="unkF" ${unkOnly ? 'checked' : ''}> Unknown site only</label><span class="muted">${rows.length} shifts · ${fmtDay(from)} – ${fmtDay(to)}</span></div>
       ${nUnk ? `<div class="warnbox warn" id="unkBox">❓ <b>${nUnk} shift${nUnk > 1 ? 's' : ''} at an unknown site.</b> The worker couldn't find their site. Check with them or the crew, then tap <b>Set site</b> to move the shift to the right site.</div>` : ''}
-      <table class="tbl"><tr><th></th><th>Date</th><th>Employee</th><th>Site</th><th>In</th><th>Out</th><th class="num">Worked</th><th class="num">Crew</th><th>Role</th><th>Location</th><th>Notes</th><th></th></tr>
-      ${rows.map((s) => `<tr><td>${chip(s.company_id)}</td><td>${fmtDate(s.clock_in)}</td><td>${name(s.user_id)}</td><td>${esc(sn[s.site_id])}${mBadge((s.edits || []).some((e) => e.field === 'site_id'), 'Site set by the office (was Unknown site)')}${unk(s) ? ' <span class="flag unk" title="Worker picked Unknown site">site unknown</span>' : ''}</td><td>${fmtTime(s.clock_in)}${mBadge(s.inM)}</td><td>${s.clock_out ? fmtTime(s.clock_out) : '<span class="tag on">on shift</span>'}${mBadge(s.outM)}</td><td class="num">${s.clock_out ? fmtDur(hours(s.clock_in, s.clock_out)) : ''}</td><td class="num">${s.crew_count ?? ''}</td><td>${esc(s.work_role || '')}</td><td>${loc(s)}</td><td class="small">${s.in_note ? '📝 ' + esc(s.in_note) : ''}${s.out_note ? '<br>🗒 ' + esc(s.out_note) : ''}</td><td>${s.locked ? '🔒 ' : ''}${(!s.locked && ST.canOps(s.company_id)) || ST.can(s.company_id, ['owner']) ? `<button class="btn small" data-edit="${s.id}">Edit</button>` : ''}${unk(s) && !s.locked && ST.canOps(s.company_id) ? ` <button class="btn small primary" data-move="${s.id}">Set site</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">No shifts in this period.</td></tr>'}</table>
-      <p class="muted small"><span class="mbadge">M</span> = time changed by hand (original kept). Locked 🔒 = invoiced; only the owner can change it.</p>`), (root) => {
-      root.querySelector('#exportBtn').addEventListener('click', exp);
-      root.querySelector('#rF').addEventListener('change', (e) => go('shifts', { r: e.target.value, site: siteF }));
-      root.querySelector('#sF').addEventListener('change', (e) => go('shifts', { r: range, site: e.target.value }));
-      root.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', async () => {
-        const s = rows.find((x) => x.id === b.dataset.move);
-        const all = (await q(sb.from('sites').select('id, site_no, site_code, company_id, active, is_unknown').in('company_id', allowed()).order('site_no'))).filter((x) => x.active && x.site_code && !ST.isUnknownSite(x) && ST.canOps(x.company_id));
-        modal(`<h2>Set the site for this shift</h2><p class="muted">${name(s.user_id)} · ${fmtDate(s.clock_in)} ${fmtTime(s.clock_in)} · clocked in at <b>${esc(sn[s.site_id])}</b></p>
-          <form id="mv" class="stack"><label class="field"><span>Correct site</span><select name="site" required><option value="">Pick a site…</option>${all.map((x) => `<option value="${x.site_no}">${esc(ST.siteName(x))}${allowed().length > 1 ? ' · ' + COMPANIES[x.company_id].short : ''}</option>`).join('')}</select></label>
-          <label class="field"><span>Details (optional)</span><input name="det" maxlength="200" placeholder="e.g. confirmed with the driver"></label>
-          <p class="muted small">The change is logged (M mark). If the site belongs to the other company, the shift moves to that company.</p>
-          <div class="err" id="mvErr"></div><div class="row-end"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary">Move shift</button></div></form>`, (w, close) => {
-          w.querySelector('#mv').addEventListener('submit', async (e) => {
-            e.preventDefault(); const d = new FormData(e.target);
-            try { await q(sb.rpc('admin_reassign_shift', { p_shift: s.id, p_site_no: +d.get('site'), p_details: d.get('det') || null })); close(); toast('Shift moved ✓', 'good'); ST.render(); }
-            catch (err) { w.querySelector('#mvErr').textContent = errMsg(err); }
-          });
+      ${nMovable ? `<div class="bulkbar"><button class="btn small" id="bulkMove" disabled><span>Set site for selected (<span id="selN">0</span>)</span></button> <span class="muted small">Tick shifts, then pick the correct site once.</span></div>` : ''}
+      <table class="tbl"><tr><th>${nMovable ? '<input type="checkbox" id="selAll" title="Select all" aria-label="Select all">' : ''}</th><th></th><th>Date</th><th>Employee</th><th>Site</th><th>In</th><th>Out</th><th class="num">Worked</th><th class="num">Crew</th><th>Role</th><th>Location</th><th>Notes</th><th></th></tr>
+      ${rows.map((s) => `<tr><td>${canMove(s) ? `<input type="checkbox" class="selShift" value="${s.id}" aria-label="Select shift">` : ''}</td><td>${chip(s.company_id)}</td><td>${fmtDate(s.clock_in)}</td><td>${name(s.user_id)}</td><td>${esc(sn[s.site_id])}${mBadge((s.edits || []).some((e) => e.field === 'site_id'), 'Site changed by the office')}${unk(s) ? ' <span class="flag unk" title="Worker picked Unknown site">site unknown</span>' : ''}${canMove(s) && !unk(s) ? ` <button class="linkbtn small" data-mvany="${s.id}" title="Change the site of this shift">✎</button>` : ''}</td><td>${fmtTime(s.clock_in)}${mBadge(s.inM, s.entered_at ? 'Shift added by the worker' : '')}${added(s)}</td><td>${s.clock_out ? fmtTime(s.clock_out) : '<span class="tag on">on shift</span>'}${mBadge(s.outM)}</td><td class="num">${s.clock_out ? fmtDur(hours(s.clock_in, s.clock_out)) : ''}</td><td class="num">${s.crew_count ?? ''}</td><td>${esc(s.work_role || '')}</td><td>${loc(s)}</td><td class="small">${s.in_note ? '📝 ' + esc(s.in_note) : ''}${s.out_note ? '<br>🗒 ' + esc(s.out_note) : ''}</td><td>${s.locked ? '🔒 ' : ''}${(!s.locked && ST.canOps(s.company_id)) || ST.can(s.company_id, ['owner']) ? `<button class="btn small" data-edit="${s.id}">Edit</button>` : ''}${unk(s) && canMove(s) ? ` <button class="btn small primary" data-move="${s.id}">Set site</button>` : ''}${canDel(s) ? ` <button class="btn small danger-ghost" data-del="${s.id}" title="Delete this shift">Delete</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="13" class="empty">No shifts in this period.</td></tr>'}</table>
+      <p class="muted small"><span class="mbadge">M</span> = time changed by hand (original kept); “added by worker” = the whole shift was typed in afterwards (missed shift). Locked 🔒 = invoiced; only the owner can change or delete it.</p>`), (root) => {
+      root.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => {
+        const s = rows.find((x) => x.id === b.dataset.del);
+        modal(`<h2>Delete this shift? This can't be undone.</h2><p>${name(s.user_id)} · ${esc(sn[s.site_id])} · ${fmtDate(s.clock_in)} ${fmtTime(s.clock_in)}–${s.clock_out ? fmtTime(s.clock_out) : 'open'}</p><p class="muted small">A full copy of the shift is kept in the audit log with your name and the time.</p>
+          <label class="field"><span>Reason (optional)</span><input id="delWhy" maxlength="200" placeholder="e.g. duplicate entry"></label>
+          <div class="err" id="delErr"></div><div class="row-between"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" data-go>Delete shift</button></div>`, (w, close) => {
+          w.querySelector('[data-go]').addEventListener('click', async (ev) => { ev.target.disabled = true;
+            try { await q(sb.rpc('admin_delete_shift', { p_shift: s.id, p_reason: w.querySelector('#delWhy').value.trim() || null })); close(); toast('Shift deleted', 'good'); ST.render(); }
+            catch (e) { w.querySelector('#delErr').textContent = errMsg(e); ev.target.disabled = false; } });
         });
       }));
+      root.querySelector('#exportBtn').addEventListener('click', exp);
+      const qp = (o) => { const x = { r: range, site: siteF, d: dayF, ...o }; if (!x.unk) delete x.unk; if (!x.d) delete x.d; if (!x.site) delete x.site; return x; };
+      root.querySelector('#dF').addEventListener('change', (e) => go('shifts', qp({ d: e.target.value, unk: unkOnly ? 1 : 0 })));
+      root.querySelector('#rF').addEventListener('change', (e) => go('shifts', qp({ r: e.target.value, d: '', unk: unkOnly ? 1 : 0 })));
+      root.querySelector('#sF').addEventListener('change', (e) => go('shifts', qp({ site: e.target.value, unk: unkOnly ? 1 : 0 })));
+      root.querySelector('#unkF').addEventListener('change', (e) => go('shifts', qp({ unk: e.target.checked ? 1 : 0 })));
+      const sel = () => [...root.querySelectorAll('.selShift:checked')].map((x) => x.value);
+      const upd = () => { const b = root.querySelector('#bulkMove'); if (b) { b.disabled = !sel().length; root.querySelector('#selN').textContent = sel().length; } };
+      root.querySelectorAll('.selShift').forEach((c) => c.addEventListener('change', upd));
+      const sa = root.querySelector('#selAll'); sa && sa.addEventListener('change', () => { root.querySelectorAll('.selShift').forEach((c) => { c.checked = sa.checked; }); upd(); });
+      const bm = root.querySelector('#bulkMove'); bm && bm.addEventListener('click', () => moveModal(sel()));
+      root.querySelectorAll('[data-mvany]').forEach((b) => b.addEventListener('click', () => moveModal([b.dataset.mvany])));
+      root.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', () => moveModal([b.dataset.move])));
+      async function moveModal(ids) {
+        if (!ids.length) return; const list = ids.map((id) => rows.find((x) => x.id === id)); const one = list.length === 1 ? list[0] : null;
+        const owner = ST.me.roles.some((r) => r.role === 'owner');
+        // cross-company moves are owner only; everyone else picks from the shift's own company
+        const cos = owner ? allowed() : [...new Set(list.map((x) => x.company_id))];
+        const all = (await q(sb.from('sites').select('id, site_no, site_code, company_id, active, is_unknown, label').in('company_id', cos).order('site_no'))).filter((x) => x.active && x.site_code && !ST.isUnknownSite(x) && ST.canOps(x.company_id) && !(one && x.id === one.site_id));
+        const optHtml = (f) => all.filter((x) => !f || (ST.siteName(x) + ' ' + x.site_no + ' ' + (x.site_code || '')).toLowerCase().includes(f)).map((x) => `<option value="${x.site_no}">${esc(ST.siteName(x))}${cos.length > 1 ? ' · ' + COMPANIES[x.company_id].short : ''}</option>`).join('');
+        modal(`<h2>${one ? 'Change the site of this shift' : `Set site for ${list.length} shifts`}</h2>
+          <p class="muted">${one ? `${name(one.user_id)} · ${fmtDate(one.clock_in)} ${fmtTime(one.clock_in)} · now at <b>${esc(sn[one.site_id])}</b>` : list.map((x) => `${name(x.user_id)} ${fmtDate(x.clock_in)} (${esc(sn[x.site_id])})`).join(' · ')}</p>
+          <form id="mv" class="stack"><label class="field"><span>Find site (code or number)</span><input id="mvQ" autocomplete="off" placeholder="e.g. CPM105 or 105"></label>
+          <label class="field"><span>Correct site</span><select name="site" size="6" required>${optHtml('')}</select></label>
+          <label class="field"><span>Details (optional)</span><input name="det" maxlength="200" placeholder="e.g. confirmed with the driver"></label>
+          <p class="muted small">Logged with an M mark. Hours, timesheets and invoices use the new site and its rate on the shift date.${owner ? ' If the site belongs to the other company, the shift moves to that company.' : ''}</p>
+          <div class="err" id="mvErr"></div><div class="row-end"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary">${one ? 'Move shift' : `Move ${list.length} shifts`}</button></div></form>`, (w, close) => {
+          const qi = w.querySelector('#mvQ'); const se = w.querySelector('#mv select[name=site]');
+          qi.addEventListener('input', () => { se.innerHTML = optHtml(qi.value.trim().toLowerCase()); if (se.options.length === 1) se.selectedIndex = 0; });
+          w.querySelector('#mv').addEventListener('submit', async (e) => {
+            e.preventDefault(); const d = new FormData(e.target); if (!d.get('site')) { w.querySelector('#mvErr').textContent = 'Pick a site.'; return; }
+            try {
+              if (one) await q(sb.rpc('admin_reassign_shift', { p_shift: one.id, p_site_no: +d.get('site'), p_details: d.get('det') || null }));
+              else await q(sb.rpc('admin_reassign_shifts', { p_shifts: ids, p_site_no: +d.get('site'), p_details: d.get('det') || null }));
+              close(); toast(one ? 'Shift moved ✓' : `${list.length} shifts moved ✓`, 'good'); ST.render();
+            } catch (err) { w.querySelector('#mvErr').textContent = errMsg(err); }
+          });
+        });
+      }
       root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
         const s = rows.find((x) => x.id === b.dataset.edit);
         modal(`<h2>Edit shift · ${esc(sn[s.site_id])}</h2><p class="muted">${name(s.user_id)} · ${fmtDate(s.clock_in)}</p>
@@ -216,9 +331,9 @@
     const showBill = site && ST.canBill(site.company_id);
     const tot = (k) => rows.reduce((a, r) => a + r[k], 0);
     const openN = site ? all.filter((x) => x.site_id === site.id && !x.clock_out).length : 0;
-    const csvOut = () => download(`timesheet-${site.site_code || 'site-' + site.site_no}-${ws}.csv`, csv([['company', 'site_code', 'site_no', 'week_start', 'employee', 'phone', 'date', 'in', 'out', 'crew', 'worked_h', 'unpaid_break_h', 'paid_h', ...(showBill ? ['billable_h'] : []), 'edited'], ...rows.map((r) => [site.company_id.toUpperCase(), site.site_code || '', site.site_no, ws, name(r.user_id), (pp.byId[r.user_id] || {}).phone, r.day, r.shifts.map((s) => fmtTime(s.clock_in)).join(' / '), r.shifts.map((s) => fmtTime(s.clock_out)).join(' / '), r.crew.join('/'), h2(r.worked), h2(r.unpaid), h2(r.paid), ...(showBill ? [h2(r.billable)] : []), r.edited ? 'M' : ''])]));
+    const csvOut = () => download(`timesheet-${site.site_code || 'site-' + site.site_no}-${ws}.csv`, csv([['company', 'site_code', 'site_no', 'week_start', 'employee', 'phone', 'date', 'in', 'out', 'crew', 'worked_h', 'unpaid_break_h', 'paid_h', ...(showBill ? ['billable_h'] : []), 'edited', 'added_by_worker_at'], ...rows.map((r) => [site.company_id.toUpperCase(), site.site_code || '', site.site_no, ws, name(r.user_id), (pp.byId[r.user_id] || {}).phone, r.day, r.shifts.map((s) => fmtTime(s.clock_in)).join(' / '), r.shifts.map((s) => fmtTime(s.clock_out)).join(' / '), r.crew.join('/'), h2(r.worked), h2(r.unpaid), h2(r.paid), ...(showBill ? [h2(r.billable)] : []), r.edited ? 'M' : '', r.shifts.filter((s) => s.entered_at).map((s) => fmtDT(s.entered_at)).join(' / ')])]));
     const co = site ? site.company_id : scope()[0];
-    return [shell('timesheets', `<div class="page-h no-print"><h1>Timesheets</h1><span class="muted">Per site number · week Mon–Sun (Atlantic)</span></div>
+    return [shell('timesheets', `${paySeg('timesheets')}<div class="page-h no-print"><h1>Timesheets</h1><span class="muted">Per site number · week Mon–Sun (Atlantic)</span></div>
       <div class="form-row no-print"><label>Week<span class="segs"><button class="btn small" id="prevW">‹</button> <b>${fmtDay(ws)} – ${fmtDay(we)}</b> <button class="btn small" id="nextW">›</button></span></label>
         <label>Site<select id="sF">${sites.map((s) => `<option value="${s.site_no}" ${site && s.id === site.id ? 'selected' : ''}>${esc(ST.siteName(s))}${withShifts.includes(s) ? ' •' : ''}</option>`).join('')}</select></label>
         <span class="spacer"></span>${site ? '<button class="btn" id="pBtn">⤓ PDF (print → Save as PDF)</button> <button class="btn primary" id="cBtn">⤓ CSV</button>' : ''}</div>
@@ -226,9 +341,9 @@
       ${site ? `<div class="sheet"><div class="sheet-h co-${co}">${ST.logo(co)}<div class="sheet-co">${COMPANIES[co].name}</div><div class="sheet-t"><h1>Weekly Timesheet</h1><div>Week of <b>${fmtDay(ws)} – ${fmtDay(we)}</b> <span class="muted">(Mon–Sun, Atlantic)</span></div></div></div>
         <div class="sheet-meta"><div><span>Site</span><b>${esc(ST.siteName(site))}</b></div><div><span>Type</span><b>${esc(site.label)}</b></div><div><span>Prepared</span><b>${fmtDT(new Date().toISOString())}</b></div>${openN ? `<div><span>Open shifts</span><b class="bad">${openN} not clocked out</b></div>` : ''}</div>
         <table class="sheet-tbl tbl"><thead><tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th class="num">Crew</th><th class="num">Worked</th><th class="num">Unpaid break</th><th class="num">Paid</th>${showBill ? '<th class="num">Billable</th>' : ''}</tr></thead><tbody>
-        ${rows.map((r) => `<tr><td>${esc(name(r.user_id))}</td><td>${fmtDay(r.day)}</td><td>${r.shifts.map((s) => fmtTime(s.clock_in) + mBadge(s.inM)).join('<br>')}</td><td>${r.shifts.map((s) => fmtTime(s.clock_out) + mBadge(s.outM)).join('<br>')}</td><td class="num">${r.crew.join('/')}</td><td class="num">${h2(r.worked)}</td><td class="num">${r.unpaid ? '−' + h2(r.unpaid) : '0.00'}</td><td class="num"><b>${h2(r.paid)}</b></td>${showBill ? `<td class="num">${h2(r.billable)}${r.billAdj > 0 ? ` <span class="flag" title="Billing minimum ${site.min_hours_per_day} h/day">min</span>` : ''}</td>` : ''}</tr>`).join('') || `<tr><td colspan="9" class="empty">No completed shifts at ${esc(ST.siteName(site))} this week.</td></tr>`}
+        ${rows.map((r) => `<tr><td>${esc(name(r.user_id))}</td><td>${fmtDay(r.day)}</td><td>${r.shifts.map((s) => fmtTime(s.clock_in) + mBadge(s.inM) + (s.entered_at ? ` <span class="flag added">added ${fmtDate(s.entered_at)}</span>` : '')).join('<br>')}</td><td>${r.shifts.map((s) => fmtTime(s.clock_out) + mBadge(s.outM)).join('<br>')}</td><td class="num">${r.crew.join('/')}</td><td class="num">${h2(r.worked)}</td><td class="num">${r.unpaid ? '−' + h2(r.unpaid) : '0.00'}</td><td class="num"><b>${h2(r.paid)}</b></td>${showBill ? `<td class="num">${h2(r.billable)}${r.billAdj > 0 ? ` <span class="flag" title="Billing minimum ${site.min_hours_per_day} h/day">min</span>` : ''}</td>` : ''}</tr>`).join('') || `<tr><td colspan="9" class="empty">No completed shifts at ${esc(ST.siteName(site))} this week.</td></tr>`}
         </tbody><tfoot><tr><th colspan="5">Totals</th><th class="num">${h2(tot('worked'))}</th><th class="num">−${h2(tot('unpaid'))}</th><th class="num">${h2(tot('paid'))}</th>${showBill ? `<th class="num">${h2(tot('billable'))}</th>` : ''}</tr></tfoot></table>
-        <div class="sheet-foot small"><span class="mbadge">M</span> = time changed by hand. Unpaid break per worker per day: over 5 h → 0.5 h, 8 h or more → 1 h.${showBill && site.min_hours_per_day ? ` Billable includes the ${site.min_hours_per_day} h/day minimum.` : ''}<br><br>Approved by: ____________________ &nbsp; Date: ____________</div></div>` : '<div class="empty">No sites in scope.</div>'}`), (root) => {
+        <div class="sheet-foot small"><span class="mbadge">M</span> = time changed by hand; “added” = whole shift entered afterwards by the worker (date shown). Unpaid break per worker per day: over 5 h → 0.5 h, 8 h or more → 1 h.${showBill && site.min_hours_per_day ? ` Billable includes the ${site.min_hours_per_day} h/day minimum.` : ''}<br><br>Approved by: ____________________ &nbsp; Date: ____________</div></div>` : '<div class="empty">No sites in scope.</div>'}`), (root) => {
       const nav = (w, s) => go('timesheets', { week: w, site: s });
       root.querySelector('#prevW').addEventListener('click', () => nav(T().addDays(ws, -7), site ? site.site_no : ''));
       root.querySelector('#nextW').addEventListener('click', () => nav(T().addDays(ws, 7), site ? site.site_no : ''));
@@ -251,7 +366,7 @@
       if (!roles.length) return '<span class="flag bad">no rate — invoices blocked</span>';
       return roles.map((role) => { const cur = rateOn(rates, s.id, role, tk); const next = rates.filter((r) => r.site_id === s.id && r.role === role && r.effective_from > tk);
         return `<div>${esc(role)}: <b>${cur ? money(cur.rate) : '—'}</b>${cur ? ` <span class="muted small">since ${cur.effective_from}</span>` : ''}${next.map((n) => ` <span class="tag">${money(n.rate)} from ${n.effective_from}</span>`).join('')}</div>`; }).join(''); };
-    return [shell('rates', `<div class="page-h"><h1>Rates per role</h1><span class="muted">Hourly rate per site number and role. A change is a new dated rate (history kept). Never shown to employees.</span></div>
+    return [shell('rates', `${paySeg('rates')}<div class="page-h"><h1>Rates per role</h1><span class="muted">Hourly rate per site number and role. A change is a new dated rate (history kept). Never shown to employees.</span></div>
       <section class="panel"><h2>Add a rate</h2><form id="addRate" class="form-row">
         <label>Site<select name="site" required>${sites.map((s) => `<option value="${s.id}">${s.company_id.toUpperCase()} · ${esc(ST.siteName(s))}</option>`).join('')}</select></label>
         <label>Role<select name="role">${ROLES.map((r) => `<option>${r}</option>`).join('')}</select></label>
@@ -352,7 +467,7 @@
     }
     const age = (i) => { if (i.status !== 'sent') return ''; if (!i.due_on) return '<span class="muted small">not received yet</span>'; const days = Math.round((new Date(tk) - new Date(i.due_on)) / 86400000); return days > 0 ? `<span class="tag bad">${days} days overdue</span>` : `<span class="tag">due in ${-days} d</span>`; };
     const lastMonth = T().addDays(tk.slice(0, 8) + '01', -1);
-    return [shell('invoices', `<div class="page-h"><h1>Invoices</h1><span class="muted">Payment due within one month of receipt · HST ${C.hst * 100}%</span></div>
+    return [shell('invoices', `${paySeg('invoices')}<div class="page-h"><h1>Invoices</h1><span class="muted">Payment due within one month of receipt · HST ${C.hst * 100}%</span></div>
       <section class="panel"><h2>New invoice</h2><form id="newInv" class="form-row">
         <label>Site<select name="site">${sites.map((s) => `<option value="${s.id}">${s.company_id.toUpperCase()} · ${esc(ST.siteName(s))}${s.flags.some((f) => /missing/.test(f)) || s.billing_type === 'per-visit' ? ' ⛔' : ''}</option>`).join('')}</select></label>
         <label>From<input type="date" name="from" value="${lastMonth.slice(0, 8)}01" required></label><label>To<input type="date" name="to" value="${lastMonth}" required></label>
@@ -393,6 +508,7 @@
     const list = all.filter((x) => showOff || x.active || !x.site_code);
     const tk = T().todayKey();
     return [shell('sites', `<div class="page-h"><h1>Sites</h1><button class="btn primary" id="addSiteBtn">+ Add site</button></div>
+      <div class="stat-row" id="siteTotals"><div class="st"><b>${all.filter((x) => x.active && !x.is_unknown).length}</b><span>active sites</span></div><div class="st"><b>${all.filter((x) => !x.active).length}</b><span>turned off</span></div><div class="st ${all.some((x) => x.active && !x.is_unknown && x.lat == null) ? 'warn' : ''}"><b>${all.filter((x) => x.active && !x.is_unknown && x.lat == null).length}</b><span>no GPS point</span></div><div class="st"><b>${cos.map((c) => COMPANIES[c].short).join(' + ')}</b><span>company</span></div></div>
       <p class="muted small">Sites are shown by code only: 3-letter acronym + number (Chief Janitorial 101–199, Unscramble 201–299). Client names live only in the Drive Site Key.</p>
       <div class="form-row"><label class="chk"><input type="checkbox" id="showOff" ${showOff ? 'checked' : ''}> Show turned-off sites</label><span class="muted">${list.length} sites · ${all.filter((x) => !x.site_code).length} need a name/acronym</span></div>
       <table class="tbl"><tr><th></th><th>Code</th><th>Type</th><th>Billing</th><th>GPS</th><th>Status</th><th>Flags</th><th></th></tr>
@@ -497,6 +613,6 @@
     const page = (p[0] || 'dashboard').split('?')[0];
     const fn = PAGES[page] || dashboard;
     const [html, bind] = await fn();
-    app.innerHTML = html; bindShell(app); bind && bind(app);
+    app.innerHTML = html; bindShell(app); bind && bind(app); cardify(app);
   };
 })();

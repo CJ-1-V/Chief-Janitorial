@@ -29,6 +29,7 @@
   function errMsg(e) {
     const m = (e && (e.message || e.msg || e.error_description)) || String(e);
     if (/Invalid login credentials/i.test(m)) return 'Wrong phone number or password.';
+    if (/banned/i.test(m)) return 'This account was removed. Please contact the office.';
     if (/already registered|already exists|duplicate key.*phone/i.test(m)) return 'This phone number already has an account. Log in instead, or ask the office.';
     if (/Email not confirmed/i.test(m)) return 'Sign-up is not switched on yet (the office must change one setting). Please ask the office.';
     if (/Password should be/i.test(m)) return 'Password must be at least 8 characters.';
@@ -250,7 +251,7 @@
       const me = await loadMe();
       if (!me || p[0] === 'login') { app.innerHTML = loginView(); bindAuth(app); bindGlobal(app); mountInstall(); return; }
       if (!me.profile) { app.innerHTML = loginView('Your account is not set up yet. Ask the office.'); bindAuth(app); await sb.auth.signOut(); return; }
-      if (me.profile.status === 'disabled') { app.innerHTML = loginView('This account is turned off. Please contact the office.'); bindAuth(app); await sb.auth.signOut(); return; }
+      if (me.profile.status === 'disabled') { app.innerHTML = loginView(me.profile.removed_at ? 'This account was removed. Please contact the office.' : 'This account is turned off. Please contact the office.'); bindAuth(app); await sb.auth.signOut(); return; }
       if (me.mustChange) { app.innerHTML = forcedPwView(); bindForcedPw(app); bindGlobal(app); return; }
       if (me.isStaff && me.roles.length) { if (p[0] !== 'admin') { location.hash = '#/admin/dashboard'; return; } await ST.adminView(app, p.slice(1)); }
       else { if (p[0] !== 'emp' && me.profile.status === 'active') { location.hash = '#/emp/clock'; return; } await ST.employeeView(app, p.slice(1)); }

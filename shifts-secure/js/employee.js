@@ -11,7 +11,7 @@
     const uid = ST.me.id;
     const [sites, shifts, edits] = await Promise.all([
       q(sb.from('employee_sites').select('id, site_no, site_code, label, lat, lng, radius_m, company_id').order('site_no')),
-      q(sb.from('shifts').select('id, site_id, clock_in, clock_out, recorded_in, recorded_out, crew_count, in_note, out_note, loc_status, locked').eq('user_id', uid).order('clock_in', { ascending: false }).limit(200)),
+      q(sb.from('shifts').select('id, site_id, clock_in, clock_out, recorded_in, recorded_out, crew_count, in_note, out_note, loc_status, locked, entered_by, entered_at').eq('user_id', uid).order('clock_in', { ascending: false }).limit(200)),
       q(sb.from('shift_edits').select('shift_id, field, by_kind, at')),
     ]);
     const num = {}; const codeOf = {}; sites.forEach((s) => { num[s.id] = s.site_no; if (s.site_code) codeOf[s.site_no] = s.site_code; });
@@ -150,7 +150,8 @@
     const brk = (h) => (h > 0 ? fmtDur(h) : 'none');
     const hrs = (h) => (Math.round(h * 100) / 100).toString() + ' hrs';   // e.g. 7.5 hrs (employees see no paid/unpaid wording)
     const wk = (l, w) => `<div><span>${l} <em>${w.n} shift${w.n === 1 ? '' : 's'}</em></span><div class="wp3"><div><small>Worked</small><b>${fmtDur(w.worked)}</b></div><div><small>Break</small><b class="brk">${brk(w.unpaid)}</b></div><div><small>&nbsp;</small><b class="pd">${hrs(w.paid)}</b></div></div></div>`;
-    const edLine = (s) => { const p = []; s.edits.forEach((e) => p.push(`${e.field.replace('_', '-')} changed by ${e.by_kind === 'worker' ? 'you' : 'the office'} on ${fmtDate(e.at)}`)); return p.length ? `<div class="edited-line"><span class="mbadge sm">M</span> ${esc(p.join(' · '))}</div>` : ''; };
+    const edLine = (s) => { const p = []; if (s.entered_at) p.push(`shift added by you on ${fmtDate(s.entered_at)} ${fmtTime(s.entered_at)}`);
+      s.edits.filter((e) => !s.entered_at || new Date(e.at) - new Date(s.entered_at) > 5000).forEach((e) => p.push(`${e.field.replace('_', '-')} changed by ${e.by_kind === 'worker' ? 'you' : 'the office'} on ${fmtDate(e.at)}`)); return p.length ? `<div class="edited-line"><span class="mbadge sm">M</span> ${esc(p.join(' · '))}</div>` : ''; };
     const punch = (s) => { const open = !s.clock_out; const missed = open && hours(s.clock_in, now) > 14;
       return `<div class="punch"><div class="times"><div><span class="tl">In</span><b>${fmtTime(s.clock_in)}</b>${mBadge(s.inEdited)}</div><span class="arrow">→</span><div><span class="tl">Out</span><b>${open ? '—' : fmtTime(s.clock_out)}</b>${mBadge(s.outEdited)}</div>${canEdit(s) ? `<a class="btn small edit" href="#/emp/edit/${s.id}">✎ Edit</a>` : ''}</div>
         ${edLine(s)}${missed ? '<div class="warn sm">Forgot to clock out? Tap Edit to add your finish time.</div>' : ''}
@@ -163,9 +164,10 @@
     return shell('shifts', `<h1 class="h1">My shifts</h1>
       <div class="summary">${wk('This week', sum(ws, tk))}${wk('Last week', sum(lws, T().addDays(ws, -1)))}</div>
       <div class="rule-line">ℹ Break: over 5 h worked = 0.5 h break; 8 h or more = 1 h break. Worked out once per day per site (split shifts are added together).</div>
-      <div class="legend"><span class="mbadge sm">M</span> = time changed by hand (the original time is kept on record)</div>
+      <div class="legend"><span class="mbadge sm">M</span> = time changed or shift added by hand (the original time is kept on record)</div>
+      <a class="btn big add-missed" href="#/emp/add" data-act="addmissed">＋ Add missed shift</a>
       <div class="shift-list">${cards.join('') || '<div class="empty">No shifts yet.</div>'}</div>
-      <p class="muted small center">You can fix your own times for shifts in the last ${C.editDays} days. For older shifts, ask the office.</p>`);
+      <p class="muted small center">You can fix your own times, or add a shift you forgot to clock, for the last ${C.editDays} days. For older shifts, ask the office.</p>`);
   }
 
   function editView(id) {
@@ -193,6 +195,44 @@
       const sh = cache.shifts.find((x) => x.id === id); const ci = d.get('clockIn') === T().toInput(sh.clock_in) ? sh.clock_in : T().fromInput(d.get('clockIn')); const co = !d.get('clockOut') ? null : d.get('clockOut') === T().toInput(sh.clock_out) ? sh.clock_out : T().fromInput(d.get('clockOut'));
       try { await q(sb.rpc('edit_my_shift', { p_shift: id, p_clock_in: ci, p_clock_out: co, p_reason: d.get('reason'), p_details: d.get('details') || null, p_crew: crew })); toast('Saved ✓ (marked M)', 'good'); location.hash = '#/emp/shifts'; }
       catch (err) { root.querySelector('#editErr').textContent = errMsg(err); }
+    });
+  }
+
+  // Add a missed shift (migration 011, add_missed_shift): own account, picked company's active sites, last 14 days.
+  // The server re-checks everything (future, > 14 days, end before start, > 16 h, overlaps, crew 1-50).
+  function addView() {
+    const tk = T().todayKey(); const min = T().addDays(tk, -C.editDays);
+    const opts = cache.sites.map((s) => `<option value="${s.site_no}">${esc(siteLabel(s.site_no))}</option>`).join('') + (cache.unknown ? `<option value="${cache.unknown.site_no}">Unknown site (not in the list)</option>` : '');
+    return shell('shifts', `<a class="back" href="#/emp/shifts">‹ My shifts</a><h1 class="h1">Add missed shift</h1>
+      <div class="card"><p class="muted small">Forgot to clock in and out? Add the shift here (${esc(coName())}, last ${C.editDays} days). It gets an <span class="mbadge sm">M</span> mark and the office sees that you added it.</p>
+        <form id="addForm" class="stack">
+          <label class="field"><span>Site <span class="req">*</span></span><select name="site" required><option value="">Pick a site…</option>${opts}</select></label>
+          <label class="field"><span>Day <span class="req">*</span></span><input type="date" name="day" min="${min}" max="${tk}" value="${T().addDays(tk, -1)}" required></label>
+          <div class="row-2"><label class="field"><span>Start <span class="req">*</span></span><input type="time" name="start" value="07:00" required></label>
+            <label class="field"><span>End <span class="req">*</span></span><input type="time" name="end" value="15:30" required></label></div>
+          <div class="muted small" id="durLine"></div>
+          ${crewPicker(null).replace(/How many workers were at .*? this shift\?/, 'How many workers were on site this shift?')}
+          <label class="field"><span>Note (optional) <em id="anCnt">0/120</em></span><textarea name="note" id="addNote" maxlength="120" rows="2" placeholder="e.g. phone battery died"></textarea></label>
+          <div class="err" id="addErr"></div>
+          <button class="btn primary big" type="submit" id="addBtn">Add shift</button><a class="btn ghost big" href="#/emp/shifts">Cancel</a>
+        </form></div>`);
+  }
+  function bindAdd(root) {
+    const f = root.querySelector('#addForm'); if (!f) return; let crew = null; bindCrew(root, (n) => (crew = n)); counter(root, 'addNote', 'anCnt');
+    const times = () => { const d = new FormData(f); if (!d.get('day') || !d.get('start') || !d.get('end')) return null;
+      const [h1, m1] = d.get('start').split(':').map(Number); const [h2, m2] = d.get('end').split(':').map(Number);
+      const a = T().zoned(d.get('day'), h1, m1); let b = T().zoned(d.get('day'), h2, m2); if (b <= a) b = T().zoned(T().addDays(d.get('day'), 1), h2, m2);  // past midnight
+      return [a, b]; };
+    const show = () => { const t = times(); root.querySelector('#durLine').textContent = t ? `${fmtDur((t[1] - t[0]) / 3600000)} · ends ${fmtDate(t[1].toISOString())} ${fmtTime(t[1].toISOString())}` : ''; };
+    f.addEventListener('input', show); show();
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault(); const err = root.querySelector('#addErr'); err.textContent = ''; const d = new FormData(f); const t = times();
+      if (!d.get('site')) { err.textContent = 'Pick a site.'; return; }
+      if (!crew) { err.textContent = 'Enter how many workers were on site (1–50).'; return; }
+      if (!t) { err.textContent = 'Enter the day, start and end.'; return; }
+      f.classList.add('loading');
+      try { await q(sb.rpc('add_missed_shift', { p_site_no: +d.get('site'), p_start: t[0].toISOString(), p_end: t[1].toISOString(), p_crew: crew, p_note: (d.get('note') || '').trim() || null, p_company: co() })); toast('Shift added ✓ (marked M)', 'good'); location.hash = '#/emp/shifts'; }
+      catch (e2) { err.textContent = errMsg(e2); } finally { f.classList.remove('loading'); }
     });
   }
 
@@ -232,6 +272,7 @@
     const v = p[0] || 'clock';
     if (v === 'shifts') app.innerHTML = shiftsView();
     else if (v === 'edit') { app.innerHTML = editView(p[1]); bindEdit(app, p[1]); }
+    else if (v === 'add') { app.innerHTML = addView(); bindAdd(app); }
     else if (v === 'profile') { app.innerHTML = profileView(); app.querySelector('[data-act="chnick"]').addEventListener('click', changeNickname); }
     else { app.innerHTML = clockView(); bindClock(app); }
   };

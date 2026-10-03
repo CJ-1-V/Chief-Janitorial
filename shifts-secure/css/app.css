@@ -114,3 +114,79 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 .sub-brand .logo{height:32px}.sub-brand .sb-line{font-style:normal;font-size:13px;color:var(--muted);line-height:1.35}.sub-brand .sb-line b{font-size:13px;color:#3f6b1d}
 [data-theme=dark] .sub-brand .sb-line b{color:#b9dc8f}
 .pick-btn{padding-top:42px}.pick-cj .logo{height:48px}
+/* 011: delete / remove / missed shift */
+.btn.danger{background:#b91c1c;border-color:#b91c1c;color:#fff}
+.btn.danger:hover:not(:disabled){background:#991b1b;border-color:#991b1b}
+.btn.danger-ghost{background:transparent;border-color:#fca5a5;color:#b91c1c}
+.btn.danger-ghost:hover:not(:disabled){background:#fee2e2}
+.flag.added{background:#e0e7ff;color:#3730a3}
+label.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.bulkbar{display:flex;align-items:center;gap:10px;margin:6px 0}
+#mv select[size]{min-height:150px}
+/* ===== (g) admin on phones: mobile-first, tested at 390 px ===== */
+.adm-tabs,.more-sheet,.actbtn,.mob-only{display:none}
+.seg.mob-only{display:none}
+.stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 14px}
+.stat-row .st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0;display:flex;flex-direction:column;justify-content:center}
+.stat-row .st b{display:block;font-size:22px;line-height:1.1}.stat-row .st span{font-size:12px;color:var(--muted);font-weight:600}
+.stat-row .st.warn b{color:#b45309}
+@media screen and (max-width:760px){
+  html,body{overflow-x:hidden}
+  .mob-only{display:initial}label.mob-only{display:flex;flex-direction:column}.seg.mob-only{display:flex}.desk-only{display:none!important}
+  .adm-main{padding:12px 12px 96px}
+  .adm-top-in{padding:8px 12px;gap:6px}.adm-nav,.adm-top .topbar-r .who,.adm-top .topbar-r .btn,.adm-top .coswitch{display:none!important}
+  .co-band{font-size:13px;padding:6px 12px}
+  .page-h{flex-wrap:wrap;gap:8px}.page-h h1{font-size:22px}
+  .panel{padding:12px;border-radius:14px}
+  .stat-row{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.stat-row .st{padding:8px 6px;text-align:center}.stat-row .st b{font-size:18px}.stat-row .st span{font-size:11px;line-height:1.2}
+  .stats{grid-template-columns:1fr 1fr!important}
+  /* 44 px tap targets */
+  .adm .btn,.adm select,.adm input:not([type=checkbox]):not([type=radio]),.adm textarea,.modal .btn,.modal select,.modal input:not([type=checkbox]){min-height:44px;font-size:16px}
+  .adm .btn.small{min-height:44px;padding:8px 14px;font-size:15px}
+  .adm .linkbtn,.adm .iconbtn{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}
+  .adm input[type=checkbox]{width:24px;height:24px}
+  label.chk{min-height:44px}
+  .filters.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}.filters.form-row label{margin:0}.filters.form-row>span.muted{grid-column:1/-1}
+  .filters.form-row select,.filters.form-row input{width:100%}
+  /* tables -> stacked cards */
+  table.tbl.cards,table.tbl.cards tbody,table.tbl.cards tr,table.tbl.cards td{display:block;width:100%}
+  table.tbl.cards tr:has(> th){display:none!important}
+  table.tbl.cards tr{position:relative;display:grid!important;grid-template-columns:1fr 1fr;gap:6px 12px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 10px;padding:12px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+  table.tbl.cards tr.solo{display:block!important}
+  table.tbl.cards tr.solo{border:0;box-shadow:none;background:none}
+  table.tbl.cards td{border:0;padding:0;display:block;text-align:left!important;min-height:0;min-width:0;overflow-wrap:anywhere;font-size:15px}
+  table.tbl.cards td[data-label]::before{content:attr(data-label);display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin-bottom:1px}
+  table.tbl.cards td:has(.cochip):not([data-label]){grid-column:1/-1}
+  table.tbl.cards td.wide,table.tbl.cards td.small{grid-column:1/-1}
+  table.tbl.cards td.empty-cell{display:none}
+  table.tbl.cards td.sel{position:absolute;top:8px;right:10px;width:auto;padding:0}
+  table.tbl.cards td.sel input{width:28px;height:28px}
+  table.tbl.cards td.act{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;padding-top:10px;border-top:1px solid var(--line)}
+  table.tbl.cards td.act>*{flex:1 1 calc(50% - 8px)}
+  table.tbl.cards td.act .actbtn{display:block;flex:1 1 100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--soft);font-weight:700;font-size:16px;color:inherit}
+  table.tbl.cards tr:not(.open) td.act:has(.actbtn)>*:not(.actbtn):not(.btn.primary){display:none}
+  table.tbl.cards td.act:has(.actbtn) .btn.primary{order:-1;flex:1 1 100%}
+  table.tbl.cards tr:not(.open) td.act .actbtn{flex:1 1 100%}
+  table.tbl.cards tr.open td.act .actbtn{order:9}
+  /* bottom tab bar */
+  .adm-tabs{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--card);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom));box-shadow:0 -4px 14px rgba(15,23,42,.08)}
+  .adm-tabs a,.adm-tabs button{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11.5px;font-weight:700;color:var(--muted);text-decoration:none;background:none;border:0;border-radius:10px;position:relative;font-family:inherit}
+  .adm-tabs .ti{font-size:20px;line-height:1}
+  .adm-tabs .on{color:var(--us);background:var(--soft)}
+  [data-theme=dark] .adm-tabs .on{color:var(--gold)}
+  .adm-tabs .count{position:absolute;top:4px;right:calc(50% - 22px);background:#dc2626;color:#fff;border-radius:9px;font-size:10px;padding:0 5px}
+  .more-sheet:not([hidden]){display:flex;position:fixed;inset:0;z-index:120;background:rgba(15,23,42,.45);align-items:flex-end}
+  .more-in{background:var(--card);width:100%;border-radius:18px 18px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px}
+  .more-who{font-weight:700;padding:4px 6px 8px;color:var(--muted)}
+  .more-item{min-height:52px;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;background:var(--soft);border:0;font-size:16px;font-weight:600;color:inherit;text-decoration:none;font-family:inherit;text-align:left}
+  .more-item select{margin-left:auto;min-height:40px}
+  /* modals = bottom sheets */
+  .modal-wrap{align-items:flex-end;padding:0}
+  .modal{width:100%;max-width:none!important;border-radius:18px 18px 0 0;max-height:92vh;overflow:auto;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .modal .row-between,.modal .row-end{gap:10px}.modal .row-between>.btn,.modal .row-end>.btn{flex:1}
+  .bulkbar{position:sticky;top:0;z-index:6;background:var(--bg,#f5f6fa);padding:6px 0;flex-direction:column;align-items:stretch;gap:4px}.bulkbar .btn{width:100%}
+  /* print sheets (timesheet / invoice) stay paper-shaped: they scroll inside their own box, never the page */
+  .sheet,.sheet-wrap{max-width:100%;overflow-x:auto}
+  .tbl:not(.cards){display:block;overflow-x:auto}
+  .seg{display:flex;gap:6px;margin:0 0 12px}.seg a{flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--soft);font-weight:700;text-decoration:none;color:inherit}.seg a.on{background:var(--us);color:#fff}
+}
