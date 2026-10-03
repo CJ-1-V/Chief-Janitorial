@@ -4961,3 +4961,203 @@ button {
     background-repeat: no-repeat;
     margin-right: 10px;
 }
+
+/* Quote form */
+
+#quote {
+    scroll-margin-top: 120px;
+}
+.quote-section {
+    padding: 50px 0 110px;
+}
+.quote-form {
+    background-color: #fff;
+    border: 1px solid rgba(89, 86, 232, 0.149);
+    border-radius: 7px;
+    padding: 40px 35px 25px;
+}
+.quote-form .quote-note {
+    font-size: 16px;
+    line-height: 26px;
+    margin-bottom: 25px;
+}
+.quote-form .form_group {
+    margin-bottom: 22px;
+}
+.quote-form label,
+.quote-form legend {
+    display: block;
+    width: 100%;
+    font-weight: 700;
+    color: var(--heading);
+    font-size: 16px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    padding: 0;
+}
+.quote-form .req {
+    color: var(--blue-dark);
+}
+.quote-form .quote-optional {
+    font-weight: 500;
+    color: var(--text-color);
+}
+.quote-form fieldset {
+    border: 0;
+    margin: 0 0 22px;
+    padding: 0;
+    min-width: 0;
+}
+.quote-form .form_control {
+    display: block;
+    width: 100%;
+    height: 60px;
+    border-radius: 5px;
+    padding: 0 20px;
+    font-family: var(--dmsans);
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--heading);
+    background-color: #fff;
+    border: 1px solid rgba(88, 86, 233, 0.2);
+    -webkit-appearance: none;
+    appearance: none;
+}
+.quote-form textarea.form_control {
+    height: 140px;
+    padding: 16px 20px;
+    resize: vertical;
+}
+.quote-form select.form_control {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%235956e9' d='M1.41.59 6 5.17 10.59.59 12 2 6 8 0 2z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    padding-right: 46px;
+}
+.quote-form input[type="date"].form_control {
+    min-height: 60px;
+}
+.quote-form .form_control:focus {
+    border-color: var(--blue-dark);
+    box-shadow: 0 0 0 3px rgba(89, 86, 233, 0.18);
+    outline: none;
+}
+.quote-form .form_control.is-invalid {
+    border-color: #c0392b;
+}
+.quote-form .form_control.is-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15);
+}
+.quote-form .quote-error {
+    color: #c0392b;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 500;
+    margin: 6px 0 0;
+    min-height: 0;
+}
+.quote-form .quote-error:empty {
+    display: none;
+}
+.quote-form .quote-summary:empty {
+    margin: 0;
+}
+.quote-form .quote-summary {
+    color: #c0392b;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 18px;
+}
+.quote-checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 18px;
+    margin: 0;
+    padding: 16px 18px;
+    border: 1px solid rgba(88, 86, 233, 0.2);
+    border-radius: 5px;
+}
+.quote-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0;
+    font-weight: 500;
+    color: var(--heading);
+    font-size: 16px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.quote-check input {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin-top: 2px;
+    accent-color: var(--blue-dark);
+}
+.quote-check input:focus-visible {
+    outline: 2px solid var(--blue-dark);
+    outline-offset: 2px;
+}
+.quote-form .main-btn {
+    border: none;
+    cursor: pointer;
+    min-height: 52px;
+    margin-top: 6px;
+}
+.quote-form .main-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+.quote-hp {
+    display: none;
+}
+.quote-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+.thanks-section {
+    padding: 40px 0 130px;
+}
+.thanks-section .thanks-card {
+    background-color: #fff;
+    border: 1px solid rgba(89, 86, 232, 0.149);
+    border-radius: 7px;
+    padding: 50px 40px;
+}
+.thanks-section .thanks-card p {
+    font-size: 18px;
+    line-height: 32px;
+    margin-bottom: 18px;
+}
+.thanks-section .thanks-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 15px;
+    margin-top: 28px;
+}
+@media (max-width: 767px) {
+    .quote-form {
+        padding: 28px 18px 18px;
+    }
+    .quote-checks {
+        grid-template-columns: 1fr;
+    }
+    .quote-form .main-btn,
+    .thanks-section .thanks-actions .main-btn {
+        width: 100%;
+    }
+    .thanks-section .thanks-card {
+        padding: 32px 20px;
+    }
+}

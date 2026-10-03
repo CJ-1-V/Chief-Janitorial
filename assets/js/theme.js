@@ -164,7 +164,8 @@
         }
     });
     //===== Nice select js
-    $('select').niceSelect();
+    // Quote-form selects stay native so their labels, validation, and mobile pickers work.
+    $('select').not('#quote-form select').niceSelect();
 
     
     //===== Slick slider js
