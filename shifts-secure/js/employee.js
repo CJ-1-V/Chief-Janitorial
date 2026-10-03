@@ -11,7 +11,9 @@
     const uid = ST.me.id;
     const [sites, shifts, edits] = await Promise.all([
       q(sb.from('employee_sites').select('id, site_no, site_code, label, lat, lng, radius_m, company_id').order('site_no')),
-      q(sb.from('shifts').select('id, site_id, clock_in, clock_out, recorded_in, recorded_out, crew_count, in_note, out_note, loc_status, locked, entered_by, entered_at').eq('user_id', uid).order('clock_in', { ascending: false }).limit(200)),
+      (async () => { const cols = 'id, site_id, clock_in, clock_out, recorded_in, recorded_out, crew_count, in_note, out_note, loc_status, locked, entered_by, entered_at';
+        const sel = (c) => q(sb.from('shifts').select(c).eq('user_id', uid).order('clock_in', { ascending: false }).limit(200));
+        try { return await sel(cols + ', chosen_in, chosen_out'); } catch (e) { return sel(cols); } })(),  // chosen_* arrive with migration 012
       q(sb.from('shift_edits').select('shift_id, field, by_kind, at')),
     ]);
     const num = {}; const codeOf = {}; sites.forEach((s) => { num[s.id] = s.site_no; if (s.site_code) codeOf[s.site_no] = s.site_code; });
@@ -29,7 +31,7 @@
     const open = cache.shifts.find((s) => !s.clock_out);
     const missed = open && hours(open.clock_in, new Date().toISOString()) > 14;
     return `<div class="emp co-${co()}">
-      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r"><button class="btn small ghost" data-act="switchco" title="Switch company" aria-label="Switch company">⇄ Switch</button>${ST.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(ST.who(me))}">${esc(ST.initials(ST.who(me)))}</a></div></header>
+      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r"><button class="btn small ghost" data-act="switchco" title="Switch company" aria-label="Switch company">⇄ Switch</button>${ST.themeBtn()}<a class="avatar ava-link" href="#/emp/profile" title="${esc(ST.who(me))}">${ST.avatar(me, 'hd')}</a></div></header>
       <main class="emp-main">${missed ? `<div class="reminder"><span class="ri">🔔</span><div>You're still clocked in at ${siteLabel(open.site_no)} since ${fmtDate(open.clock_in)} ${fmtTime(open.clock_in)}. Please clock out, or fix your time in My shifts.</div></div>` : ''}${body}</main>
       <nav class="tabbar">
         <a href="#/emp/clock" class="${active === 'clock' ? 'on' : ''}"><span class="ti">⏱</span>Clock</a>
@@ -57,6 +59,21 @@
   const crewPicker = (n) => `<div class="crew-box"><div class="crew-q">How many workers were at ${siteLabel(n)} this shift? <span class="req">*</span></div>
     <div class="muted small">Count everyone working there with you, including yourself (1–50).</div>
     <div class="stepper"><button type="button" class="step" data-step="-1" aria-label="One less">−</button><input id="crew" type="number" inputmode="numeric" min="1" max="50" placeholder="?" aria-label="Workers on site"><button type="button" class="step" data-step="1" aria-label="One more">+</button></div></div>`;
+  // 012: quarter-hour start/finish picker (owner: "quarter, half an hour, three-quarter and full")
+  const tIn = (s) => s.chosen_in || s.clock_in; const tOut = (s) => (s.clock_out ? s.chosen_out || s.clock_out : null);
+  const QMS = 900000;
+  const quarterOpts = (after) => { const now = Date.now(); const q0 = Math.round(now / QMS) * QMS; const c = [];
+    for (let k = -4; k <= 4; k++) { const t = q0 + k * QMS; if (Math.abs(t - now) <= 3600000 && (!after || t > after)) c.push(t); }
+    const four = c.sort((a, b) => Math.abs(a - now) - Math.abs(b - now)).slice(0, 4).sort((a, b) => a - b);
+    const pre = four.includes(q0) ? q0 : four.reduce((best, t) => (Math.abs(t - now) < Math.abs(best - now) ? t : best), four[0]);
+    return { four, pre }; };
+  const qName = (t) => ({ 0: 'full hour', 15: 'quarter', 30: 'half', 45: 'three-quarter' })[new Date(t).getUTCMinutes()] || '';
+  const quarterPicker = (id, label, after) => { const { four, pre } = quarterOpts(after);
+    return `<div class="qpick-box"><div class="label">${label} <span class="req">*</span></div><div class="qpick" id="${id}" role="radiogroup" aria-label="${esc(label)}">${four.map((t) => `<button type="button" role="radio" class="qopt ${t === pre ? 'sel' : ''}" aria-checked="${t === pre}" data-t="${new Date(t).toISOString()}"><b>${fmtTime(new Date(t).toISOString())}</b><small>${qName(t)}</small></button>`).join('')}</div><div class="muted small">Your real clock time is saved too.</div></div>`; };
+  const bindQuarter = (root, id) => { const box = root.querySelector('#' + id); if (!box) return () => null;
+    box.querySelectorAll('.qopt').forEach((b) => b.addEventListener('click', () => { box.querySelectorAll('.qopt').forEach((x) => { x.classList.toggle('sel', x === b); x.setAttribute('aria-checked', String(x === b)); }); }));
+    return () => { const x = box.querySelector('.qopt.sel'); return x ? x.dataset.t : null; }; };
+  const missingFn = (e) => /Could not find the function|schema cache|does not exist/i.test(String((e && e.message) || e));
   const validCrew = (v) => /^\d+$/.test(String(v || '').trim()) && +v >= 1 && +v <= 50;
   function bindCrew(root, cb) {
     const inp = root.querySelector('#crew'); if (!inp) return;
@@ -80,12 +97,13 @@
         <div class="card clock-card on">
           <div class="status-pill on">● On shift</div>
           <div class="site-big">${siteLabel(open.site_no)}</div>
-          <div class="since">Clocked in at <b>${fmtTime(open.clock_in)}</b>${mBadge(open.inEdited)}</div>
+          <div class="since">Started at <b>${fmtTime(tIn(open))}</b>${mBadge(open.inEdited)}${open.chosen_in && open.chosen_in !== open.clock_in ? ` <span class="muted small">(clocked in ${fmtTime(open.clock_in)})</span>` : ''}</div>
           <div class="elapsed" data-elapsed="${open.clock_in}">${fmtDur(hours(open.clock_in, now))}</div>
           ${hours(open.clock_in, now) > 14 ? '<div class="warn">You have been clocked in for over 14 hours. Did you forget to clock out? Use <b>Edit times</b>.</div>' : ''}
           ${open.loc_status === 'off' ? '<div class="warn sm">Your clock-in location was away from the site. The office will review it.</div>' : ''}
           ${open.in_note ? `<div class="note">📝 ${esc(open.in_note)}</div>` : ''}
           ${crewPicker(open.site_no)}
+          ${quarterPicker('qOut', 'What time did you finish?', new Date(tIn(open)).getTime())}
           <label class="field outnote"><span>Clock-out note (optional) <em id="onCnt">0/120</em></span><textarea id="outNote" maxlength="120" rows="2" placeholder="e.g. finished early, supplies low, gate left open"></textarea><small class="muted">Saved when you clock out. You can't change it afterwards.</small></label>
           <button class="btn danger huge" data-act="clockout" disabled>Enter workers on site to clock out</button>
           <a class="btn ghost" href="#/emp/edit/${open.id}">Wrong start time? Edit times</a>
@@ -107,11 +125,12 @@
         <div class="label">Location check</div>
         <div class="privacy small">${PRIVACY}</div>
         <label class="field"><span>Notes (optional) <em id="cnt">0/120</em></span><textarea id="notes" maxlength="120" rows="2" placeholder="e.g. ride partner"></textarea></label>
+        ${quarterPicker('qIn', 'What time did you start?')}
         <div class="sticky-cta"><button class="btn primary huge" id="clockinBtn" disabled>Pick a site to clock in</button></div>
       </div>`);
   }
   function bindClock(root) {
-    let sel = null; const btn = root.querySelector('#clockinBtn');
+    let sel = null; const btn = root.querySelector('#clockinBtn'); const qIn = bindQuarter(root, 'qIn'); const qOut = bindQuarter(root, 'qOut');
     root.querySelectorAll('.site-tile').forEach((t) => t.addEventListener('click', () => { sel = +t.dataset.num; root.querySelectorAll('.site-tile').forEach((x) => x.classList.toggle('sel', +x.dataset.num === sel)); btn.disabled = false; btn.textContent = 'Clock in at ' + siteLabel(sel); }));
     const ss = root.querySelector('#siteSearch');
     ss && ss.addEventListener('input', () => { const v = ss.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); const d = v.replace(/\D/g, ''); root.querySelectorAll('#allTiles .site-tile').forEach((t) => { const ok = !v || t.dataset.code.includes(v) || (d && d === v && t.dataset.num.startsWith(d)); t.style.display = ok ? '' : 'none'; }); });
@@ -121,7 +140,8 @@
       const site = cache.sites.find((s) => s.site_no === sel);
       const pos = site && site.lat != null ? await getPosition() : null; // GPS only when the site has a GPS point
       try {
-        await q(sb.rpc('clock_in', { p_site_no: sel, p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null, p_note: root.querySelector('#notes').value.trim() || null }));
+        const args = { p_site_no: sel, p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null, p_note: root.querySelector('#notes').value.trim() || null };
+        try { await q(sb.rpc('clock_in_q', { ...args, p_chosen: qIn() })); } catch (e1) { if (!missingFn(e1)) throw e1; await q(sb.rpc('clock_in', args)); }  // before migration 012
         toast('Clocked in ✓', 'good'); ST.render();
       } catch (e) { toast(errMsg(e), 'bad'); btn.disabled = false; btn.textContent = 'Clock in at ' + siteLabel(sel); }
     });
@@ -129,9 +149,13 @@
     bindCrew(root, (n) => { crew = n; if (cob) { cob.disabled = !n; cob.textContent = n ? 'Clock out' : 'Enter workers on site to clock out'; } });
     cob && cob.addEventListener('click', () => {
       const note = (root.querySelector('#outNote').value || '').trim();
-      modal(`<h2>Clock out now?</h2><p>Your shift will end at ${fmtTime(new Date().toISOString())}.<br>Workers on site: <b>${crew}</b>${note ? '<br>Note: “' + esc(note) + '” <span class="muted small">(can\'t be changed later)</span>' : ''}</p><div class="row-end"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="yes">Clock out</button></div>`, (w, close) => {
+      const fin = qOut();
+      if (!fin) { toast('Pick the time you finished.', 'bad'); return; }
+      modal(`<h2>Clock out now?</h2><p>Finish time: <b>${fmtTime(fin)}</b> <span class="muted small">(real time ${fmtTime(new Date().toISOString())} is saved too)</span><br>Workers on site: <b>${crew}</b>${note ? '<br>Note: “' + esc(note) + '” <span class="muted small">(can\'t be changed later)</span>' : ''}</p><div class="row-end"><button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="yes">Clock out</button></div>`, (w, close) => {
         w.querySelector('#yes').addEventListener('click', async () => {
-          try { await q(sb.rpc('clock_out', { p_crew: crew, p_note: note || null })); close(); toast('Clocked out ✓', 'good'); ST.render(); }
+          try {
+            try { await q(sb.rpc('clock_out_q', { p_crew: crew, p_chosen: fin, p_note: note || null })); } catch (e1) { if (!missingFn(e1)) throw e1; await q(sb.rpc('clock_out', { p_crew: crew, p_note: note || null })); }
+            close(); toast('Clocked out ✓', 'good'); ST.render(); }
           catch (e) { toast(errMsg(e), 'bad'); }
         });
       });
@@ -141,7 +165,7 @@
   // ---------- My shifts: Worked / Break / hrs ----------
   function payDays(shifts) {
     const m = {};
-    shifts.filter((s) => s.clock_out).forEach((s) => { const k = T().dayKey(s.clock_in) + '|' + s.site_no; (m[k] = m[k] || { day: T().dayKey(s.clock_in), site_no: s.site_no, worked: 0, ids: [] }); m[k].worked += hours(s.clock_in, s.clock_out); m[k].ids.push(s.id); });
+    shifts.filter((s) => s.clock_out).forEach((s) => { const k = T().dayKey(s.clock_in) + '|' + s.site_no; (m[k] = m[k] || { day: T().dayKey(s.clock_in), site_no: s.site_no, worked: 0, ids: [] }); m[k].worked += hours(tIn(s), tOut(s)); m[k].ids.push(s.id); });
     return Object.values(m).map((d) => ({ ...d, unpaid: unpaidBreak(d.worked), paid: d.worked - unpaidBreak(d.worked) })).sort((a, b) => b.day.localeCompare(a.day));
   }
   function shiftsView() {
@@ -153,7 +177,7 @@
     const edLine = (s) => { const p = []; if (s.entered_at) p.push(`shift added by you on ${fmtDate(s.entered_at)} ${fmtTime(s.entered_at)}`);
       s.edits.filter((e) => !s.entered_at || new Date(e.at) - new Date(s.entered_at) > 5000).forEach((e) => p.push(`${e.field.replace('_', '-')} changed by ${e.by_kind === 'worker' ? 'you' : 'the office'} on ${fmtDate(e.at)}`)); return p.length ? `<div class="edited-line"><span class="mbadge sm">M</span> ${esc(p.join(' · '))}</div>` : ''; };
     const punch = (s) => { const open = !s.clock_out; const missed = open && hours(s.clock_in, now) > 14;
-      return `<div class="punch"><div class="times"><div><span class="tl">In</span><b>${fmtTime(s.clock_in)}</b>${mBadge(s.inEdited)}</div><span class="arrow">→</span><div><span class="tl">Out</span><b>${open ? '—' : fmtTime(s.clock_out)}</b>${mBadge(s.outEdited)}</div>${canEdit(s) ? `<a class="btn small edit" href="#/emp/edit/${s.id}">✎ Edit</a>` : ''}</div>
+      return `<div class="punch"><div class="times"><div><span class="tl">In</span><b>${fmtTime(tIn(s))}</b>${mBadge(s.inEdited)}</div><span class="arrow">→</span><div><span class="tl">Out</span><b>${open ? '—' : fmtTime(tOut(s))}</b>${mBadge(s.outEdited)}</div>${canEdit(s) ? `<a class="btn small edit" href="#/emp/edit/${s.id}">✎ Edit</a>` : ''}</div>
         ${edLine(s)}${missed ? '<div class="warn sm">Forgot to clock out? Tap Edit to add your finish time.</div>' : ''}
         ${s.in_note ? `<div class="note sm">📝 ${esc(s.in_note)}</div>` : ''}${s.out_note ? `<div class="note sm outnote-ro">🗒 Clock-out note: “${esc(s.out_note)}” <span class="lock" title="Saved at clock-out — can't be changed">🔒</span></div>` : ''}</div>`; };
     const cards = [];
@@ -200,6 +224,8 @@
 
   // Add a missed shift (migration 011, add_missed_shift): own account, picked company's active sites, last 14 days.
   // The server re-checks everything (future, > 14 days, end before start, > 16 h, overlaps, crew 1-50).
+  const qTimes = (def) => { const o = []; for (let m = 0; m < 1440; m += 15) { const hh = String(Math.floor(m / 60)).padStart(2, '0'); const mm = String(m % 60).padStart(2, '0'); const v = `${hh}:${mm}`; const h12 = (Math.floor(m / 60) % 12) || 12;
+    o.push(`<option value="${v}" ${v === def ? 'selected' : ''}>${h12}:${mm} ${m < 720 ? 'AM' : 'PM'}</option>`); } return o.join(''); };
   function addView() {
     const tk = T().todayKey(); const min = T().addDays(tk, -C.editDays);
     const opts = cache.sites.map((s) => `<option value="${s.site_no}">${esc(siteLabel(s.site_no))}</option>`).join('') + (cache.unknown ? `<option value="${cache.unknown.site_no}">Unknown site (not in the list)</option>` : '');
@@ -208,8 +234,9 @@
         <form id="addForm" class="stack">
           <label class="field"><span>Site <span class="req">*</span></span><select name="site" required><option value="">Pick a site…</option>${opts}</select></label>
           <label class="field"><span>Day <span class="req">*</span></span><input type="date" name="day" min="${min}" max="${tk}" value="${T().addDays(tk, -1)}" required></label>
-          <div class="row-2"><label class="field"><span>Start <span class="req">*</span></span><input type="time" name="start" value="07:00" required></label>
-            <label class="field"><span>End <span class="req">*</span></span><input type="time" name="end" value="15:30" required></label></div>
+          <div class="row-2"><label class="field"><span>Start <span class="req">*</span></span><select name="start" required>${qTimes('07:00')}</select></label>
+            <label class="field"><span>End <span class="req">*</span></span><select name="end" required>${qTimes('15:30')}</select></label></div>
+          <div class="muted small">Times go in quarter hours (:00, :15, :30, :45).</div>
           <div class="muted small" id="durLine"></div>
           ${crewPicker(null).replace(/How many workers were at .*? this shift\?/, 'How many workers were on site this shift?')}
           <label class="field"><span>Note (optional) <em id="anCnt">0/120</em></span><textarea name="note" id="addNote" maxlength="120" rows="2" placeholder="e.g. phone battery died"></textarea></label>
