@@ -1,5 +1,6 @@
 /* EMPLOYEE screens (mobile-first).
  * PRIVACY RULE: this file may only use CJ.api.emp.* which exposes site NUMBERS only.
+ * Pay view (owner confirmed Oct 3 9:14 AM): Worked / Unpaid break / Paid only — never billable hours, bill adjustments, the 5 h billing minimum, money or farm names.
  * Never reference CJ.api.admin or any client/farm field here. */
 (function () {
   const CJ = (window.CJ = window.CJ || {});
@@ -180,11 +181,13 @@
   }
   function shiftsView(uid) {
     const all = E().shifts(uid); const now = new Date().toISOString(); const ws = E().weekSummary(uid);
-    const card = (s) => {
+    // Pay view per day per site (owner confirmed Oct 3 9:14 AM): Worked, Unpaid break, Paid. Nothing farm-side is shown.
+    const days = E().payDays(uid); const dayOf = {}; days.forEach((d) => d.shiftIds.forEach((id) => (dayOf[id] = d)));
+    const brk = (h) => (h > 0 ? '−' + fmtDur(h) : 'none');
+    const payline = (d) => `<div class="payline"><div><small>Worked</small><b>${fmtDur(d.worked)}</b></div><div><small>Unpaid break</small><b class="brk">${brk(d.unpaidBreak)}</b></div><div><small>Paid</small><b class="pd">${fmtDur(d.paid)}</b></div></div>`;
+    const punch = (s) => {
       const open = !s.clockOut; const missed = open && hours(s.clockIn, now) > 14;
-      return `<div class="shift ${missed ? 'missed' : ''}">
-        <div class="shift-top"><div><div class="shift-date">${fmtDate(s.clockIn)}</div><div class="shift-site">${siteLabel(s.siteNumber)}</div></div>
-          <div class="shift-hrs">${open ? (missed ? '<span class="tag bad">No clock-out</span>' : '<span class="tag on">On shift</span>') : fmtDur(hours(s.clockIn, s.clockOut))}</div></div>
+      return `<div class="punch">
         <div class="times"><div><span class="tl">In</span><b>${fmtTime(s.clockIn)}</b>${mBadge(s.inEdited)}</div><span class="arrow">→</span><div><span class="tl">Out</span><b>${open ? '—' : fmtTime(s.clockOut)}</b>${mBadge(s.outEdited)}</div>
           ${E().canEdit(uid, s.id) ? `<a class="btn small edit" href="#/emp/edit/${s.id}">✎ Edit</a>` : ''}</div>
         ${editedLine(s)}
@@ -193,11 +196,23 @@
         ${s.outNote ? `<div class="note sm outnote-ro">🗒 Clock-out note: “${esc(s.outNote)}” <span class="lock" title="Saved at clock-out — can't be changed">🔒</span></div>` : ''}
       </div>`;
     };
+    const seen = new Set(); const cards = [];
+    all.slice(0, 20).forEach((s) => {
+      const d = dayOf[s.id];
+      if (!d) { const missed = hours(s.clockIn, now) > 14; cards.push(`<div class="shift ${missed ? 'missed' : ''}"><div class="shift-top"><div><div class="shift-date">${fmtDate(s.clockIn)}</div><div class="shift-site">${siteLabel(s.siteNumber)}</div></div>
+        <div class="shift-hrs">${missed ? '<span class="tag bad">No clock-out</span>' : '<span class="tag on">On shift</span>'}</div></div>${punch(s)}</div>`); return; }
+      const key = d.day + '|' + d.siteNumber; if (seen.has(key)) return; seen.add(key);
+      const ps = all.filter((x) => d.shiftIds.includes(x.id)).sort((a, b) => a.clockIn.localeCompare(b.clockIn));
+      cards.push(`<div class="shift"><div class="shift-top"><div><div class="shift-date">${fmtDate(ps[0].clockIn)}</div><div class="shift-site">${siteLabel(d.siteNumber)}${ps.length > 1 ? ' <span class="tag">' + ps.length + ' punches · added together</span>' : ''}</div></div></div>
+        ${payline(d)}${ps.map(punch).join('')}</div>`);
+    });
+    const wk = (l, w) => `<div><span>${l} <em>${w.shifts} shift${w.shifts === 1 ? '' : 's'}</em></span><div class="wp3"><div><small>Worked</small><b>${fmtDur(w.worked)}</b></div><div><small>Unpaid break</small><b class="brk">${brk(w.unpaidBreak)}</b></div><div><small>Paid</small><b class="pd">${fmtDur(w.paid)}</b></div></div></div>`;
     return shell(uid, 'shifts', `
       <h1 class="h1">My shifts</h1>
-      <div class="summary">${[['This week', ws.thisWeek], ['Last week', ws.lastWeek]].map(([l, w]) => `<div><span>${l} <em>${w.shifts} shifts</em></span><div class="wp"><div><small>Hours worked</small><b>${fmtDur(w.worked)}</b></div></div></div>`).join('')}</div>
+      <div class="summary">${wk('This week', ws.thisWeek)}${wk('Last week', ws.lastWeek)}</div>
+      <div class="rule-line">ℹ ${esc(E().breakRule())}</div>
       <div class="legend"><span class="mbadge sm">M</span> = time changed by hand (the original time is kept on record)</div>
-      <div class="shift-list">${all.slice(0, 20).map(card).join('') || '<div class="empty">No shifts yet.</div>'}</div>
+      <div class="shift-list">${cards.join('') || '<div class="empty">No shifts yet.</div>'}</div>
       <p class="muted small center">You can fix your own times for shifts in the last ${E().editWindowDays()} days. For older shifts, ask the office.</p>`);
   }
 

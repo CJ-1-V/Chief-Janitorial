@@ -90,12 +90,21 @@
     },
     // Weekly WORKED hours only (Atlantic Mon–Sun). Owner rule: employees never see paid hours, deductions,
     // billable hours or site/farm info — so none of those are computed or returned here.
+    // Employee pay view (owner CONFIRMED Oct 3 9:14 AM): Worked, Unpaid break, Paid — per day per site, split punches combined.
+    // Projection: NO billable hours, bill adjustment, 5 h minimum, money or farm fields.
+    payDays(uid) {
+      return CJ.rules.groupDays(db.shifts.filter((s) => s.userId === uid && s.clockOut)).map((g) => {
+        const r = CJ.rules.apply(g.worked); const st = site(g.siteId);
+        return { day: g.day, siteNumber: st ? st.number : null, shiftIds: g.shifts.map((x) => x.id), worked: r.worked, unpaidBreak: r.payDed, paid: r.paid };
+      });
+    },
     weekSummary(uid) {
-      const done = db.shifts.filter((s) => s.userId === uid && s.clockOut);
+      const days = emp.payDays(uid);
       const ws = CJ.tz.weekStart(CJ.tz.todayKey());
-      const sum = (w) => { const d = done.filter((s) => CJ.rules.inWeek(CJ.tz.dayKey(s.clockIn), w)); return { worked: d.reduce((a, s) => a + (new Date(s.clockOut) - new Date(s.clockIn)) / 3600000, 0), shifts: d.length }; };
+      const sum = (w) => { const d = days.filter((x) => CJ.rules.inWeek(x.day, w)); return { worked: d.reduce((a, x) => a + x.worked, 0), unpaidBreak: d.reduce((a, x) => a + x.unpaidBreak, 0), paid: d.reduce((a, x) => a + x.paid, 0), shifts: d.reduce((a, x) => a + x.shiftIds.length, 0), days: d.length }; };
       return { thisWeek: sum(ws), lastWeek: sum(CJ.tz.addDays(ws, -7)) };
     },
+    breakRule() { return 'Unpaid break: shifts over 5 h have 0.5 h unpaid, 8 h or more have 1 h unpaid — worked out once per day per site (split shifts are added together).'; },
     editWindowDays() { return db.settings.empEditWindowDays; },
     clockIn(uid, siteId, notes, locMode) {
       const u = user(uid);
