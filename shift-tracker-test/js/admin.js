@@ -3,7 +3,9 @@
   const CJ = (window.CJ = window.CJ || {});
   const A = () => CJ.api.admin;
   const { esc, fmtTime, fmtDate, fmtDT, fmtDur, hours, mBadge, toLocalInput, ago } = CJ;
-  const siteCell = (s) => (s ? `<div class="sitecell"><b>Site ${s.number}</b><span>${esc(s.clientName)}</span></div>` : '—');
+  const both = () => CJ.api.scope().length > 1;
+  const coChip = (x) => { const c = CJ.api.coOf(x); return `<span class="cochip co-${c}" title="${CJ.F.COMPANIES[c].name}">${CJ.F.COMPANIES[c].short}</span>`; };
+  const siteCell = (s) => (s ? `<div class="sitecell"><b>${both() ? coChip(s) + ' ' : ''}Site ${s.number}</b><span>${esc(s.clientName)}</span></div>` : '—');
   const siteText = (s) => (s ? `Site ${s.number} — ${s.clientName}` : '');
   const uname = (id) => { const u = A().user(id); return u ? u.name : id; };
   const FL = { clockIn: 'clock-in', clockOut: 'clock-out', crewCount: 'workers on site' };
@@ -16,13 +18,19 @@
 
   function shell(active, body) {
     const n = A().pending().length;
+    const a = CJ.api.actor() || {}; const allowed = CJ.api.allowedCompanies(); const sc = CJ.api.scope(); const f = CJ.api.companyFilter();
+    const ROLE = { owner: 'Owner', ops: 'Ops', billing: 'Billing' };
+    const switcher = allowed.length > 1
+      ? `<label class="coswitch" title="Company filter — applies to every admin page"><span>Company</span><select id="coFilter"><option value="all" ${f === 'all' ? 'selected' : ''}>All companies</option><option value="cj" ${f === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${f === 'us' ? 'selected' : ''}>Unscramble</option></select></label>`
+      : `<span class="coswitch fixed co-${allowed[0]}" title="This login only sees ${CJ.F.COMPANIES[allowed[0]].name}">${CJ.F.COMPANIES[allowed[0]].name} only</span>`;
     const link = (k, label, extra) => `<a href="#/admin/${k}" class="${active === k ? 'on' : ''}">${label}${extra || ''}</a>`;
     return `<div class="adm">
       <header class="adm-top"><div class="adm-top-in">
-        <a href="#/admin/dashboard">${CJ.logo()}</a>
+        <a href="#/admin/dashboard">${CJ.logo(sc.length > 1 ? 'both' : sc[0])}</a>
         <nav class="adm-nav">${link('dashboard', 'Dashboard')}${link('shifts', 'Shifts')}${link('schedule', 'Schedule')}${link('employees', 'Employees')}${link('timesheets', 'Timesheets')}${link('invoices', 'Invoices')}${link('incidents', 'Incidents')}${link('reports', 'Reports')}${link('sites', 'Sites')}</nav>
-        <div class="topbar-r"><a class="iconbtn bell" href="#/admin/approvals" title="${n} sign-ups waiting">🔔${n ? `<span class="dot">${n}</span>` : ''}</a>${CJ.themeBtn()}<span class="who">Owner</span><button class="btn small ghost" data-act="logout">Log out</button></div>
+        <div class="topbar-r"><a class="iconbtn bell" href="#/admin/approvals" title="${n} sign-ups waiting">🔔${n ? `<span class="dot">${n}</span>` : ''}</a>${CJ.themeBtn()}${switcher}<span class="who">${esc(a.name || 'Owner')} <em>${ROLE[a.staffRole] || 'Admin'}</em></span><button class="btn small ghost" data-act="logout">Log out</button></div>
       </div></header>
+      ${sc.length === 1 && allowed.length > 1 ? `<div class="co-band co-${sc[0]}">Showing <b>${CJ.F.COMPANIES[sc[0]].name}</b> only · <a href="#" data-cof="all">show all companies</a></div>` : ''}
       <main class="adm-main">${body}</main></div>`;
   }
 
@@ -50,7 +58,7 @@
     const al = A().alerts();
     const mmShift = (c) => A().shifts().find((x) => x.siteId === c.siteId && CJ.tz.dayKey(x.clockIn) === c.day && x.crewCount != null);
     return shell('dashboard', `
-      <h1>${CJ.tz.parts(Date.now()).h < 12 ? 'Good morning' : CJ.tz.parts(Date.now()).h < 18 ? 'Good afternoon' : 'Good evening'}</h1>
+      <h1>${CJ.tz.parts(Date.now()).h < 12 ? 'Good morning' : CJ.tz.parts(Date.now()).h < 18 ? 'Good afternoon' : 'Good evening'} <span class="muted small">· ${CJ.api.scope().map((c) => CJ.F.COMPANIES[c].name).join(' + ')}</span></h1>
       ${pend.length ? `<a class="banner" href="#/admin/approvals"><b>${pend.length} new sign-up${pend.length > 1 ? 's' : ''} waiting for approval</b><span>${pend.map((u) => esc(u.name)).join(', ')} — they can't clock in until you approve.</span><em>Review →</em></a>` : ''}
       ${alertsPanel(al)}
       <div class="stats six">
@@ -86,7 +94,7 @@
       row('bad', '🚫', 'No-shows (no clock-in 15 min after start)', al.noShows.map((x) => li(`<b>${esc(uname(x.sched.userId))}</b> — ${st(x.sched.siteId)}, scheduled ${fmtDate(x.sched.startIso)} ${fmtTime(x.sched.startIso)}–${fmtTime(x.sched.endIso)}`)), '#/admin/schedule'),
       row('warn', '📍', 'Off-site / no-location clock-ins to review', al.offsite.map((s) => li(`<b>${esc(uname(s.userId))}</b> — ${st(s.siteId)}, ${fmtDate(s.clockIn)} ${locBadge(s)}`))),
       row('warn', '👥', 'Crew count mismatches', al.crew.map((c) => li(`${st(c.siteId)} — ${fmtDate(CJ.tz.zoned(c.day, 12, 0).toISOString())} ${crewBadge(c)}`))),
-      row('warn', '⏱', 'Overtime (PEI OT threshold, confirm: 44 h/week)', al.ot.map((x) => li(`<b>${esc(x.user.name)}</b> — ${fmtDur(x.hours)} this week <span class="tag ${x.status === 'over' ? 'bad' : 'warn'}">${x.status === 'over' ? 'Over 44 h' : 'Nearing 44 h'}</span>`)), '#/admin/reports'),
+      row('warn', '⏱', 'Overtime (heads-up at 40 h · flag over 44 h worked/week)', al.ot.map((x) => li(`<b>${esc(x.user.name)}</b> — ${fmtDur(x.hours)} this week <span class="tag ${x.status === 'over' ? 'bad' : 'warn'}">${x.status === 'over' ? 'Over 44 h' : '40 h heads-up'}</span>`)), '#/admin/reports'),
       row('warn', '😴', 'Fatigue: 6+ consecutive days', al.fatigue.map((x) => li(`<b>${esc(x.user.name)}</b> — ${x.days} days in a row`)), '#/admin/reports'),
       row('warn', '🩹', 'Incidents needing WCB follow-up', al.incidents.map((i) => li(`<b>${esc(uname(i.userId))}</b> — ${esc(i.type)}, ${st(i.siteId)}, ${fmtDate(i.at)} · <span class="tag warn">${esc(i.wcbStatus)}</span>`)), '#/admin/incidents'),
       row('info', '✍', 'Days not signed off (since last Monday)', al.unsigned.map((u) => li(`${st(u.siteId)} — ${fmtDate(CJ.tz.zoned(u.day, 12, 0).toISOString())}`)), '#/admin/timesheets'),
@@ -150,13 +158,13 @@
   }
   function exportCsv() {
     const cell = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const head = ['Date', 'Employee', 'Phone', 'Site #', 'Client / farm', 'Old code', 'Clock in', 'In edited (M)', 'Original clock in', 'Clock out', 'Out edited (M)', 'Original clock out', 'Hours', 'Crew reported', 'Crew edited (M)', 'Workers clocked in (site/day)', 'Crew mismatch', 'Notes', 'Clock-out note', 'Edit count', 'Last edited by'];
+    const head = ['Company', 'Date', 'Employee', 'Phone', 'Site #', 'Client / farm', 'Old code', 'Clock in', 'In edited (M)', 'Original clock in', 'Clock out', 'Out edited (M)', 'Original clock out', 'Hours', 'Crew reported', 'Crew edited (M)', 'Workers clocked in (site/day)', 'Crew mismatch', 'Notes', 'Clock-out note', 'Edit count', 'Last edited by'];
     const lines = [head.map(cell).join(',')];
     filtered().forEach((s) => {
       const st = A().site(s.siteId); const u = A().user(s.userId); const ie = A().fieldEdited(s, 'clockIn'); const oe = A().fieldEdited(s, 'clockOut'); const le = s.edits[s.edits.length - 1];
-      lines.push([fmtDate(s.clockIn), u.name, u.phone, st.number, st.clientName, st.legacyCode, fmtTime(s.clockIn) + (ie ? ' M' : ''), ie ? 'M' : '', ie ? fmtDT(s.recordedIn) : '', s.clockOut ? fmtTime(s.clockOut) + (oe ? ' M' : '') : '', oe ? 'M' : '', oe ? fmtDT(s.recordedOut) : '', s.clockOut ? hours(s.clockIn, s.clockOut).toFixed(2) : '', s.crewCount == null ? '' : s.crewCount, A().fieldEdited(s, 'crewCount') ? 'M' : '', crewOf(s).clockedIn, crewOf(s).label, s.notes, s.outNote || '', s.edits.length, le ? uname(le.byUserId) + ' ' + fmtDT(le.at) : ''].map(cell).join(','));
+      lines.push([CJ.F.COMPANIES[CJ.api.coOf(st)].name, fmtDate(s.clockIn), u.name, u.phone, st.number, st.clientName, st.legacyCode, fmtTime(s.clockIn) + (ie ? ' M' : ''), ie ? 'M' : '', ie ? fmtDT(s.recordedIn) : '', s.clockOut ? fmtTime(s.clockOut) + (oe ? ' M' : '') : '', oe ? 'M' : '', oe ? fmtDT(s.recordedOut) : '', s.clockOut ? hours(s.clockIn, s.clockOut).toFixed(2) : '', s.crewCount == null ? '' : s.crewCount, A().fieldEdited(s, 'crewCount') ? 'M' : '', crewOf(s).clockedIn, crewOf(s).label, s.notes, s.outNote || '', s.edits.length, le ? uname(le.byUserId) + ' ' + fmtDT(le.at) : ''].map(cell).join(','));
     });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'shifts-export.csv'; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = CJ.api.scope().map((c) => CJ.F.COMPANIES[c].short).join('+') + '_shifts-export.csv'; a.click();
     CJ.toast('CSV exported (' + (lines.length - 1) + ' rows)', 'good');
   }
 
@@ -258,25 +266,73 @@
     return shell('employees', `<div class="page-h"><h1>Employees</h1><span class="muted">${rows.length} accounts</span></div>
       <div class="panel nopad"><table class="tbl"><thead><tr><th>Employee</th><th>Phone</th><th>Account</th><th>Now</th><th>Hours this week</th><th>Edits (14 days)</th></tr></thead><tbody>
       ${rows.map((u) => { const mine = all.filter((s) => s.userId === u.id); const open = mine.find((s) => !s.clockOut); const wh = mine.filter((s) => new Date(s.clockIn) >= wk).reduce((a, s) => a + hours(s.clockIn, s.clockOut), 0); const ne = mine.reduce((a, s) => a + s.edits.length, 0);
-        return `<tr><td><b>${esc(u.name)}</b>${u.crewLead ? ' <span class="tag lead">Crew lead</span>' : ''}</td><td>${esc(u.phone)}</td><td><span class="tag ${u.status === 'active' ? 'on' : u.status === 'pending' ? 'warn' : 'bad'}">${u.status === 'active' ? 'Approved' : u.status === 'pending' ? 'Pending' : 'Rejected'}</span></td>
+        return `<tr><td>${both() ? coChip(u) + ' ' : ''}<b>${esc(u.name)}</b>${u.crewLead ? ' <span class="tag lead">Crew lead</span>' : ''}</td><td>${esc(u.phone)}</td><td><span class="tag ${u.status === 'active' ? 'on' : u.status === 'pending' ? 'warn' : 'bad'}">${u.status === 'active' ? 'Approved' : u.status === 'pending' ? 'Pending' : 'Rejected'}</span></td>
           <td>${open ? (isMissed(open) ? '<span class="tag bad">Missed clock-out</span> ' : '<span class="tag on">On shift</span> ') + `Site ${A().site(open.siteId).number} · ${esc(A().site(open.siteId).clientName)} since ${fmtTime(open.clockIn)}` : '<span class="muted">Off shift</span>'}</td>
           <td>${wh ? fmtDur(wh) : '—'}</td><td>${ne ? ne + ' <span class="mbadge sm">M</span>' : '—'}</td></tr>`; }).join('')}</tbody></table></div>`);
   }
 
   // ---------- Sites ----------
   function sitesPage() {
-    const wk = CJ.startOfWeek(); const all = A().shifts();
+    const wk = CJ.startOfWeek(); const all = A().shifts(); const cos = CJ.api.scope(); const today = CJ.tz.todayKey();
+    const nextRate = (s) => (s.rates || []).find((r) => r.from > today);
+    const MT = { probable: 'warn', possible: 'warn', confirmed: 'on', unmatched: 'bad' };
+    const rateCell = (s) => s.rateStatus === 'missing'
+      ? `<form class="ratefill" data-fill="${s.id}"><span>$</span><input class="mini req-empty" name="rate" type="number" step="0.01" min="0.01" required placeholder="required"><span>/${s.billingType === 'monthly' ? 'mo' : s.billingType === 'per-visit' ? 'visit' : 'h'}</span><button class="btn small primary">Save</button></form><span class="tag bad sm">RATE MISSING — invoices blocked</span>`
+      : `<b>${CJ.F.money(CJ.F.rateOn(s, today))}</b>/h ${s.rateSample ? '<span class="tag sample">SAMPLE</span>' : ''}${s.rateStatus === 'flagged' ? ` <span class="tag warn sm" title="${esc(s.flagNote || '')}">⚠ check rate</span>` : ''}`;
+    const matchCell = (s) => !s.match ? '' : `<div class="small"><span class="tag ${MT[s.match]} sm" title="${esc(s.matchNote || '')}">code ${s.match}</span>${s.match === 'probable' || s.match === 'possible' ? ` <button class="btn small" data-confirm-match="${s.id}">Confirm match</button>` : ''}</div>`;
     return shell('sites', `<div class="page-h"><h1>Sites &amp; rates</h1><span class="muted">Employees only ever see the site number.</span></div>
-      <div class="info"><b>SAMPLE rates:</b> the hourly rates below are made-up placeholders for the prototype — the owner must enter the real contract rate per farm. Geofence radius is used only for the one-time clock-in location check. Changing a rate affects new draft invoices only.</div>
-      <section class="panel"><h2>Add site</h2><form id="addSite" class="inline-form"><input name="name" placeholder="Client / farm name" required><select name="type"><option>Farm</option><option>Office</option><option>Warehouse</option><option>Healthcare</option><option>Restaurant</option><option>Retail Store</option><option>Other</option></select><input name="loc" placeholder="Town, PEI"><button class="btn primary">Add — gets next number</button></form></section>
-      <div class="panel nopad"><table class="tbl"><thead><tr><th>Site #</th><th>Client / farm (admin only)</th><th>Type</th><th>Location</th><th>Old code</th><th>Geofence (lat, lng · radius)</th><th>Hourly rate</th><th>Invoice prefix</th><th>Hours this week</th><th>On now</th></tr></thead><tbody>
-      ${A().sites().map((s) => { const sh = all.filter((x) => x.siteId === s.id); const wh = sh.filter((x) => new Date(x.clockIn) >= wk).reduce((a, x) => a + hours(x.clockIn, x.clockOut), 0); const on = sh.filter((x) => !x.clockOut && !isMissed(x)).length;
-        return `<tr><td><b>Site ${s.number}</b></td><td>${esc(s.clientName)}</td><td>${esc(s.type)}</td><td>${esc(s.location)}</td><td class="muted">${esc(s.legacyCode || '—')}</td><td class="nowrap small">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)} · <input class="mini" type="number" data-radius="${s.id}" value="${s.radiusM}" min="25" max="5000" step="25"> m</td><td class="nowrap">$<input class="mini" type="number" data-rate="${s.id}" value="${s.rate.toFixed(2)}" step="0.25" min="1">/h ${s.rateSample ? '<span class="tag sample">SAMPLE</span>' : ''}</td><td><code>${esc(s.invoicePrefix)}</code></td><td>${wh ? fmtDur(wh) : '—'}</td><td>${on || ''}</td></tr>`; }).join('')}</tbody></table></div>`);
+      <div class="info"><b>Rates have a history.</b> Sites with <b>RATE MISSING</b> show a blank, required field — invoices for them are blocked until a rate is entered (the app never invents one). <b>⚠ check rate</b> = a rate that looks wrong; it stays editable. <b>Confirm match</b> = the old app code was matched to this farm with less than full certainty.</div><div class="info"> Each rate has an effective date; billing uses the rate in effect on the shift date (a week can have two rates). Click <b>Rates</b> to see the history or add a new rate (past or future date) — every change is audit-logged. Rates marked SAMPLE are placeholders until the owner enters the real ones (pending).</div>
+      <section class="panel"><h2>Add site</h2><form id="addSite" class="inline-form">${cos.length > 1 ? '<select name="co"><option value="cj">Chief Janitorial</option><option value="us">Unscramble</option></select>' : `<input type="hidden" name="co" value="${cos[0]}"><span class="cochip co-${cos[0]}">${CJ.F.COMPANIES[cos[0]].short}</span>`}<input name="name" placeholder="Client / farm name" required><select name="type"><option>Farm</option><option>Staffing</option><option>Office</option><option>Warehouse</option><option>Healthcare</option><option>Restaurant</option><option>Retail Store</option><option>Other</option></select><input name="loc" placeholder="Town, PEI"><button class="btn primary">Add — gets next number</button></form>
+        <p class="muted small">Each company's ops login enters its own site locations (geofence).</p></section>
+      <div class="panel nopad"><table class="tbl"><thead><tr><th>Site #</th><th>Client / farm (admin only)</th><th>Type</th><th>Location</th><th>Old code</th><th>Geofence (lat, lng · radius)</th><th>Billing</th><th>Rate today</th><th>Next change</th><th>Invoice prefix</th><th>Hours this week</th><th>On now</th></tr></thead><tbody>
+      ${A().sites().map((s) => { const sh = all.filter((x) => x.siteId === s.id); const wh = sh.filter((x) => new Date(x.clockIn) >= wk).reduce((a, x) => a + hours(x.clockIn, x.clockOut), 0); const on = sh.filter((x) => !x.clockOut && !isMissed(x)).length; const nx = nextRate(s);
+        return `<tr><td><b>${both() ? coChip(s) + ' ' : ''}Site ${s.number}</b></td><td>${esc(s.clientName)}</td><td>${esc(s.type)}</td><td>${esc(s.location)}</td><td class="muted">${esc(s.legacyCode || '—')}${matchCell(s)}</td><td class="nowrap small">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)} · <input class="mini" type="number" data-radius="${s.id}" value="${s.radiusM}" min="25" max="5000" step="25"> m</td><td class="small">${CJ.F.BILLING_TYPES[s.billingType || 'hourly']}</td><td class="nowrap">${rateCell(s)} <a class="btn small ghost" href="#/admin/site/${s.id}">Rates (${(s.rates || []).length})</a></td><td class="nowrap small">${nx ? CJ.F.money(nx.rate) + ' from ' + nx.from : '<span class="muted">—</span>'}</td><td><code>${esc(s.invoicePrefix)}</code></td><td>${wh ? fmtDur(wh) : '—'}</td><td>${on || ''}</td></tr>`; }).join('')}</tbody></table></div>`);
   }
-  function bindSites(root) {
-    root.querySelectorAll('[data-rate]').forEach((i) => i.addEventListener('change', () => { const r = A().setRate(i.dataset.rate, i.value); r.error ? CJ.toast(r.error, 'bad') : (CJ.toast('Rate saved', 'good'), CJ.render()); }));
+  function bindSites(root, uid) {
+    bindSiteCommon(root, uid);
     root.querySelectorAll('[data-radius]').forEach((i) => i.addEventListener('change', () => { const r = A().setRadius(i.dataset.radius, i.value); r.error ? CJ.toast(r.error, 'bad') : CJ.toast('Radius saved', 'good'); }));
-    const f = root.querySelector('#addSite'); f && f.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(f); const r = A().addSite(d.get('name'), d.get('type'), d.get('loc')); CJ.toast('Added as Site ' + r.number, 'good'); CJ.render(); });
+    const f = root.querySelector('#addSite'); f && f.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(f); const r = A().addSite(d.get('name'), d.get('type'), d.get('loc'), d.get('co')); if (r.error) return CJ.toast(r.error, 'bad'); CJ.toast('Added as Site ' + r.number, 'good'); CJ.render(); });
+  }
+  // ---------- Site rate history (rate + effective_from; billing uses the rate on the shift date) ----------
+  function sitePage(id) {
+    const s = A().site(id); if (!s) return shell('sites', '<p>Site not found.</p>');
+    const today = CJ.tz.todayKey(); const cur = CJ.F.rateOn(s, today); const rates = (s.rates || []).slice().sort((a, b) => b.from.localeCompare(a.from));
+    const curFrom = (s.rates || []).filter((r) => r.from <= today).sort((a, b) => a.from.localeCompare(b.from)).slice(-1)[0];
+    const st = (r) => (r.from > today ? '<span class="tag warn">Future</span>' : r === curFrom ? '<span class="tag on">In effect today</span>' : '<span class="tag">Past</span>');
+    const log = A().rateLog(id); const canEdit = A().can('billing', CJ.api.coOf(s)); const block = A().invoiceBlock(id);
+    const MT = { probable: 'warn', possible: 'warn', confirmed: 'on', unmatched: 'bad' };
+    const invs = A().invoiceRows().filter((r) => r.inv.siteId === id).slice(0, 6);
+    return shell('sites', `<a class="back" href="#/admin/sites">‹ Sites &amp; rates</a>
+      <div class="page-h"><h1>${coChip(s)} Site ${s.number} — ${esc(s.clientName)} · rate history</h1><span class="muted">${esc(s.location)} · prefix <code>${esc(s.invoicePrefix)}</code></span></div>
+      ${s.rateStatus === 'missing' ? `<div class="lockbox">⛔ <b>Rate missing.</b> No rate is on file for this site, so <b>invoices are blocked</b> until you enter one below. The app never invents a rate.</div>` : ''}
+      ${s.rateStatus === 'flagged' ? `<div class="warnbox">⚠ <b>Check this rate:</b> ${esc(s.flagNote || '')} ${canEdit ? '<button class="btn small" id="clearFlag">Rate checked — clear warning</button>' : ''}<div class="muted small">Still editable: add the right rate below if this one is wrong.</div></div>` : ''}
+      <section class="panel"><div class="kv wide"><span>Billing type</span><b>${canEdit ? `<select id="billType">${Object.entries(CJ.F.BILLING_TYPES).map(([k, v]) => `<option value="${k}" ${(s.billingType || 'hourly') === k ? 'selected' : ''}>${v}</option>`).join('')}</select>` : CJ.F.BILLING_TYPES[s.billingType || 'hourly']} <span class="muted small">Monthly / per-visit details (amount per month or visit, how hours relate) are an open question for the owner.</span></b>
+        <span>Invoicing</span><b>${block ? `<span class="tag bad">Blocked</span> ${esc(block)}` : '<span class="tag on">OK</span> weekly draft invoices from Billing-locked timesheets'}</b>
+        ${s.match ? `<span>Old app code</span><b>${esc(s.legacyCode || '')} <span class="tag ${MT[s.match]}">${s.match}</span> <span class="muted small">${esc(s.matchNote || '')}</span>${s.match === 'probable' || s.match === 'possible' ? ` <button class="btn small" data-confirm-match="${s.id}">Confirm match</button>` : ''}${s.matchConfirmed ? ` <span class="muted small">confirmed by ${esc(s.matchConfirmed.by)} · ${fmtDT(s.matchConfirmed.at)}</span>` : ''}</b>` : ''}
+        ${s.terms ? `<span>Payment terms</span><b class="small">${esc(s.terms)}</b>` : ''}${s.realNotes ? `<span>Notes</span><b class="small">${esc(s.realNotes)}</b>` : ''}${s.roles && s.roles.length > 1 ? `<span>Other roles</span><b class="small">${s.roles.map((r) => esc(r.role) + ': ' + (r.old == null ? 'MISSING' : CJ.F.money(r.old) + ' → ' + CJ.F.money(r.new))).join(' · ')}</b>` : ''}</div></section>
+      <div class="grid2">
+        <section class="panel"><h2>Rates <span class="muted small">today: <b>${cur == null ? 'MISSING' : CJ.F.money(cur) + '/h'}</b></span></h2>
+          <table class="tbl"><thead><tr><th>Effective from</th><th class="r">Rate / h</th><th>Status</th><th>Set by</th><th>Note</th></tr></thead><tbody>
+          ${rates.length ? '' : '<tr><td colspan="5"><span class="tag bad">No rate on file</span> <span class="muted small">Enter the first rate below (required before invoicing).</span></td></tr>'}${rates.map((r) => `<tr class="${r === curFrom ? 'row-on' : ''}"><td class="nowrap"><b>${fDk(r.from)}</b></td><td class="r"><b>${CJ.F.money(r.rate)}</b>${r.sample ? ' <span class="tag sample sm">SAMPLE</span>' : ''}</td><td>${st(r)}</td><td class="small">${esc(r.by)}<br><span class="muted">${fmtDT(r.at)}</span></td><td class="small">${esc(r.note || '')}</td></tr>`).join('')}</tbody></table>
+          <p class="muted small">Billing uses the rate in effect on each shift's date (Atlantic time). A week that crosses an effective date gets one invoice line per rate. Invoices already drafted keep their saved amounts.</p>
+          ${canEdit ? `<h3>Add a new rate</h3><form id="addRate" class="inline-form"><span>$</span><input class="mini ${cur == null ? 'req-empty' : ''}" name="rate" type="number" step="0.01" min="0.01" value="${cur == null ? '' : (cur + 0.25).toFixed(2)}" placeholder="${cur == null ? 'required' : ''}" required><span>/h from</span><input type="date" name="from" value="${cur == null ? today.slice(0, 4) + '-01-01' : CJ.tz.addDays(today, 7)}" required><input name="note" placeholder="Reason (saved in audit log)" style="min-width:220px"><button class="btn primary">Add rate</button></form><div class="err" id="rateErr"></div>` : '<p class="muted small">Only the owner or this company\'s billing login can change rates.</p>'}
+        </section>
+        <section class="panel"><h2>Rate change audit log</h2>
+          <ul class="feed">${log.map((l) => l.action !== 'add' ? `<li><div class="feed-h"><b>${esc(l.by)}</b> — ${esc(l.note)}</div><div class="feed-t">${fmtDT(l.at)}</div></li>` : `<li><div class="feed-h"><b>${esc(l.by)}</b> set <b>${CJ.F.money(l.rate)}/h</b> from <b>${fDk(l.from)}</b></div><div class="feed-c">was ${l.prev == null ? 'MISSING (no rate)' : CJ.F.money(l.prev) + '/h'} on that date</div>${l.note ? `<div class="feed-r">“${esc(l.note)}”</div>` : ''}<div class="feed-t">${fmtDT(l.at)}</div></li>`).join('') || '<li class="muted">No changes yet.</li>'}</ul>
+          <h3>Recent invoices</h3><table class="tbl"><tbody>${invs.map((r) => `<tr><td><a href="#/admin/invoice/${r.inv.id}">${esc(r.inv.number)}</a></td><td class="small">${CJ.ts.fRange(r.inv.weekStart)}</td><td class="r small">${(r.inv.lines || [{ rate: r.inv.rate }]).map((l) => CJ.F.money(l.rate)).join(' + ')}/h</td><td class="r">${CJ.F.money(r.inv.total)}</td></tr>`).join('') || '<tr><td class="muted">No invoices.</td></tr>'}</tbody></table>
+        </section></div>`);
+  }
+  const fDk = (k) => CJ.tz.zoned(k, 12, 0).toLocaleDateString('en-US', { timeZone: 'America/Halifax', month: 'short', day: 'numeric', year: 'numeric' });
+  function bindSiteCommon(root, uid) {
+    root.querySelectorAll('[data-confirm-match]').forEach((b) => b.addEventListener('click', () => { const r = A().confirmMatch(b.dataset.confirmMatch, uid); r.error ? CJ.toast(r.error, 'bad') : (CJ.toast('Match confirmed — audit-logged', 'good'), CJ.render()); }));
+    root.querySelectorAll('[data-fill]').forEach((f) => f.addEventListener('submit', (e) => { e.preventDefault(); const v = new FormData(f).get('rate'); const r = A().addRate(f.dataset.fill, v, CJ.tz.todayKey().slice(0, 4) + '-01-01', 'First rate entered (was missing)', uid); r.error ? CJ.toast(r.error, 'bad') : (CJ.toast('Rate saved — invoices unblocked', 'good'), CJ.render()); }));
+  }
+  function bindSite(root, id, uid) {
+    bindSiteCommon(root, uid);
+    const cf = root.querySelector('#clearFlag'); cf && cf.addEventListener('click', () => { const r = A().clearRateFlag(id, uid); r.error ? CJ.toast(r.error, 'bad') : (CJ.toast('Warning cleared — audit-logged', 'good'), CJ.render()); });
+    const bt = root.querySelector('#billType'); bt && bt.addEventListener('change', () => { const r = A().setBillingType(id, bt.value, uid); r.error ? CJ.toast(r.error, 'bad') : (CJ.toast('Billing type saved', 'good'), CJ.render()); });
+    const f = root.querySelector('#addRate'); f && f.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(f); const r = A().addRate(id, d.get('rate'), d.get('from'), d.get('note'), uid);
+      if (r.error) { root.querySelector('#rateErr').textContent = r.error; return; } CJ.toast('Rate added — audit-logged' + (r.affected.length ? ' · ' + r.affected.length + ' existing invoice(s) keep their saved amounts' : ''), 'good'); CJ.render(); });
   }
 
   // ---------- Edit log ----------
@@ -287,7 +343,7 @@
       ${ed.map((e) => { const s = e.shift; const st = A().site(s.siteId); return `<tr><td class="nowrap">${fmtDT(e.at)}</td><td>${esc(uname(e.byUserId))} <span class="role ${e.byRole}">${e.byRole === 'admin' ? 'admin' : 'employee'}</span></td><td>${esc(uname(s.userId))}</td><td>${fmtDate(s.clockIn)}<br>${siteCell(st)}</td><td>${FLc[e.field]}</td><td class="nowrap"><s>${fv(e, e.from)}</s> → <b>${fv(e, e.to)}</b> <span class="mbadge sm">M</span></td><td>${esc(e.reason)}</td><td><a class="btn small ghost" href="#/admin/shift/${s.id}">History</a></td></tr>`; }).join('')}</tbody></table></div>`);
   }
 
-  CJ.adm = { shell, siteCell, siteText, uname, locBadge, crewBadge, isMissed };
+  CJ.adm = { shell, coChip, both, siteCell, siteText, uname, locBadge, crewBadge, isMissed };
   CJ.adminView = function (app, parts, uid) {
     const [p, id] = parts;
     if (p === 'shifts') { app.innerHTML = shiftsPage(); bindShifts(app); }
@@ -296,10 +352,13 @@
     else if (p === 'edit') { app.innerHTML = editPage(id); bindEdit(app, id, uid); }
     else if (p === 'approvals') { app.innerHTML = approvalsPage(); bindApprovals(app, uid); }
     else if (p === 'employees') { app.innerHTML = employeesPage(); }
-    else if (p === 'sites') { app.innerHTML = sitesPage(); bindSites(app); }
+    else if (p === 'sites') { app.innerHTML = sitesPage(); bindSites(app, uid); }
+    else if (p === 'site') { app.innerHTML = sitePage(id); bindSite(app, id, uid); }
     else if (p === 'edits') { app.innerHTML = editsPage(); }
     else if (p === 'timesheets') { app.innerHTML = shell('timesheets', CJ.ts.page()); CJ.ts.bindPage(app); }
     else if (p === 'timesheet') { const which = (parts[2] || 'all').split('?')[0]; app.innerHTML = CJ.ts.printView(id, which); CJ.ts.bindPrint(app, id, which); }
     else { app.innerHTML = dashboard(); }
+    const cf = app.querySelector('#coFilter'); cf && cf.addEventListener('change', () => { CJ.api.setCompanyFilter(cf.value); CJ.render(); });
+    app.querySelectorAll('[data-cof]').forEach((x) => x.addEventListener('click', (e) => { e.preventDefault(); CJ.api.setCompanyFilter(x.dataset.cof); CJ.render(); }));
   };
 })();

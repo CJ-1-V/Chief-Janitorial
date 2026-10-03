@@ -2,7 +2,8 @@
  * - One timesheet per farm/site per week (Mon–Sun), "generated" every Monday for the previous week.
  * - Break/billing rules live in rules.js (per employee/day/farm, Atlantic time): Worked, Paid, Billable shown per row + totals.
  * - Downloads: CSV is a real Blob download. PDF = print view + window.print() ("Save as PDF").
- * - NO email/send. CJ Bal reviews and drafts farm emails for the owner's approval.
+ * - NO email/send. Reviewer per company (CJ: CJ Bal · Unscramble: Us Sandra) reviews and drafts farm emails for the owner's approval.
+ * - Two companies: 'all-cj' / 'all-us' build one company's farms; files and notes are per company.
  * Never loaded into employee code paths (employee.js does not reference CJ.ts). */
 (function () {
   const CJ = (window.CJ = window.CJ || {});
@@ -27,8 +28,11 @@
   const uname = (id) => (A().user(id) || {}).name || id;
 
   // Build sheets for a week (ws = Monday key, Atlantic). One row per employee/day/farm (split punches combined).
+  const CO = (c) => CJ.F.COMPANIES[c || 'cj'];
+  const coOfSite = (site) => CJ.api.coOf(site);
   function build(ws, siteId) {
-    const inWeek = A().shifts().filter((s) => R().inWeek(T().dayKey(s.clockIn), ws) && (!siteId || s.siteId === siteId));
+    const co = /^all-(cj|us)$/.test(siteId || '') ? siteId.slice(4) : null; if (co || siteId === 'all') siteId = null;
+    const inWeek = A().shifts().filter((s) => R().inWeek(T().dayKey(s.clockIn), ws) && (!siteId || s.siteId === siteId) && (!co || coOfSite(A().site(s.siteId)) === co));
     const bySite = {};
     inWeek.forEach((s) => (bySite[s.siteId] = bySite[s.siteId] || []).push(s));
     const ids = siteId ? [siteId] : Object.keys(bySite);
@@ -70,36 +74,39 @@
     const lg = R().LEGEND; [lg.unit, lg.paid, lg.bill, lg.combined].forEach((x) => L.push(c('Note: ' + x)));
     return L.join('\n');
   }
-  const fileName = (ws, sheets, all) => 'timesheet_' + ws + '_' + (all ? 'all-farms' : 'site-' + sheets[0].site.number + '-' + sheets[0].site.clientName.replace(/[^A-Za-z0-9]+/g, '-').replace(/-+$/, '')) + '.csv';
+  const fileName = (ws, sheets, all) => CO(coOfSite(sheets[0].site)).short + '_timesheet_' + ws + '_' + (all ? 'all-farms' : 'site-' + sheets[0].site.number + '-' + sheets[0].site.clientName.replace(/[^A-Za-z0-9]+/g, '-').replace(/-+$/, '')) + '.csv';
   function downloadCsv(ws, siteId) {
-    const sheets = build(ws, siteId || null);
+    if (!siteId || siteId === 'all') siteId = 'all-' + CJ.api.scope()[0]; // never mix companies in one file
+    const sheets = build(ws, siteId);
     if (!sheets.length) return CJ.toast('No shifts that week', 'bad');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv(sheets)], { type: 'text/csv' })); a.download = fileName(ws, sheets, !siteId); document.body.appendChild(a); a.click(); a.remove();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + csv(sheets)], { type: 'text/csv' })); a.download = fileName(ws, sheets, /^all/.test(siteId)); document.body.appendChild(a); a.click(); a.remove();
     CJ.toast('CSV downloaded', 'good');
   }
   const legendHtml = (cls) => { const lg = R().LEGEND; return `<div class="${cls}"><b>Break &amp; billing rules</b><ul><li>${lg.unit}</li><li>${lg.paid}</li><li>${lg.bill}</li><li><b>${lg.combined}</b></li></ul></div>`; };
 
   // ---------- Status workflow: Draft → Reviewed (Bal) → Approved (owner) → Billing locked ----------
   function statusTag(siteId, ws) {
-    const st = A().tsStatus(siteId, ws).status; const n = st === 'locked' ? 0 : A().lockIssues(siteId, ws).length;
-    return `<span class="wf wf-${st}">${st === 'locked' ? '🔒 ' : ''}${CJ.F.STATUS_LABEL[st]}</span>${n ? ` <span class="tag bad sm" title="Issues that block Billing lock">${n} blocking</span>` : ''}${A().invoiceFor(siteId, ws) ? ` <a class="tag sm" href="#/admin/invoice/${A().invoiceFor(siteId, ws).id}">🧾 ${CJ.esc(A().invoiceFor(siteId, ws).number)}</a>` : ''}`;
+    const co = coOfSite(A().site(siteId)); const st = A().tsStatus(siteId, ws).status; const n = st === 'locked' ? 0 : A().lockIssues(siteId, ws).length;
+    return `<span class="wf wf-${st}">${st === 'locked' ? '🔒 ' : ''}${CJ.F.statusLabel(st, co)}</span>${n ? ` <span class="tag bad sm" title="Issues that block Billing lock">${n} blocking</span>` : ''}${A().invoiceFor(siteId, ws) ? ` <a class="tag sm" href="#/admin/invoice/${A().invoiceFor(siteId, ws).id}">🧾 ${CJ.esc(A().invoiceFor(siteId, ws).number)}</a>` : ''}`;
   }
   function workflowPanel(ws, site) {
-    const cur = A().tsStatus(site.id, ws); const issues = cur.status === 'locked' ? [] : A().lockIssues(site.id, ws); const i = CJ.F.STATUSES.indexOf(cur.status);
-    const steps = CJ.F.STATUSES.map((k, j) => `<li class="${j < i ? 'done' : j === i ? 'now' : ''}">${CJ.F.STATUS_LABEL[k]}</li>`).join('');
+    const co = coOfSite(site); const C = CO(co); const cur = A().tsStatus(site.id, ws); const issues = cur.status === 'locked' ? [] : A().lockIssues(site.id, ws); const i = CJ.F.STATUSES.indexOf(cur.status);
+    const steps = CJ.F.STATUSES.map((k, j) => `<li class="${j < i ? 'done' : j === i ? 'now' : ''}">${CJ.F.statusLabel(k, co)}</li>`).join('');
     const next = CJ.F.STATUSES[i + 1];
-    const btn = { reviewed: ['Mark reviewed (CJ Bal)', 'CJ Bal'], approved: ['Approve (owner)', 'Owner'], locked: ['🔒 Billing lock (owner)', 'Owner'] }[next];
+    const btn = { reviewed: ['Mark reviewed (' + C.reviewer + ')', C.reviewer, 'review'], approved: ['Approve (owner)', 'Owner', 'approve'], locked: ['🔒 Billing lock (owner)', 'Owner', 'lock'] }[next];
+    const allowed = btn && A().can(btn[2], co); const canBill = A().can('billing', co); const block = A().invoiceBlock(site.id);
     const days = []; for (let d = 0; d < 7; d++) { const k = T().addDays(ws, d); const has = A().shifts().some((x) => x.siteId === site.id && T().dayKey(x.clockIn) === k); if (has) days.push({ k, so: A().signoff(site.id, k) }); }
     const inv = A().invoiceFor(site.id, ws);
     return `<section class="wf-panel no-print">
-      <div class="row-between"><h2>Timesheet status · Site ${site.number} — ${CJ.esc(site.clientName)}</h2><span class="wf wf-${cur.status} big">${cur.status === 'locked' ? '🔒 ' : ''}${CJ.F.STATUS_LABEL[cur.status]}</span></div>
+      <div class="row-between"><h2>Timesheet status · <span class="cochip co-${co}">${C.short}</span> Site ${site.number} — ${CJ.esc(site.clientName)}</h2><span class="wf wf-${cur.status} big">${cur.status === 'locked' ? '🔒 ' : ''}${CJ.F.statusLabel(cur.status, co)}</span></div>
+      <p class="muted small">${C.name}: <b>${C.reviewer}</b> reviews this timesheet and drafts the email to the farm · the <b>owner</b> approves and locks · <b>${C.billing}</b> drafts the invoice. Nothing is sent from this app.</p>
       <ol class="wf-steps">${steps}</ol>
       <div class="grid2">
         <div><h3>${issues.length ? `⚠ ${issues.length} issue${issues.length > 1 ? 's' : ''} block Billing lock` : cur.status === 'locked' ? '🔒 Locked for billing' : '✓ No blocking issues'}</h3>
           ${issues.length ? `<ul class="issues">${issues.map((x) => `<li><span class="itype it-${x.type}">${{ missed: 'Missed clock-out', zero: '0 h', crew: 'Crew mismatch', offsite: 'Location', unsigned: 'Unsigned day' }[x.type]}</span> ${fD(x.day)} — ${CJ.esc(x.label)} ${x.shiftId ? `<a href="#/admin/shift/${x.shiftId}">Review</a>` : ''}</li>`).join('')}</ul>` : ''}
           ${cur.status === 'locked' ? '<p class="muted small">Shift edits for this farm-week are blocked. The owner can override from the shift edit screen; every override is written to the audit log below.</p>' : ''}
-          <div class="row-gap">${btn ? `<button class="btn primary" data-advance="${next}" data-by="${btn[1]}" ${next === 'locked' && issues.length ? 'disabled title="Fix the issues first"' : ''}>${btn[0]}</button>` : ''}
-            ${cur.status === 'locked' ? (inv ? `<a class="btn primary" href="#/admin/invoice/${inv.id}">🧾 Open draft invoice ${CJ.esc(inv.number)}</a>` : `<button class="btn primary" data-invoice="1">🧾 Create draft invoice</button>`) : '<button class="btn" disabled title="Available once Billing locked">🧾 Create draft invoice</button>'}</div></div>
+          <div class="row-gap">${btn ? `<button class="btn primary" data-advance="${next}" data-by="${btn[1]}" ${!allowed ? `disabled title="Your login can't do this step"` : next === 'locked' && issues.length ? 'disabled title="Fix the issues first"' : ''}>${btn[0]}</button>` : ''}
+            ${cur.status === 'locked' ? (inv ? `<a class="btn primary" href="#/admin/invoice/${inv.id}">🧾 Open draft invoice ${CJ.esc(inv.number)}</a>` : (block ? `<button class="btn" disabled title="${CJ.esc(block)}">🧾 Create draft invoice</button><div class="err small">⛔ ${CJ.esc(block)}</div>` : `<button class="btn primary" data-invoice="1" ${canBill ? '' : `disabled title="${C.billing} or the owner drafts invoices"`}>🧾 Create draft invoice</button>`)) : '<button class="btn" disabled title="Available once Billing locked">🧾 Create draft invoice</button>'}</div></div>
         <div><h3>Daily crew sign-off</h3><table class="tbl"><tbody>${days.map((d) => `<tr><td class="nowrap">${fD(d.k)}</td><td>${d.so ? `<span class="tag on">✓ Signed</span> <span class="muted small">${CJ.esc(uname(d.so.byUserId))}${d.so.byRole === 'crewlead' ? ' (crew lead)' : ' (office)'}</span>` : `<span class="tag warn">Not signed</span> ${cur.status === 'locked' ? '' : `<button class="btn small ghost" data-sign="${d.k}">Sign off as office</button>`}`}</td></tr>`).join('')}</tbody></table>
           <h3>History</h3><ul class="wf-hist">${(cur.history.length ? cur.history : [{ status: 'draft', byName: 'System', note: 'Generated' }]).map((h) => `<li class="${/OVERRIDE/.test(h.note || '') ? 'ovr' : ''}"><b>${CJ.F.STATUS_LABEL[h.status]}</b> · ${CJ.esc(h.byName)}${h.at ? ' · ' + CJ.fmtDT(h.at) : ''}${h.note ? ' — ' + CJ.esc(h.note) : ''}</li>`).join('')}</ul></div>
       </div></section>`;
@@ -108,7 +115,8 @@
   // ---------- Admin Timesheets page ----------
   function page() {
     const q = CJ.query(); const ws = q.get('week') || lastCompletedWeek(); const st = status(ws);
-    const sheets = build(ws, null); const tot = (k) => sheets.reduce((a, s) => a + s.totals[k], 0);
+    const sheets = build(ws, null); const tot = (k) => sheets.reduce((a, s) => a + s.totals[k], 0); const cos = CJ.api.scope();
+    const both = cos.length > 1; const chip = (site) => (both ? `<span class="cochip co-${coOfSite(site)}">${CO(coOfSite(site)).short}</span> ` : '');
     const wk = weeks(16); const prev = T().addDays(ws, -7), next = T().addDays(ws, 7);
     const link = (w) => location.pathname + '?week=' + w + '#/admin/timesheets';
     const nIssues = sheets.reduce((a, s) => a + s.issues.length, 0);
@@ -120,7 +128,7 @@
         ${next <= thisWeek() ? `<a class="btn small ghost" href="${link(next)}">›</a>` : '<span class="btn small ghost" style="opacity:.4">›</span>'}
         <span class="tag ${st.done ? 'on' : 'warn'}">${st.label}</span>
       </div>
-      <div class="info ts-note">📧 <b>Timesheets are never emailed to farms by this app.</b> CJ Bal reviews each timesheet and drafts the email to the farm; nothing goes out without the owner's OK. Use the downloads below.</div>
+      <div class="info ts-note">📧 <b>Timesheets are never emailed to farms by this app.</b> ${cos.map((c) => `<b>${CO(c).reviewer}</b> reviews ${CO(c).name} timesheets`).join(' · ')} and drafts the email to the farm; nothing goes out without the owner's OK. Use the downloads below — files are separate per company.</div>
       ${legendHtml('ts-legend')}
       <div class="stats five">
         <div class="stat"><span>Farms with shifts</span><b>${sheets.length}</b></div>
@@ -132,10 +140,11 @@
       <div class="panel nopad"><table class="tbl big">
         <thead><tr><th>Site</th><th>Employees</th><th>Days</th><th class="r">Worked h</th><th class="r">Paid h</th><th class="r">Billable h</th><th>Flags</th><th>Status</th><th class="r">Preview / download</th></tr></thead>
         <tbody>
-        <tr class="all-row"><td><b>All farms</b><div class="muted small">${sheets.length} timesheets in one file</div></td><td>${new Set(sheets.flatMap((s) => s.employees)).size}</td><td>${tot('days')}</td><td class="r">${h2(tot('worked'))}</td><td class="r">${h2(tot('paid'))}</td><td class="r"><b>${h2(tot('billable'))}</b></td>
-          <td>${tot('edited') ? tot('edited') + ' <span class="mbadge sm">M</span> ' : ''}${tot('minDays') ? `<span class="tag">${tot('minDays')} min 5 h</span> ` : ''}${tot('crewMismatch') ? `<span class="crewbad">⚠ crew ${tot('crewMismatch')}</span> ` : ''}${nIssues ? `<span class="tag bad">${nIssues} issue${nIssues > 1 ? 's' : ''}</span>` : ''}</td><td class="muted small">${['locked', 'approved', 'reviewed', 'draft'].map((k) => { const n = sheets.filter((x) => A().tsStatus(x.site.id, ws).status === k).length; return n ? n + ' ' + CJ.F.STATUS_LABEL[k].replace(/ \(.*\)/, '').toLowerCase() : ''; }).filter(Boolean).join(' · ')}</td>
-          <td class="r nowrap"><a class="btn small ghost" href="#/admin/timesheet/${ws}/all">Preview</a> <a class="btn small" href="#/admin/timesheet/${ws}/all" data-pdf>⤓ PDF</a> <button class="btn small primary" data-csv="">⤓ CSV</button></td></tr>
-        ${sheets.map((s) => `<tr><td><div class="sitecell"><b>Site ${s.site.number}</b><span>${CJ.esc(s.site.clientName)}</span></div></td><td>${s.employees.length}</td><td>${s.totals.days}</td><td class="r">${h2(s.totals.worked)}</td><td class="r">${h2(s.totals.paid)}</td><td class="r"><b>${h2(s.totals.billable)}</b></td>
+        ${cos.map((c) => { const sh = sheets.filter((x) => coOfSite(x.site) === c); if (!sh.length) return ''; const t = (k) => sh.reduce((a, s) => a + s.totals[k], 0); const ni = sh.reduce((a, s) => a + s.issues.length, 0);
+          return `<tr class="all-row"><td><b>${chip(sh[0].site)}All ${CO(c).name} farms</b><div class="muted small">${sh.length} timesheets in one file</div></td><td>${new Set(sh.flatMap((s) => s.employees)).size}</td><td>${t('days')}</td><td class="r">${h2(t('worked'))}</td><td class="r">${h2(t('paid'))}</td><td class="r"><b>${h2(t('billable'))}</b></td>
+          <td>${t('edited') ? t('edited') + ' <span class="mbadge sm">M</span> ' : ''}${t('minDays') ? `<span class="tag">${t('minDays')} min 5 h</span> ` : ''}${t('crewMismatch') ? `<span class="crewbad">⚠ crew ${t('crewMismatch')}</span> ` : ''}${ni ? `<span class="tag bad">${ni} issue${ni > 1 ? 's' : ''}</span>` : ''}</td><td class="muted small">${['locked', 'approved', 'reviewed', 'draft'].map((k) => { const n = sh.filter((x) => A().tsStatus(x.site.id, ws).status === k).length; return n ? n + ' ' + CJ.F.STATUS_LABEL[k].replace(/ \(.*\)/, '').toLowerCase() : ''; }).filter(Boolean).join(' · ')}</td>
+          <td class="r nowrap"><a class="btn small ghost" href="#/admin/timesheet/${ws}/all-${c}">Preview</a> <a class="btn small" href="#/admin/timesheet/${ws}/all-${c}" data-pdf>⤓ PDF</a> <button class="btn small primary" data-csv="all-${c}">⤓ CSV</button></td></tr>`; }).join('')}
+        ${sheets.map((s) => `<tr><td><div class="sitecell"><b>${chip(s.site)}Site ${s.site.number}</b><span>${CJ.esc(s.site.clientName)}</span></div></td><td>${s.employees.length}</td><td>${s.totals.days}</td><td class="r">${h2(s.totals.worked)}</td><td class="r">${h2(s.totals.paid)}</td><td class="r"><b>${h2(s.totals.billable)}</b></td>
           <td>${s.totals.edited ? s.totals.edited + ' <span class="mbadge sm">M</span> ' : ''}${s.totals.minDays ? `<span class="tag">${s.totals.minDays} min 5 h</span> ` : ''}${s.totals.crewMismatch ? `<span class="crewbad">⚠ crew ${s.totals.crewMismatch}</span> ` : ''}${s.issues.length ? `<span class="tag bad">${s.issues.length} issue${s.issues.length > 1 ? 's' : ''}</span>` : ''}${s.totals.outNotes ? ` <a class="tag" href="#/admin/timesheet/${ws}/${s.site.id}" title="${CJ.esc(s.rows.flatMap((r) => r.outNotes.map((n) => r.employee + ': ' + n)).join('\n'))}">🗒 ${s.totals.outNotes}</a>` : ''}</td><td>${statusTag(s.site.id, ws)}</td>
           <td class="r nowrap"><a class="btn small ghost" href="#/admin/timesheet/${ws}/${s.site.id}">Preview</a> <a class="btn small" href="#/admin/timesheet/${ws}/${s.site.id}" data-pdf>⤓ PDF</a> <button class="btn small primary" data-csv="${s.site.id}">⤓ CSV</button></td></tr>`).join('') || '<tr><td colspan="9" class="muted">No shifts this week.</td></tr>'}
         </tbody></table></div>
@@ -150,30 +159,31 @@
 
   // ---------- Print view (one page per farm) ----------
   function printView(ws, which) {
-    const sheets = build(ws, which === 'all' ? null : which); const st = status(ws);
+    if (which === 'all') which = 'all-' + CJ.api.scope()[0];
+    const sheets = build(ws, which); const st = status(ws);
     const mf = (on) => (on ? '<span class="mflag">M</span>' : '');
     const cellIn = (r) => r.punches.map((p) => `<div>${fT(p.clockIn)}${mf(p.inM)}</div>`).join('');
     const cellOut = (r) => r.punches.map((p) => `<div>${fT(p.clockOut)}${p.nextDay ? '<sup class="nd">+1</sup>' : ''}${mf(p.outM)}</div>`).join('');
     const tags = (r) => [r.split ? '<span class="rtag">split · combined</span>' : '', r.overnight ? '<span class="rtag">overnight · start day</span>' : ''].join('');
     const sheetHtml = (s) => `<section class="sheet">
-      <div class="sheet-h"><img src="assets/logo.png" alt="Chief Janitorial" class="sheet-logo"><div class="sheet-t"><h1>Weekly Timesheet</h1><div>Week of <b>${fRange(ws)}</b> <span class="muted">(Mon–Sun, Atlantic)</span></div></div></div>
+      <div class="sheet-h co-${coOfSite(s.site)}"><img src="${CO(coOfSite(s.site)).logo}" alt="${CO(coOfSite(s.site)).name}" class="sheet-logo"><div class="sheet-co">${CO(coOfSite(s.site)).name}<span>${CO(coOfSite(s.site)).web}</span></div><div class="sheet-t"><h1>Weekly Timesheet</h1><div>Week of <b>${fRange(ws)}</b> <span class="muted">(Mon–Sun, Atlantic)</span></div></div></div>
       <div class="sheet-meta"><div><span>Client / farm</span><b>${CJ.esc(s.site.clientName)}</b></div><div><span>Site</span><b>Site ${s.site.number}</b></div><div><span>Location</span><b>${CJ.esc(s.site.location)}</b></div><div><span>Prepared</span><b>${st.done ? st.label.replace('Generated ', '') : 'DRAFT — week in progress'}</b></div></div>
       <table class="sheet-tbl"><thead><tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th class="c">Crew rep.</th><th class="r">Worked</th><th class="r sub">Pay ded.</th><th class="r">Paid</th><th class="r sub">Bill adj.</th><th class="r">Billable</th></tr></thead><tbody>
       ${s.rows.map((r) => `<tr><td>${CJ.esc(r.employee)}${tags(r)}${r.outNotes.map((n) => `<div class="sheet-outnote">🗒 “${CJ.esc(n)}”</div>`).join('')}</td><td class="nowrap">${fD(r.day)}</td><td class="nowrap">${cellIn(r)}</td><td class="nowrap">${cellOut(r)}</td><td class="c">${r.crew.join('/') || '—'}${mf(r.crewM)}${r.crewCheck.mismatch ? `<div class="crewwarn">⚠ ${r.crewCheck.clockedIn} clocked in</div>` : ''}</td><td class="r">${h2(r.worked)}</td><td class="r sub">${sgn(-r.payDed)}</td><td class="r"><b>${h2(r.paid)}</b></td><td class="r sub">${sgn(r.billAdj)}${r.minApplied ? '<div class="minnote">min 5 h</div>' : ''}</td><td class="r"><b>${h2(r.billable)}</b></td></tr>`).join('')}
       </tbody><tfoot><tr><td colspan="5">Totals · ${s.totals.days} day${s.totals.days === 1 ? '' : 's'} · ${s.totals.shifts} punch${s.totals.shifts === 1 ? '' : 'es'} · ${s.employees.length} employee${s.employees.length === 1 ? '' : 's'}</td><td class="r">${h2(s.totals.worked)}</td><td class="r sub">${sgn(-s.totals.payDed)}</td><td class="r">${h2(s.totals.paid)}</td><td class="r sub">${sgn(s.totals.billAdj)}</td><td class="r">${h2(s.totals.billable)}</td></tr></tfoot></table>
       ${s.issues.length ? `<div class="sheet-issue">⚠ Not paid or billed until fixed: ${s.issues.map((x) => CJ.esc(uname(x.userId)) + ' ' + fD(x.day) + ' (' + x.why + ')').join(', ')}.</div>` : ''}
-      <div class="sheet-foot"><span><span class="mflag">M</span> = time entered or corrected by hand (original time kept in Chief Janitorial's audit log). <sup class="nd">+1</sup> = next day. Hours are decimal. Crew rep. = workers on site reported by the employee at clock-out; ⚠ = differs from the number of workers who clocked in at this site that day. 🗒 = clock-out note written by the employee (read-only).</span></div>
+      <div class="sheet-foot"><span><span class="mflag">M</span> = time entered or corrected by hand (original time kept in ${CO(coOfSite(s.site)).name}'s audit log). <sup class="nd">+1</sup> = next day. Hours are decimal. Crew rep. = workers on site reported by the employee at clock-out; ⚠ = differs from the number of workers who clocked in at this site that day. 🗒 = clock-out note written by the employee (read-only).</span></div>
       ${legendHtml('sheet-legend')}
     </section>`;
     return `<div class="print-wrap">
-      <div class="print-toolbar no-print"><a class="btn small ghost" href="${location.pathname}?week=${ws}#/admin/timesheets">‹ Timesheets</a><b>${which === 'all' ? 'All farms' : 'Site ' + (sheets[0] ? sheets[0].site.number : '')} · ${fRange(ws)}</b><span class="spacer"></span><button class="btn small" id="pBtn">⤓ PDF (print → Save as PDF)</button><button class="btn small primary" id="cBtn">⤓ CSV</button></div>
-      ${which !== 'all' && sheets[0] ? workflowPanel(ws, sheets[0].site) : ''}
+      <div class="print-toolbar no-print"><a class="btn small ghost" href="${location.pathname}?week=${ws}#/admin/timesheets">‹ Timesheets</a><b>${/^all/.test(which) ? 'All ' + CO(which.slice(4)).name + ' farms' : 'Site ' + (sheets[0] ? sheets[0].site.number : '')} · ${fRange(ws)}</b><span class="spacer"></span><button class="btn small" id="pBtn">⤓ PDF (print → Save as PDF)</button><button class="btn small primary" id="cBtn">⤓ CSV</button></div>
+      ${!/^all/.test(which) && sheets[0] ? workflowPanel(ws, sheets[0].site) : ''}
       ${sheets.map(sheetHtml).join('') || '<p>No shifts that week.</p>'}</div>`;
   }
   function bindPrint(root, ws, which) {
     root.querySelector('#pBtn').addEventListener('click', () => window.print());
-    root.querySelector('#cBtn').addEventListener('click', () => downloadCsv(ws, which === 'all' ? '' : which));
-    root.querySelectorAll('[data-advance]').forEach((b) => b.addEventListener('click', () => { const r = A().advance(which, ws, b.dataset.advance, b.dataset.by); if (r.error) return CJ.toast(r.error, 'bad'); CJ.toast('Status: ' + CJ.F.STATUS_LABEL[r.status], 'good'); CJ.render(); }));
+    root.querySelector('#cBtn').addEventListener('click', () => downloadCsv(ws, which));
+    root.querySelectorAll('[data-advance]').forEach((b) => b.addEventListener('click', () => { const r = A().advance(which, ws, b.dataset.advance, b.dataset.by); if (r.error) return CJ.toast(r.error, 'bad'); CJ.toast('Status: ' + CJ.F.statusLabel(r.status, CJ.api.coOf(A().site(which))), 'good'); CJ.render(); }));
     root.querySelectorAll('[data-sign]').forEach((b) => b.addEventListener('click', () => { const r = A().adminSignoff(which, b.dataset.sign, CJ.session.get()); if (r.error) return CJ.toast(r.error, 'bad'); CJ.toast('Day signed off', 'good'); CJ.render(); }));
     const ib = root.querySelector('[data-invoice]'); ib && ib.addEventListener('click', () => { const r = A().createInvoice(which, ws, CJ.session.get()); if (r.error) return CJ.toast(r.error, 'bad'); CJ.go('#/admin/invoice/' + r.id); });
     if (CJ.query().get('autoprint')) { history.replaceState(null, '', location.pathname + location.hash); setTimeout(() => window.print(), 300); }

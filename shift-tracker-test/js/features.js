@@ -60,6 +60,29 @@
     const sub = cents(qty * rate); const tax = Math.round(sub * hstRate); const tot = sub + tax;
     return { qty, rate, subtotal: sub / 100, hst: tax / 100, total: tot / 100 };
   }
+  // ---- Rate history (owner, Oct 3): each site keeps [{rate, from:'YYYY-MM-DD', ...}]; billing uses the rate in effect on the shift's (Atlantic) day.
+  function rateOn(site, dayKey) {
+    const list = (site.rates || []).filter((r) => r.from <= dayKey).sort((a, b) => a.from.localeCompare(b.from) || String(a.at || '').localeCompare(String(b.at || '')));
+    if (list.length) return list[list.length - 1].rate;
+    const first = (site.rates || []).slice().sort((a, b) => a.from.localeCompare(b.from))[0];
+    return first ? first.rate : site.rates ? undefined : site.rate; // before the first effective date: earliest known rate; no rates = MISSING (undefined, never invented)
+  }
+  const BILLING_TYPES = { hourly: 'Hourly', monthly: 'Monthly flat fee', 'per-visit': 'Per visit' };
+  // Why a farm-week can't be invoiced yet (null = OK). MISSING rate or non-hourly billing blocks; a FLAGGED rate only warns.
+  function invoiceBlock(site) {
+    if ((site.billingType || 'hourly') !== 'hourly') return BILLING_TYPES[site.billingType] + ' billing — invoicing for monthly / per-visit sites is not built yet (question for the owner).';
+    if (site.rateStatus === 'missing' || rateOn(site, '9999-12-31') == null) return 'Rate missing — enter the rate on Sites → Rates first. Invoices are blocked until then.';
+    return null;
+  }
+  // days = [{day, billable}] -> one invoice line per rate in effect (a week can cross an effective date)
+  function invoiceLines(days, site, hstRate) {
+    const by = {}; const order = [];
+    days.slice().sort((a, b) => a.day.localeCompare(b.day)).forEach((d) => { const r = rateOn(site, d.day) ?? 0; const k = r.toFixed(2); if (!by[k]) { by[k] = { rate: r, hours: 0, from: d.day, to: d.day }; order.push(k); } by[k].hours += d.billable; by[k].to = d.day; });
+    const lines = order.map((k) => { const x = by[k]; const qty = Math.round((x.hours + Number.EPSILON) * 100) / 100; return { qty, rate: x.rate, from: x.from, to: x.to, amount: cents(qty * x.rate) / 100 }; }).filter((l) => l.qty > 0);
+    const sub = lines.reduce((a, l) => a + cents(l.amount), 0); const tax = Math.round(sub * hstRate);
+    const qty = Math.round(lines.reduce((a, l) => a + l.qty, 0) * 100) / 100;
+    return { lines, qty, rate: lines.length === 1 ? lines[0].rate : null, subtotal: sub / 100, hst: tax / 100, total: (sub + tax) / 100 };
+  }
   const money = (n) => '$' + Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ---- 9. Aging ----
@@ -67,7 +90,7 @@
 
   // ---- 7. Timesheet workflow ----
   const STATUSES = ['draft', 'reviewed', 'approved', 'locked'];
-  const STATUS_LABEL = { draft: 'Draft', reviewed: 'Reviewed (Bal)', approved: 'Approved (owner)', locked: 'Billing locked' };
+  const STATUS_LABEL = { draft: 'Draft', reviewed: 'Reviewed', approved: 'Approved (owner)', locked: 'Billing locked' };
   function canAdvance(cur, next, issues) {
     const i = STATUSES.indexOf(cur), j = STATUSES.indexOf(next);
     if (j !== i + 1) return { ok: false, why: 'Steps go Draft → Reviewed → Approved → Billing locked.' };
@@ -75,6 +98,12 @@
     return { ok: true };
   }
 
+  // ---- Two companies (owner, Oct 3 9:36 AM) ----
+  const COMPANIES = {
+    cj: { id: 'cj', name: 'Chief Janitorial', short: 'CJ', invPrefix: 'CJ', reviewer: 'CJ Bal', billing: 'CJ Sandra', web: 'chiefjanitorial.com', hst: '000000000 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/logo.png' },
+    us: { id: 'us', name: 'Unscramble', short: 'US', invPrefix: 'US', reviewer: 'Us Sandra', billing: 'Us Sandra', web: 'unscramble.ca', hst: '999999999 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/unscramble-logo.svg', color: '#332E57', gold: '#C9A227' },
+  };
+  const statusLabel = (st, company) => (st === 'reviewed' ? 'Reviewed (' + (COMPANIES[company] || COMPANIES.cj).reviewer + ')' : STATUS_LABEL[st]);
   const fmtDist = (m) => (m == null ? '' : m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m');
-  CJ.F = { fmtDist, distanceM, locCheck, offsetEast, missedClockOut, noShow, schedStatus, otStatus, consecutiveDays, invoiceAmounts, money, ageFlag, STATUSES, STATUS_LABEL, canAdvance };
+  CJ.F = { COMPANIES, statusLabel, fmtDist, distanceM, locCheck, offsetEast, missedClockOut, noShow, schedStatus, otStatus, consecutiveDays, invoiceAmounts, rateOn, invoiceLines, invoiceBlock, BILLING_TYPES, money, ageFlag, STATUSES, STATUS_LABEL, canAdvance };
 })();

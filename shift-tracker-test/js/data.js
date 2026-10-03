@@ -28,7 +28,7 @@
     ['CJCTCV17', 'Charlottetown Vet Clinic', 'Healthcare', 'Charlottetown'],
     ['CJVTWF18', 'Wheatley River Farms', 'Farm', 'Wheatley River'],
     ['CJVTHF19', 'Hillcrest Hog Farm', 'Farm', 'Hunter River'],
-    ['CJVTGF20', 'Green Meadow Greenhouses', 'Farm', 'Cornwall'],
+    ['CJVTGF20', 'Seabreeze Greenhouses', 'Farm', 'Cornwall'],
     ['CJVTSI21', 'Souris Island Seafoods', 'Warehouse', 'Souris'],
     ['CJVTGM22', 'Gallant Mills Farm', 'Farm', 'Tignish'],
     ['CJVTMB23', 'Murray Brook Blueberries', 'Farm', 'Murray River'],
@@ -77,7 +77,7 @@
     const today = CJ.tz.todayKey();
     const lastWk = CJ.tz.addDays(CJ.tz.weekStart(today), -7); // Monday of last completed week
     const isLastWk = (key) => key >= lastWk && key <= CJ.tz.addDays(lastWk, 6);
-    const db = { version: 5, seededAt: iso(now), users: [], sites: [], shifts: [], settings: { empEditWindowDays: 14, maxShiftHours: 18 } };
+    const db = { version: 6, seededAt: iso(now), users: [], sites: [], shifts: [], settings: { empEditWindowDays: 14, maxShiftHours: 18 } };
 
     SITES.forEach(([code, name, type, town]) => {
       const number = parseInt(code.match(/(\d+)$/)[1], 10);
@@ -85,14 +85,14 @@
     });
     db.sites.sort((a, b) => a.number - b.number);
 
-    db.users.push({ id: 'u-owner', name: 'Owner (Admin)', phone: '1111111111', password: 'demo', role: 'admin', status: 'active', createdAt: iso(at(today, -400, 9, 0)) });
+    db.users.push({ id: 'u-owner', name: 'Owner (Admin)', phone: '1111111111', password: 'demo', role: 'admin', staffRole: 'owner', companies: ['cj', 'us'], status: 'active', createdAt: iso(at(today, -400, 9, 0)) });
     WORKERS.forEach(([id, name, phone], i) => {
       db.users.push({ id, name, phone, password: 'demo', role: 'worker', status: 'active', createdAt: iso(at(today, -300 + i * 20, 10, 0)), decidedBy: 'u-owner', decidedAt: iso(at(today, -300 + i * 20, 15, 0)) });
     });
     // Pending sign-ups (the "AI" test account from the live-app tour is one of them).
     db.users.push({ id: 'u-ai', name: 'AI', phone: '9025550147', password: 'demo', role: 'worker', status: 'pending', createdAt: iso(at(today, 0, 8, 2)) });
     db.users.push({ id: 'u-kulwinder', name: 'Kulwinder Singh', phone: '9025550148', password: 'demo', role: 'worker', status: 'pending', createdAt: iso(at(today, -1, 19, 41)) });
-    db.users.push({ id: 'u-sarah', name: 'Sarah Arsenault', phone: '9025550149', password: 'demo', role: 'worker', status: 'pending', createdAt: iso(at(today, -2, 13, 5)) });
+    db.users.push({ id: 'u-sarah', name: 'Sarah Doiron', phone: '9025550149', password: 'demo', role: 'worker', status: 'pending', createdAt: iso(at(today, -2, 13, 5)) });
     // Already-processed sign-ups
     db.users.push({ id: 'u-jordan', name: 'Jordan Doucette', phone: '9025550150', password: 'demo', role: 'worker', status: 'rejected', createdAt: iso(at(today, -6, 11, 20)), decidedBy: 'u-owner', decidedAt: iso(at(today, -5, 9, 3)), decisionNote: 'Not a Chief Janitorial employee' });
     db.users.push({ id: 'u-amandeep', name: 'Amandeep Dhaliwal', phone: '9025550151', password: 'demo', role: 'worker', status: 'active', createdAt: iso(at(today, -4, 18, 0)), decidedBy: 'u-owner', decidedAt: iso(at(today, -4, 20, 12)) });

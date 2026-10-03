@@ -31,15 +31,18 @@
   }
   function theme(t) { if (t) localStorage.setItem('cj-theme', t); document.documentElement.dataset.theme = localStorage.getItem('cj-theme') || 'light'; }
   function toggleTheme() { theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); CJ.render(); }
-  const logo = () => `<img class="logo" src="assets/${document.documentElement.dataset.theme === 'dark' ? 'logo-dark' : 'logo'}.png" alt="Chief Janitorial">`;
+  // Company logo: 'cj' (default) or 'us' (Unscramble). 'both' = the two side by side (owner / login page).
+  const logo = (co) => co === 'us' ? `<img class="logo logo-us" src="assets/unscramble-logo.svg" alt="Unscramble">`
+    : co === 'both' ? `<span class="logo-pair">${logo('cj')}<span class="amp">+</span>${logo('us')}</span>`
+    : `<img class="logo" src="assets/${document.documentElement.dataset.theme === 'dark' ? 'logo-dark' : 'logo'}.png" alt="Chief Janitorial">`;
   const themeBtn = () => `<button class="iconbtn" data-act="theme" title="Dark / light mode">${document.documentElement.dataset.theme === 'dark' ? '☀' : '☾'}</button>`;
 
   // ---------- Login / sign-up ----------
   function loginView() {
     return `<div class="auth">
       <div class="auth-card">
-        <div class="auth-logo">${logo()}</div>
-        <h1>Shift Tracker</h1>
+        <div class="auth-logo">${logo('both')}</div>
+        <h1>Shift Tracker</h1><p class="muted center small">Chief Janitorial · Unscramble</p>
         <form id="loginForm" class="stack">
           <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="902 555 0101" autocomplete="username"></label>
           <label class="field"><span>Password</span><input name="password" type="password" placeholder="••••" autocomplete="current-password"></label>
@@ -49,19 +52,25 @@
         <p class="muted center">New employee? <a href="#/signup">Create an account</a></p>
         <div class="demo-box">
           <div class="demo-title">Prototype demo logins <span class="muted">(password: demo)</span></div>
-          <button class="btn demo" data-demo="u-harpreet">👷 Employee — Harpreet Kaur</button>
+          <div class="demo-grp">Employees</div>
+          <button class="btn demo" data-demo="u-harpreet">👷 Employee (CJ) — Harpreet Kaur</button>
+          <button class="btn demo demo-us" data-demo="u-us-ana">👷 Employee (Unscramble) — Ana Lima</button>
           <button class="btn demo" data-demo="u-ai">⏳ Pending sign-up — AI</button>
-          <button class="btn demo" data-demo="u-owner">🛡 Admin / Owner</button>
+          <div class="demo-grp">Office logins — each sees only its own company</div>
+          <button class="btn demo" data-demo="u-owner">🛡 Owner — all companies</button>
+          <div class="demo-2"><button class="btn demo" data-demo="u-cj-ops">CJ Ops — Bal</button><button class="btn demo" data-demo="u-cj-billing">CJ Billing — Sandra</button></div>
+          <div class="demo-2"><button class="btn demo demo-us" data-demo="u-us-ops">US Ops — Us Aasa</button><button class="btn demo demo-us" data-demo="u-us-billing">US Billing — Us Sandra</button></div>
           <button class="linkbtn" data-act="reset">Reset sample data</button>
         </div>
       </div></div>`;
   }
   function signupView() {
     return `<div class="auth"><div class="auth-card">
-        <div class="auth-logo">${logo()}</div>
+        <div class="auth-logo">${logo('both')}</div>
         <h1>Create employee account</h1>
-        <p class="muted">New accounts are checked by the Chief Janitorial office before you can clock in.</p>
+        <p class="muted">New accounts are checked by your company's office before you can clock in.</p>
         <form id="signupForm" class="stack">
+          <label class="field"><span>Who do you work for?</span><select name="company"><option value="cj">Chief Janitorial</option><option value="us">Unscramble</option></select></label>
           <label class="field"><span>Full name</span><input name="name" placeholder="First and last name"></label>
           <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="10 digits"></label>
           <label class="field"><span>Password</span><input name="password" type="password"></label>
@@ -81,7 +90,7 @@
     root.querySelectorAll('[data-demo]').forEach((b) => b.addEventListener('click', () => { session.set(b.dataset.demo); location.hash = CJ.api.roleOf(b.dataset.demo) === 'admin' ? '#/admin/dashboard' : '#/emp/clock'; CJ.render(); }));
     const sf = $('#signupForm', root);
     sf && sf.addEventListener('submit', (e) => {
-      e.preventDefault(); const f = new FormData(sf); const r = CJ.api.emp.signup(f.get('name'), f.get('phone'), f.get('password'));
+      e.preventDefault(); const f = new FormData(sf); const r = CJ.api.emp.signup(f.get('name'), f.get('phone'), f.get('password'), f.get('company'));
       if (r.error) { $('#signupErr').textContent = r.error; return; }
       session.set(r.id); location.hash = '#/pending';
     });
@@ -93,9 +102,10 @@
     theme();
     const app = $('#app'); const parts = parseHash(); const uid = session.get(); const role = uid ? CJ.api.roleOf(uid) : null;
     window.scrollTo(0, 0);
+    CJ.api.setActor(role === 'admin' ? uid : null); // admin data is scoped to this login's companies
     if (parts[0] === 'signup') { app.innerHTML = signupView(); bindAuth(app); return; }
     if (!uid || !role || parts[0] === 'login') { if (parts[0] !== 'login') session.clear(); app.innerHTML = loginView(); bindAuth(app); bindGlobal(app); return; }
-    if (role === 'admin') { if (parts[0] !== 'admin') return go('#/admin/dashboard'); CJ.adminView(app, parts.slice(1), uid); }
+    if (role === 'admin') { if (parts[0] !== 'admin') return go('#/admin/dashboard'); CJ.adminView(app, parts.slice(1), uid); if ((CJ.api.db() || {}).dataMode === 'real') app.insertAdjacentHTML('afterbegin', '<div class="private-band">🔒 PRIVATE REVIEW — REAL client names, rates, terms and HST numbers from the local-only seed file (shifts, hours, workers and towns are still SAMPLE data). Not part of the public build.</div>'); }
     else { CJ.employeeView(app, parts, uid); }
     bindGlobal(app);
   };
@@ -109,8 +119,10 @@
   // Demo/screenshot helpers via query string: ?as=<userId>&reset=1&theme=dark
   function applyQuery() {
     const q = new URLSearchParams(location.search);
-    if (q.get('reset')) CJ.api.reset();
+    if (q.get('data')) localStorage.setItem('cj-data-mode', q.get('data') === 'real' && CJ.REAL_SEED ? 'real' : 'sample'); // ?data=real only works where the local-only seed file exists
+    if (q.get('reset') || (q.get('data') && (CJ.api.db() || {}).dataMode !== localStorage.getItem('cj-data-mode'))) CJ.api.reset();
     if (q.get('as')) session.set(q.get('as'));
+    if (q.get('co')) CJ.api.setCompanyFilter(q.get('co')); // screenshot helper: owner's company filter (cj | us | all)
     if (q.get('theme')) theme(q.get('theme'));
   }
 

@@ -9,7 +9,7 @@
 
   function load() {
     try { db = JSON.parse(localStorage.getItem(CJ.STORE_KEY)); } catch (e) { db = null; }
-    if (!db || db.version !== 5) { db = CJ.seed(); save(); }
+    if (!db || db.version !== 6) { db = CJ.seed(); save(); }
     return db;
   }
   function save() { localStorage.setItem(CJ.STORE_KEY, JSON.stringify(db)); }
@@ -18,6 +18,18 @@
   const site = (id) => db.sites.find((s) => s.id === id);
   const shift = (id) => db.shifts.find((s) => s.id === id);
   const fieldEdited = (s, f) => s.edits.some((e) => e.field === f);
+
+  // ---------- Company scoping (CJ / Unscramble) ----------
+  // actor = logged-in admin/staff user. Staff logins carry companies:['cj'] or ['us']; the owner has both.
+  // The header switcher (filter) can narrow the owner's view; it can never widen a staff login's view.
+  const FILTER = 'cj-company-filter'; let actorId = null;
+  const coOf = (x) => (x && x.company) || 'cj';
+  function allowedCompanies() { const u = actorId && user(actorId); return u && u.companies ? u.companies.slice() : ['cj', 'us']; }
+  function companyFilter() { return localStorage.getItem(FILTER) || 'all'; }
+  function setCompanyFilter(f) { localStorage.setItem(FILTER, f === 'cj' || f === 'us' ? f : 'all'); }
+  function scope() { const a = allowedCompanies(); const f = companyFilter(); return f !== 'all' && a.includes(f) ? [f] : a; }
+  const vis = (x) => !!x && scope().includes(coOf(x));
+  const visShift = (s) => !!s && vis(site(s.siteId) || s);
 
   function validateTimes(inIso, outIso) {
     const now = Date.now();
@@ -73,8 +85,9 @@
     };
   }
   const emp = {
-    me(uid) { const u = user(uid); return u && { id: u.id, name: u.name, phone: u.phone, status: u.status, role: u.role, createdAt: u.createdAt }; },
-    sites() { return db.sites.filter((s) => s.active).map(empSite); },
+    me(uid) { const u = user(uid); const co = CJ.F.COMPANIES[coOf(u)]; return u && { id: u.id, name: u.name, phone: u.phone, status: u.status, role: u.role, createdAt: u.createdAt, company: co.id, companyName: co.name, companyLogo: co.logo }; },
+    // Employees only see their own company's sites (numbers only).
+    sites(uid) { const co = uid ? coOf(user(uid)) : null; return db.sites.filter((s) => s.active && (!co || coOf(s) === co)).map(empSite); },
     recentSiteNumbers(uid) {
       const out = [];
       db.shifts.filter((s) => s.userId === uid).sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn)).forEach((s) => { const n = site(s.siteId).number; if (!out.includes(n)) out.push(n); });
@@ -113,7 +126,8 @@
       if (!site(siteId)) return { error: 'Pick a site first.' };
       const t = new Date().toISOString();
       const loc = CJ.ops ? CJ.ops.simulateLocation(siteId, locMode) : null;
-      db.shifts.unshift({ id: 'sh' + Date.now(), userId: uid, siteId, clockIn: t, clockOut: null, notes: (notes || '').slice(0, 120), recordedIn: t, recordedOut: null, crewCount: null, recordedCrew: null, edits: [], location: loc });
+      const st0 = site(siteId); if (!st0 || coOf(st0) !== coOf(u)) return { error: 'Pick one of your sites.' };
+      db.shifts.unshift({ id: 'sh' + Date.now(), company: coOf(st0), userId: uid, siteId, clockIn: t, clockOut: null, notes: (notes || '').slice(0, 120), recordedIn: t, recordedOut: null, crewCount: null, recordedCrew: null, edits: [], location: loc });
       save(); return { ok: true, loc: loc && { status: loc.status, distanceM: loc.distanceM } };
     },
     // outNote: optional clock-out note, max 120 chars, saved ONCE and read-only afterwards (no API can change it).
@@ -131,34 +145,39 @@
       if (!emp.canEdit(uid, id)) return { error: 'This shift is older than ' + db.settings.empEditWindowDays + ' days. Ask the office to change it.' };
       return doEdit(s, changes, uid, 'worker');
     },
-    signup(name, phone, password) {
+    signup(name, phone, password, company) {
       phone = (phone || '').replace(/\D/g, '');
       if (!name || !name.trim()) return { error: 'Enter your name.' };
       if (phone.length !== 10) return { error: 'Enter a 10-digit phone number.' };
       if (!password || password.length < 4) return { error: 'Password must be at least 4 characters.' };
-      if (db.users.some((u) => u.phone === phone)) return { error: 'That phone number already has an account.' };
-      const u = { id: 'u-' + Date.now(), name: name.trim(), phone, password, role: 'worker', status: 'pending', createdAt: new Date().toISOString() };
+      const prev = db.users.find((u) => u.phone === phone);
+      if (prev && prev.status === 'rejected') return { error: 'This phone number was not approved before. Please contact the office — you can\'t sign up again with the same number.' };
+      if (prev) return { error: 'That phone number already has an account.' };
+      const u = { id: 'u-' + Date.now(), name: name.trim(), phone, password, role: 'worker', company: company === 'us' ? 'us' : 'cj', status: 'pending', createdAt: new Date().toISOString() };
       db.users.push(u); save(); return { ok: true, id: u.id };
     },
   };
 
   // ---------- ADMIN (full) ----------
   const admin = {
-    users: () => db.users, user, sites: () => db.sites, site, shift,
-    shifts: () => [...db.shifts].sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn)),
+    // Everything below is filtered to the actor's company scope.
+    users: () => db.users.filter((u) => (u.role === 'worker' ? vis(u) : true)), user, sites: () => db.sites.filter(vis),
+    site: (id) => { const x = site(id); return vis(x) ? x : null; }, shift: (id) => { const x = shift(id); return visShift(x) ? x : null; },
+    shifts: () => db.shifts.filter(visShift).sort((a, b) => new Date(b.clockIn) - new Date(a.clockIn)),
     fieldEdited, settings: () => db.settings,
-    pending: () => db.users.filter((u) => u.status === 'pending').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
-    processed: () => db.users.filter((u) => u.role === 'worker' && u.decidedAt && u.status !== 'pending').sort((a, b) => new Date(b.decidedAt) - new Date(a.decidedAt)),
+    pending: () => db.users.filter((u) => u.status === 'pending' && vis(u)).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
+    processed: () => db.users.filter((u) => u.role === 'worker' && vis(u) && u.decidedAt && u.status !== 'pending').sort((a, b) => new Date(b.decidedAt) - new Date(a.decidedAt)),
     decide(uid, approve, note, byId) {
-      const u = user(uid); if (!u || u.status !== 'pending') return { error: 'Request not found.' };
+      const u = user(uid); if (!u || u.status !== 'pending' || !vis(u)) return { error: 'Request not found.' };
       u.status = approve ? 'active' : 'rejected'; u.decidedBy = byId; u.decidedAt = new Date().toISOString(); u.decisionNote = note || ''; save(); return { ok: true };
     },
-    edit(id, changes, byId) { const s = shift(id); if (!s) return { error: 'Shift not found.' }; return doEdit(s, changes, byId, 'admin'); },
-    addSite(name, type, location) {
+    edit(id, changes, byId) { const s = shift(id); if (!s || !visShift(s)) return { error: 'Shift not found.' }; return doEdit(s, changes, byId, 'admin'); },
+    addSite(name, type, location, company) {
+      const co = company === 'us' || company === 'cj' ? company : scope()[0]; if (!scope().includes(co)) return { error: 'Not your company.' };
       const number = Math.max(...db.sites.map((s) => s.number)) + 1;
-      let pre = String(name).split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'CJ'; while (db.sites.some((s) => s.invoicePrefix === pre)) pre = pre.slice(0, 3) + number;
+      let ini = String(name).split(/\s+/).filter(Boolean).map((w) => w[0]).join('').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) || 'X'; let pre = CJ.F.COMPANIES[co].invPrefix + '-' + ini; while (db.sites.some((s) => s.invoicePrefix === pre)) pre = CJ.F.COMPANIES[co].invPrefix + '-' + ini + number;
       // New sites start at the Charlottetown default point until the owner sets real coordinates; SAMPLE rate until entered.
-      db.sites.push({ id: 's' + number, number, clientName: name, type, location, legacyCode: '', active: true, lat: 46.2382, lng: -63.1311, radiusM: type === 'Farm' ? 300 : 150, rate: 35, rateSample: true, invoicePrefix: pre }); save(); return { ok: true, number };
+      db.sites.push({ id: 's' + number, number, company: co, clientName: name, type, location, legacyCode: '', active: true, lat: 46.2382, lng: -63.1311, radiusM: type === 'Farm' ? 300 : 150, rate: 35, rates: [{ rate: 35, from: CJ.tz.todayKey().slice(0, 4) + '-01-01', sample: true, by: (actor() || {}).name || 'Owner', at: new Date().toISOString(), note: 'SAMPLE starting rate' }], rateSample: true, invoicePrefix: pre }); save(); return { ok: true, number };
     },
     // Crew check for one site on one Atlantic day: distinct workers who clocked in vs crew counts reported at clock-out.
     crewCheck(siteId, dayKey) {
@@ -170,11 +189,11 @@
     },
     crewMismatches(days) {
       const since = CJ.tz.addDays(CJ.tz.todayKey(), -(days - 1)); const seen = new Set(); const out = [];
-      db.shifts.forEach((x) => { const k = x.siteId + '|' + CJ.tz.dayKey(x.clockIn); if (seen.has(k) || CJ.tz.dayKey(x.clockIn) < since) return; seen.add(k); const c = admin.crewCheck(x.siteId, CJ.tz.dayKey(x.clockIn)); if (c.mismatch) out.push(c); });
+      db.shifts.filter(visShift).forEach((x) => { const k = x.siteId + '|' + CJ.tz.dayKey(x.clockIn); if (seen.has(k) || CJ.tz.dayKey(x.clockIn) < since) return; seen.add(k); const c = admin.crewCheck(x.siteId, CJ.tz.dayKey(x.clockIn)); if (c.mismatch) out.push(c); });
       return out.sort((a, b) => b.day.localeCompare(a.day));
     },
     allEdits() {
-      const out = []; db.shifts.forEach((s) => s.edits.forEach((e) => out.push({ ...e, shift: s }))); return out.sort((a, b) => new Date(b.at) - new Date(a.at));
+      const out = []; db.shifts.filter(visShift).forEach((s) => s.edits.forEach((e) => out.push({ ...e, shift: s }))); return out.sort((a, b) => new Date(b.at) - new Date(a.at));
     },
   };
 
@@ -185,5 +204,7 @@
   }
   function roleOf(uid) { const u = user(uid); return u ? u.role : null; }
 
-  CJ.api = { load, save, reset, emp, admin, login, roleOf, db: () => db, _internal: { user, site, shift, fieldEdited, validCrew } };
+  function setActor(uid) { actorId = uid || null; }
+  const actor = () => (actorId ? user(actorId) : null);
+  CJ.api = { load, save, reset, emp, admin, login, roleOf, setActor, actor, scope, vis, visShift, coOf, allowedCompanies, companyFilter, setCompanyFilter, db: () => db, _internal: { user, site, shift, fieldEdited, validCrew } };
 })();

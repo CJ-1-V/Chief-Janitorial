@@ -9,9 +9,9 @@
   const siteLabel = (n) => (n == null ? 'Site ?' : 'Site ' + n);
 
   function shell(uid, active, body) {
-    const me = E().me(uid);
-    return `<div class="emp">
-      <header class="topbar"><a href="#/emp/clock">${CJ.logo()}</a><div class="topbar-r">${CJ.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(me.name)}">${esc(CJ.initials(me.name))}</a></div></header>
+    const me = E().me(uid); if (typeof document !== 'undefined') document.title = 'Shift Tracker — ' + me.companyName;
+    return `<div class="emp co-${me.company}">
+      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${CJ.logo(me.company)}<span class="emp-co">${esc(me.companyName)}</span></a><div class="topbar-r">${CJ.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(me.name)}">${esc(CJ.initials(me.name))}</a></div></header>
       <main class="emp-main">${reminders(uid)}${body}</main>
       <nav class="tabbar">
         <a href="#/emp/clock" class="${active === 'clock' ? 'on' : ''}"><span class="ti">⏱</span>Clock</a>
@@ -26,12 +26,12 @@
   function pendingView(uid) {
     const me = E().me(uid);
     const rejected = me.status === 'rejected';
-    return `<div class="emp"><header class="topbar">${CJ.logo()}<div class="topbar-r">${CJ.themeBtn()}</div></header>
+    return `<div class="emp co-${me.company}"><header class="topbar">${CJ.logo(me.company)}<div class="topbar-r">${CJ.themeBtn()}</div></header>
       <main class="emp-main"><div class="card pending-card">
         <div class="pending-icon">${rejected ? '✕' : '⏳'}</div>
         <h1>${rejected ? 'Account not approved' : 'Waiting for approval'}</h1>
-        <p class="lead">Hi ${esc(me.name)}, ${rejected ? 'the Chief Janitorial office did not approve this account.' : 'your account was created and is waiting for the Chief Janitorial office to approve it.'}</p>
-        ${rejected ? '<p class="muted">If you think this is a mistake, please talk to your supervisor.</p>' : `
+        <p class="lead">Hi ${esc(me.name)}, ${rejected ? 'the ' + esc(me.companyName) + ' office did not approve this account.' : 'your account was created and is waiting for the ' + esc(me.companyName) + ' office to approve it.'}</p>
+        ${rejected ? '<div class="card"><b>Please contact the office.</b><p class="muted">If you think this is a mistake, call or visit the ' + esc(me.companyName) + ' office. You can\'t sign up again with this phone number.</p></div>' : `
         <ol class="steps">
           <li class="done"><b>Account created</b><span>${fmtDate(me.createdAt)}, ${fmtTime(me.createdAt)}</span></li>
           <li class="now"><b>Office approval</b><span>The office will review your account</span></li>
@@ -132,7 +132,7 @@
           <a class="btn ghost" href="#/emp/edit/${open.id}">Wrong start time? Edit times</a>
         </div>`);
     }
-    const sites = E().sites(); const recent = E().recentSiteNumbers(uid); const locMode = CJ.query().get('loc') || 'onsite';
+    const sites = E().sites(uid); const recent = E().recentSiteNumbers(uid); const locMode = CJ.query().get('loc') || 'onsite';
     const pre = CJ.query().get('site'); const sel = pre ? (sites.find((s) => String(s.number) === pre) || {}).id : '';
     const tile = (s) => `<button type="button" class="site-tile ${s.id === sel ? 'sel' : ''}" data-site="${s.id}" data-num="${s.number}">${siteLabel(s.number)}</button>`;
     return shell(uid, 'clock', `
@@ -288,7 +288,7 @@
   function profileView(uid) {
     const me = E().me(uid);
     return shell(uid, 'profile', `<h1 class="h1">My profile</h1>
-      <div class="card"><div class="kv"><span>Name</span><b>${esc(me.name)}</b><span>Phone</span><b>${esc(me.phone)}</b><span>Account</span><b><span class="tag on">Approved</span></b></div>
+      <div class="card"><div class="kv"><span>Name</span><b>${esc(me.name)}</b><span>Phone</span><b>${esc(me.phone)}</b><span>Company</span><b>${esc(me.companyName)}</b><span>Account</span><b><span class="tag on">Approved</span></b></div>
       <button class="btn ghost" onclick="CJ.toast('Prototype: would open the phone-change request form')">Request phone change</button></div>
       <div class="card"><h2>Change password</h2><div class="stack"><label class="field"><span>Current password</span><input type="password"></label><label class="field"><span>New password</span><input type="password"></label><button class="btn" onclick="CJ.toast('Prototype only — not saved')">Update password</button></div></div>
       <button class="btn ghost big" data-act="logout">Log out</button>`);
