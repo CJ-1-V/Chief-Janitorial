@@ -1,6 +1,6 @@
 {
-  "name": "Unscramble Shifts",
-  "short_name": "Shifts",
+  "name": "US",
+  "short_name": "US",
   "description": "Clock in and out, see your hours (Chief Janitorial + Unscramble).",
   "id": "/shifts-secure/",
   "start_url": "/shifts-secure/",
