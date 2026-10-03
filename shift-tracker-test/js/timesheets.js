@@ -94,7 +94,7 @@
     const steps = CJ.F.STATUSES.map((k, j) => `<li class="${j < i ? 'done' : j === i ? 'now' : ''}">${CJ.F.statusLabel(k, co)}</li>`).join('');
     const next = CJ.F.STATUSES[i + 1];
     const btn = { reviewed: ['Mark reviewed (' + C.reviewer + ')', C.reviewer, 'review'], approved: ['Approve (owner)', 'Owner', 'approve'], locked: ['🔒 Billing lock (owner)', 'Owner', 'lock'] }[next];
-    const allowed = btn && A().can(btn[2], co); const canBill = A().can('billing', co); const block = A().invoiceBlock(site.id);
+    const allowed = btn && A().can(btn[2], co); const canBill = A().can('billing', co); const block = A().invoiceBlock(site.id, ws);
     const days = []; for (let d = 0; d < 7; d++) { const k = T().addDays(ws, d); const has = A().shifts().some((x) => x.siteId === site.id && T().dayKey(x.clockIn) === k); if (has) days.push({ k, so: A().signoff(site.id, k) }); }
     const inv = A().invoiceFor(site.id, ws);
     return `<section class="wf-panel no-print">

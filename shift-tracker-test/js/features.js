@@ -60,33 +60,56 @@
     const sub = cents(qty * rate); const tax = Math.round(sub * hstRate); const tot = sub + tax;
     return { qty, rate, subtotal: sub / 100, hst: tax / 100, total: tot / 100 };
   }
-  // ---- Rate history (owner, Oct 3): each site keeps [{rate, from:'YYYY-MM-DD', ...}]; billing uses the rate in effect on the shift's (Atlantic) day.
-  function rateOn(site, dayKey) {
-    const list = (site.rates || []).filter((r) => r.from <= dayKey).sort((a, b) => a.from.localeCompare(b.from) || String(a.at || '').localeCompare(String(b.at || '')));
+  // ---- Rate history (owner, Oct 3): each site keeps [{rate, from:'YYYY-MM-DD', role?, ...}]; billing uses the rate in effect on the shift's (Atlantic) day.
+  // ---- Roles (Grok Bot, Oct 3): a site can have a rate per role (e.g. Labourer vs Truck driver), each with its own effective dates.
+  //      An entry without `role` belongs to the site's default role. The shift's role picks the rate.
+  const roleKey = (site, role) => role || site.defaultRole || '';
+  const rKey = (site, r) => r.role || site.defaultRole || '';
+  function siteRoles(site) { const out = []; const add = (x) => { if (x && !out.includes(x)) out.push(x); }; add(site.defaultRole); (site.rates || []).forEach((r) => add(rKey(site, r))); (site.roleNames || []).forEach(add); return out; }
+  // role of one worker-day at a site: per-shift override > the worker's role at this site > site default
+  function roleOf(site, g) { const s = (g.shifts || []).find((x) => x.jobRole); return (g.role || (s && s.jobRole) || (site.workerRoles || {})[g.userId] || site.defaultRole || ''); }
+  function rateOn(site, dayKey, role) {
+    let k = roleKey(site, role); if (role && !siteRoles(site).includes(role)) k = roleKey(site, ''); // unknown role -> default role
+    const mine = (site.rates || []).filter((r) => rKey(site, r) === k);
+    const list = mine.filter((r) => r.from <= dayKey).sort((a, b) => a.from.localeCompare(b.from) || String(a.at || '').localeCompare(String(b.at || '')));
     if (list.length) return list[list.length - 1].rate;
-    const first = (site.rates || []).slice().sort((a, b) => a.from.localeCompare(b.from))[0];
+    const first = mine.slice().sort((a, b) => a.from.localeCompare(b.from))[0];
     return first ? first.rate : site.rates ? undefined : site.rate; // before the first effective date: earliest known rate; no rates = MISSING (undefined, never invented)
   }
   const BILLING_TYPES = { hourly: 'Hourly', monthly: 'Monthly flat fee', 'per-visit': 'Per visit' };
   // Why a farm-week can't be invoiced yet (null = OK). MISSING rate or non-hourly billing blocks; a FLAGGED rate only warns.
-  function invoiceBlock(site) {
-    if ((site.billingType || 'hourly') !== 'hourly') return BILLING_TYPES[site.billingType] + ' billing — invoicing for monthly / per-visit sites is not built yet (question for the owner).';
+  // days (optional) = the worker-days being invoiced: any role in use without a rate also blocks.
+  function invoiceBlock(site, days) {
+    if ((site.billingType || 'hourly') !== 'hourly') return BILLING_TYPES[site.billingType] + ' billing — invoicing for monthly / per-visit sites is not built yet (still open with the owner).';
     if (site.rateStatus === 'missing' || rateOn(site, '9999-12-31') == null) return 'Rate missing — enter the rate on Sites → Rates first. Invoices are blocked until then.';
+    const miss = [...new Set((days || []).filter((d) => d.billable > 0 && rateOn(site, d.day, roleOf(site, d)) == null).map((d) => roleOf(site, d)))];
+    if (miss.length) return 'Rate missing for role: ' + miss.join(', ') + ' — enter it on the site page first. Invoices are blocked until then.';
     return null;
   }
-  // days = [{day, billable}] -> one invoice line per rate in effect (a week can cross an effective date)
+  // days = [{day, billable, userId, shifts}] -> one invoice line per (role, rate) in effect (a week can cross an effective date)
   function invoiceLines(days, site, hstRate) {
-    const by = {}; const order = [];
-    days.slice().sort((a, b) => a.day.localeCompare(b.day)).forEach((d) => { const r = rateOn(site, d.day) ?? 0; const k = r.toFixed(2); if (!by[k]) { by[k] = { rate: r, hours: 0, from: d.day, to: d.day }; order.push(k); } by[k].hours += d.billable; by[k].to = d.day; });
-    const lines = order.map((k) => { const x = by[k]; const qty = Math.round((x.hours + Number.EPSILON) * 100) / 100; return { qty, rate: x.rate, from: x.from, to: x.to, amount: cents(qty * x.rate) / 100 }; }).filter((l) => l.qty > 0);
+    const by = {}; const order = []; const multi = siteRoles(site).length > 1;
+    days.slice().sort((a, b) => a.day.localeCompare(b.day)).forEach((d) => { const role = multi ? roleOf(site, d) : ''; const r = rateOn(site, d.day, role) ?? 0; const k = role + '|' + r.toFixed(2); if (!by[k]) { by[k] = { role, rate: r, hours: 0, from: d.day, to: d.day }; order.push(k); } by[k].hours += d.billable; if (d.day < by[k].from) by[k].from = d.day; if (d.day > by[k].to) by[k].to = d.day; });
+    if (multi) order.sort((a, b) => (siteRoles(site).indexOf(by[a].role) - siteRoles(site).indexOf(by[b].role)) || by[a].from.localeCompare(by[b].from));
+    const lines = order.map((k) => { const x = by[k]; const qty = Math.round((x.hours + Number.EPSILON) * 100) / 100; return { qty, rate: x.rate, from: x.from, to: x.to, ...(multi ? { role: x.role } : {}), amount: cents(qty * x.rate) / 100 }; }).filter((l) => l.qty > 0);
     const sub = lines.reduce((a, l) => a + cents(l.amount), 0); const tax = Math.round(sub * hstRate);
     const qty = Math.round(lines.reduce((a, l) => a + l.qty, 0) * 100) / 100;
     return { lines, qty, rate: lines.length === 1 ? lines[0].rate : null, subtotal: sub / 100, hst: tax / 100, total: (sub + tax) / 100 };
   }
   const money = (n) => '$' + Number(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // ---- 9. Aging ----
-  const ageFlag = (days) => (days >= 45 ? 45 : days >= 30 ? 30 : days >= 15 ? 15 : 0);
+  // ---- 9. Payment terms + aging (Grok Bot, Oct 3): both companies — "Payment due within one month of receipt" (not Net 15).
+  // Due date = date the client received the invoice (defaults to the date it was marked issued) + 1 calendar month
+  // (clamped to month end: Jan 31 -> Feb 28/29). Aging buckets count days PAST DUE.
+  const TERMS = 'Payment due within one month of receipt';
+  function addMonths(dayKey, n) {
+    const [y, m, d] = dayKey.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1));
+    const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0') + '-' + String(Math.min(d, last)).padStart(2, '0');
+  }
+  const dueDate = (inv) => (inv.status === 'draft' && !inv.issuedAt ? null : addMonths(inv.receivedAt || inv.issuedAt || inv.date, 1));
+  const ageFlag = (daysPastDue) => (daysPastDue > 60 ? 61 : daysPastDue > 30 ? 31 : daysPastDue > 0 ? 1 : 0);
+  const AGE_LABEL = { 0: 'Current (not yet due)', 1: '1–30 days past due', 31: '31–60 days past due', 61: '61+ days past due' };
 
   // ---- 7. Timesheet workflow ----
   const STATUSES = ['draft', 'reviewed', 'approved', 'locked'];
@@ -100,10 +123,10 @@
 
   // ---- Two companies (owner, Oct 3 9:36 AM) ----
   const COMPANIES = {
-    cj: { id: 'cj', name: 'Chief Janitorial', short: 'CJ', invPrefix: 'CJ', reviewer: 'CJ Bal', billing: 'CJ Sandra', web: 'chiefjanitorial.com', hst: '000000000 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/logo.png' },
-    us: { id: 'us', name: 'Unscramble', short: 'US', invPrefix: 'US', reviewer: 'Us Sandra', billing: 'Us Sandra', web: 'unscramble.ca', hst: '999999999 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/unscramble-logo.svg', color: '#332E57', gold: '#C9A227' },
+    cj: { id: 'cj', name: 'Chief Janitorial', short: 'CJ', invPrefix: 'CJ', reviewer: 'CJ Bal', billing: 'CJ Sandra', web: 'chiefjanitorial.com', hst: '000000000 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/logo.png', terms: TERMS },
+    us: { id: 'us', name: 'Unscramble', short: 'US', invPrefix: 'US', reviewer: 'Us Sandra', billing: 'Us Sandra', web: 'unscramble.ca', hst: '999999999 RT0000 (SAMPLE placeholder — not a real HST number)', logo: 'assets/unscramble-logo.svg', color: '#332E57', gold: '#C9A227', terms: TERMS },
   };
   const statusLabel = (st, company) => (st === 'reviewed' ? 'Reviewed (' + (COMPANIES[company] || COMPANIES.cj).reviewer + ')' : STATUS_LABEL[st]);
   const fmtDist = (m) => (m == null ? '' : m >= 1000 ? (m / 1000).toFixed(1) + ' km' : Math.round(m) + ' m');
-  CJ.F = { COMPANIES, statusLabel, fmtDist, distanceM, locCheck, offsetEast, missedClockOut, noShow, schedStatus, otStatus, consecutiveDays, invoiceAmounts, rateOn, invoiceLines, invoiceBlock, BILLING_TYPES, money, ageFlag, STATUSES, STATUS_LABEL, canAdvance };
+  CJ.F = { COMPANIES, statusLabel, fmtDist, distanceM, locCheck, offsetEast, missedClockOut, noShow, schedStatus, otStatus, consecutiveDays, invoiceAmounts, rateOn, siteRoles, roleOf, invoiceLines, invoiceBlock, BILLING_TYPES, money, ageFlag, AGE_LABEL, TERMS, addMonths, dueDate, STATUSES, STATUS_LABEL, canAdvance };
 })();

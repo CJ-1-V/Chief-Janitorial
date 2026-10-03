@@ -77,7 +77,7 @@
     const today = CJ.tz.todayKey();
     const lastWk = CJ.tz.addDays(CJ.tz.weekStart(today), -7); // Monday of last completed week
     const isLastWk = (key) => key >= lastWk && key <= CJ.tz.addDays(lastWk, 6);
-    const db = { version: 6, seededAt: iso(now), users: [], sites: [], shifts: [], settings: { empEditWindowDays: 14, maxShiftHours: 18 } };
+    const db = { version: 7, seededAt: iso(now), users: [], sites: [], shifts: [], settings: { empEditWindowDays: 14, maxShiftHours: 18 } };
 
     SITES.forEach(([code, name, type, town]) => {
       const number = parseInt(code.match(/(\d+)$/)[1], 10);

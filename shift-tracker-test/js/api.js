@@ -9,7 +9,7 @@
 
   function load() {
     try { db = JSON.parse(localStorage.getItem(CJ.STORE_KEY)); } catch (e) { db = null; }
-    if (!db || db.version !== 6) { db = CJ.seed(); save(); }
+    if (!db || db.version !== 7) { db = CJ.seed(); save(); }
     return db;
   }
   function save() { localStorage.setItem(CJ.STORE_KEY, JSON.stringify(db)); }
