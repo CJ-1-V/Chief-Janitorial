@@ -1,6 +1,6 @@
 /* Service worker for the installable app. Caches ONLY the static app files listed below (same origin, GET).
  * It never caches Supabase / API responses or any data: every other request goes straight to the network. */
-const CACHE = 'st-static-v2';
+const CACHE = 'st-static-v3';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'css/styles.css', 'css/app.css', 'js/config.js', 'js/tz.js', 'js/core.js',
   'js/employee.js', 'js/admin.js', 'vendor/supabase.js', 'assets/logo.png', 'assets/logo-dark.png', 'assets/unscramble-logo.svg',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
