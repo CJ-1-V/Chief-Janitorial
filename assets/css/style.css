@@ -5162,3 +5162,131 @@ button {
         padding: 32px 20px;
     }
 }
+
+/* Food plant sanitation page */
+
+.sanitation-page .page-banner,
+.sanitation-page section[id] {
+    scroll-margin-top: 110px;
+}
+.sanitation-intro,
+.sanitation-block {
+    padding: 70px 0 20px;
+}
+.sanitation-block-last {
+    padding-bottom: 80px;
+}
+.sanitation-page .sanitation-lead {
+    font-size: 18px;
+    line-height: 32px;
+    margin-bottom: 18px;
+}
+.sanitation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+}
+.sanitation-page .sanitation-actions .main-btn {
+    text-transform: none;
+}
+.sanitation-page .service-grid > [class*="col-"] {
+    display: flex;
+    margin-bottom: 30px;
+}
+.sanitation-page .service-grid .service-item {
+    width: 100%;
+}
+.sanitation-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    height: 100%;
+    background-color: #fff;
+    border: 1px solid rgba(89, 86, 232, 0.149);
+    border-radius: 7px;
+    padding: 28px 24px;
+    margin-bottom: 30px;
+}
+.sanitation-step-num {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--blue-dark);
+    color: #fff;
+    font-weight: 700;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sanitation-step h3 {
+    font-size: 22px;
+    line-height: 30px;
+    margin-bottom: 8px;
+}
+.sanitation-step p {
+    margin: 0;
+}
+.sanitation-faq details {
+    background-color: #fff;
+    border: 1px solid rgba(89, 86, 232, 0.149);
+    border-radius: 7px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+}
+.sanitation-faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-weight: 700;
+    color: var(--heading);
+    font-size: 18px;
+    line-height: 1.4;
+    cursor: pointer;
+    list-style: none;
+}
+.sanitation-faq summary::-webkit-details-marker {
+    display: none;
+}
+.sanitation-faq summary:after {
+    content: '\f107';
+    font-family: 'Font Awesome 5 Pro';
+    font-weight: 600;
+    color: var(--blue-dark);
+    flex: 0 0 auto;
+}
+.sanitation-faq details[open] summary:after {
+    content: '\f106';
+}
+.sanitation-faq summary:focus-visible {
+    outline: 2px solid var(--blue-dark);
+    outline-offset: 3px;
+}
+.sanitation-faq details p {
+    margin: 12px 0 0;
+}
+.sanitation-cta {
+    background-color: #fff;
+    border: 1px solid rgba(89, 86, 232, 0.149);
+    border-radius: 7px;
+    padding: 48px 40px;
+}
+.sanitation-cta .section-title h2 {
+    margin-bottom: 12px;
+}
+@media (max-width: 767px) {
+    .sanitation-page .page-banner .page-title h1 {
+        font-size: 36px;
+        line-height: 44px;
+    }
+    .sanitation-step,
+    .sanitation-cta {
+        padding: 24px 18px;
+    }
+    .sanitation-page .sanitation-actions .main-btn {
+        width: 100%;
+    }
+}
