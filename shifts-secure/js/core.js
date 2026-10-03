@@ -17,6 +17,9 @@
   const initials = (n) => String(n || '?').split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
   const mBadge = (on, title) => (on ? `<span class="mbadge" title="${esc(title || 'Changed by hand')}">M</span>` : '');
   const ST_tz = () => window.CJ.tz;
+  // Display helpers: workers are shown by nickname (never a real name); staff by role title. Sites by code (e.g. CVF217).
+  const who = (p) => (p ? p.nickname || p.full_name || '?' : '?');
+  const siteName = (s) => (!s ? 'Site ?' : s.site_code || ('Site ' + s.site_no));
   const COMPANIES = { cj: { name: 'Chief Janitorial', short: 'CJ' }, us: { name: 'Unscramble', short: 'US' } };
   // Unpaid break per day per site (split shifts added together): over 5 h -> 0.5 h; 8 h or more -> 1 h.
   const unpaidBreak = (w) => (w >= 8 ? 1 : w > 5 ? 0.5 : 0);
@@ -86,8 +89,8 @@
       <h1>Create employee account</h1>
       <p class="muted">New accounts are checked by your company's office before you can clock in.</p>
       <form id="signupForm" class="stack">
-        <label class="field"><span>Who do you work for?</span><select name="company"><option value="cj" ${co === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${co === 'us' ? 'selected' : ''}>Unscramble</option></select></label>
-        <label class="field"><span>Full name</span><input name="name" placeholder="First and last name" required minlength="2" maxlength="80"></label>
+        <label class="field"><span>Your main office (approves your account; you can clock in at any site of either company)</span><select name="company"><option value="cj" ${co === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${co === 'us' ? 'selected' : ''}>Unscramble</option></select></label>
+        <p class="muted small">No real names here: you'll get a friendly nickname (like “Turbo Mop”). The office knows you by your phone number + nickname.</p>
         <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="10 digits" required></label>
         <label class="field"><span>Password (8 or more characters)</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
         <div class="err" id="signupErr"></div>
@@ -109,11 +112,10 @@
     });
     const sf = $('#signupForm', root);
     sf && sf.addEventListener('submit', async (e) => {
-      e.preventDefault(); const f = new FormData(sf); const ph = phoneDigits(f.get('phone')); const name = String(f.get('name')).trim();
+      e.preventDefault(); const f = new FormData(sf); const ph = phoneDigits(f.get('phone'));
       if (ph.length !== 10) { $('#signupErr').textContent = 'Enter a 10-digit phone number.'; return; }
-      if (name.length < 2) { $('#signupErr').textContent = 'Enter your full name.'; return; }
       sf.classList.add('loading');
-      const { data, error } = await sb.auth.signUp({ email: ph + '@' + C.loginDomain, password: String(f.get('password')), options: { data: { full_name: name, phone: ph, company: f.get('company') } } });
+      const { data, error } = await sb.auth.signUp({ email: ph + '@' + C.loginDomain, password: String(f.get('password')), options: { data: { phone: ph, company: f.get('company') } } });
       sf.classList.remove('loading');
       if (error) { $('#signupErr').textContent = errMsg(error); return; }
       if (!data.session) { $('#signupErr').textContent = errMsg({ message: 'Email not confirmed' }); return; }
@@ -140,7 +142,7 @@
     root.querySelectorAll('[data-act="theme"]').forEach((b) => b.addEventListener('click', () => { theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); ST.render(); }));
     root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { await sb.auth.signOut(); location.hash = '#/login'; ST.render(); }));
   }
-  Object.assign(ST, { $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
+  Object.assign(ST, { who, siteName, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
   window.addEventListener('hashchange', () => ST.render());
   window.addEventListener('DOMContentLoaded', () => { ST.render(); setInterval(() => { document.querySelectorAll('[data-live-clock]').forEach((el) => (el.textContent = fmtTime(new Date().toISOString()))); document.querySelectorAll('[data-elapsed]').forEach((el) => (el.textContent = fmtDur(hours(el.dataset.elapsed, new Date().toISOString())))); }, 15000); });
 })();
