@@ -156,17 +156,34 @@
     const sn = {}; const sno = {}; sites.forEach((s) => { sn[s.id] = ST.siteName(s); sno[s.id] = s; });
     const name = (id) => esc(ST.who(pp.byId[id]));
     const loc = (s) => (s.loc_status === 'ok' ? '<span class="tag on">at site</span>' : s.loc_status === 'off' ? `<span class="tag bad">${s.loc_distance_m} m away</span>` : '<span class="muted small">no GPS point</span>');
-    const exp = () => download(`shifts-${from}-to-${to}.csv`, csv([['company', 'employee', 'phone', 'site_code', 'site_no', 'date', 'clock_in', 'clock_out', 'worked_h', 'crew', 'role', 'edited', 'location', 'in_note', 'out_note'], ...rows.map((s) => [s.company_id.toUpperCase(), ST.who(pp.byId[s.user_id]), (pp.byId[s.user_id] || {}).phone, (sno[s.site_id] || {}).site_code || '', (sno[s.site_id] || {}).site_no, T().dayKey(s.clock_in), fmtTime(s.clock_in), s.clock_out ? fmtTime(s.clock_out) : '', s.clock_out ? h2(hours(s.clock_in, s.clock_out)) : '', s.crew_count, s.work_role, s.inM || s.outM ? 'M' : '', s.loc_status, s.in_note, s.out_note])]));
+    const exp = () => download(`shifts-${from}-to-${to}.csv`, csv([['company', 'employee', 'phone', 'site_code', 'site_no', 'date', 'clock_in', 'clock_out', 'worked_h', 'crew', 'role', 'edited', 'location', 'in_note', 'out_note', 'site_unknown'], ...rows.map((s) => [s.company_id.toUpperCase(), ST.who(pp.byId[s.user_id]), (pp.byId[s.user_id] || {}).phone, (sno[s.site_id] || {}).site_code || '', (sno[s.site_id] || {}).site_no, T().dayKey(s.clock_in), fmtTime(s.clock_in), s.clock_out ? fmtTime(s.clock_out) : '', s.clock_out ? h2(hours(s.clock_in, s.clock_out)) : '', s.crew_count, s.work_role, s.inM || s.outM ? 'M' : '', s.loc_status, s.in_note, s.out_note, ST.isUnknownSite(sno[s.site_id]) ? 'yes' : ''])]));
+    const unk = (s) => ST.isUnknownSite(sno[s.site_id]); const nUnk = rows.filter(unk).length;
     const opt = (v, l) => `<option value="${v}" ${range === v ? 'selected' : ''}>${l}</option>`;
     return [shell('shifts', `<div class="page-h"><h1>Shifts</h1><button class="btn primary" id="exportBtn">⤓ Export CSV</button></div>
       <div class="filters form-row"><label>Period<select id="rF">${opt('today', 'Today')}${opt('week', 'This week')}${opt('last', 'Last week')}${opt('30', 'Last 30 days')}</select></label>
         <label>Site<select id="sF"><option value="">All sites</option>${sites.map((s) => `<option value="${s.site_no}" ${String(s.site_no) === siteF ? 'selected' : ''}>${esc(ST.siteName(s))}</option>`).join('')}</select></label><span class="muted">${rows.length} shifts · ${fmtDay(from)} – ${fmtDay(to)}</span></div>
+      ${nUnk ? `<div class="warnbox warn" id="unkBox">❓ <b>${nUnk} shift${nUnk > 1 ? 's' : ''} at an unknown site.</b> The worker couldn't find their site. Check with them or the crew, then tap <b>Set site</b> to move the shift to the right site.</div>` : ''}
       <table class="tbl"><tr><th></th><th>Date</th><th>Employee</th><th>Site</th><th>In</th><th>Out</th><th class="num">Worked</th><th class="num">Crew</th><th>Role</th><th>Location</th><th>Notes</th><th></th></tr>
-      ${rows.map((s) => `<tr><td>${chip(s.company_id)}</td><td>${fmtDate(s.clock_in)}</td><td>${name(s.user_id)}</td><td>${esc(sn[s.site_id])}</td><td>${fmtTime(s.clock_in)}${mBadge(s.inM)}</td><td>${s.clock_out ? fmtTime(s.clock_out) : '<span class="tag on">on shift</span>'}${mBadge(s.outM)}</td><td class="num">${s.clock_out ? fmtDur(hours(s.clock_in, s.clock_out)) : ''}</td><td class="num">${s.crew_count ?? ''}</td><td>${esc(s.work_role || '')}</td><td>${loc(s)}</td><td class="small">${s.in_note ? '📝 ' + esc(s.in_note) : ''}${s.out_note ? '<br>🗒 ' + esc(s.out_note) : ''}</td><td>${s.locked ? '🔒 ' : ''}${(!s.locked && ST.canOps(s.company_id)) || ST.can(s.company_id, ['owner']) ? `<button class="btn small" data-edit="${s.id}">Edit</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">No shifts in this period.</td></tr>'}</table>
+      ${rows.map((s) => `<tr><td>${chip(s.company_id)}</td><td>${fmtDate(s.clock_in)}</td><td>${name(s.user_id)}</td><td>${esc(sn[s.site_id])}${mBadge((s.edits || []).some((e) => e.field === 'site_id'), 'Site set by the office (was Unknown site)')}${unk(s) ? ' <span class="flag unk" title="Worker picked Unknown site">site unknown</span>' : ''}</td><td>${fmtTime(s.clock_in)}${mBadge(s.inM)}</td><td>${s.clock_out ? fmtTime(s.clock_out) : '<span class="tag on">on shift</span>'}${mBadge(s.outM)}</td><td class="num">${s.clock_out ? fmtDur(hours(s.clock_in, s.clock_out)) : ''}</td><td class="num">${s.crew_count ?? ''}</td><td>${esc(s.work_role || '')}</td><td>${loc(s)}</td><td class="small">${s.in_note ? '📝 ' + esc(s.in_note) : ''}${s.out_note ? '<br>🗒 ' + esc(s.out_note) : ''}</td><td>${s.locked ? '🔒 ' : ''}${(!s.locked && ST.canOps(s.company_id)) || ST.can(s.company_id, ['owner']) ? `<button class="btn small" data-edit="${s.id}">Edit</button>` : ''}${unk(s) && !s.locked && ST.canOps(s.company_id) ? ` <button class="btn small primary" data-move="${s.id}">Set site</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">No shifts in this period.</td></tr>'}</table>
       <p class="muted small"><span class="mbadge">M</span> = time changed by hand (original kept). Locked 🔒 = invoiced; only the owner can change it.</p>`), (root) => {
       root.querySelector('#exportBtn').addEventListener('click', exp);
       root.querySelector('#rF').addEventListener('change', (e) => go('shifts', { r: e.target.value, site: siteF }));
       root.querySelector('#sF').addEventListener('change', (e) => go('shifts', { r: range, site: e.target.value }));
+      root.querySelectorAll('[data-move]').forEach((b) => b.addEventListener('click', async () => {
+        const s = rows.find((x) => x.id === b.dataset.move);
+        const all = (await q(sb.from('sites').select('id, site_no, site_code, company_id, active, is_unknown').in('company_id', allowed()).order('site_no'))).filter((x) => x.active && x.site_code && !ST.isUnknownSite(x) && ST.canOps(x.company_id));
+        modal(`<h2>Set the site for this shift</h2><p class="muted">${name(s.user_id)} · ${fmtDate(s.clock_in)} ${fmtTime(s.clock_in)} · clocked in at <b>${esc(sn[s.site_id])}</b></p>
+          <form id="mv" class="stack"><label class="field"><span>Correct site</span><select name="site" required><option value="">Pick a site…</option>${all.map((x) => `<option value="${x.site_no}">${esc(ST.siteName(x))}${allowed().length > 1 ? ' · ' + COMPANIES[x.company_id].short : ''}</option>`).join('')}</select></label>
+          <label class="field"><span>Details (optional)</span><input name="det" maxlength="200" placeholder="e.g. confirmed with the driver"></label>
+          <p class="muted small">The change is logged (M mark). If the site belongs to the other company, the shift moves to that company.</p>
+          <div class="err" id="mvErr"></div><div class="row-end"><button type="button" class="btn ghost" data-close>Cancel</button><button class="btn primary">Move shift</button></div></form>`, (w, close) => {
+          w.querySelector('#mv').addEventListener('submit', async (e) => {
+            e.preventDefault(); const d = new FormData(e.target);
+            try { await q(sb.rpc('admin_reassign_shift', { p_shift: s.id, p_site_no: +d.get('site'), p_details: d.get('det') || null })); close(); toast('Shift moved ✓', 'good'); ST.render(); }
+            catch (err) { w.querySelector('#mvErr').textContent = errMsg(err); }
+          });
+        });
+      }));
       root.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => {
         const s = rows.find((x) => x.id === b.dataset.edit);
         modal(`<h2>Edit shift · ${esc(sn[s.site_id])}</h2><p class="muted">${name(s.user_id)} · ${fmtDate(s.clock_in)}</p>
@@ -366,7 +383,7 @@
   // ---------- Sites: list, Add site, set acronym (owner/admin; enforced by RLS policy sites_admin_write) ----------
   const ACR_RE = /^[A-Z]{3}$/;
   const RANGE = { cj: [101, 199], us: [201, 299] };
-  const nextFree = (all, co) => { const nos = all.filter((x) => x.company_id === co).map((x) => x.site_no); const used = new Set(nos); const top = Math.max(RANGE[co][0] - 1, ...nos) + 1; if (top <= RANGE[co][1]) return top; for (let n = RANGE[co][0]; n <= RANGE[co][1]; n++) if (!used.has(n)) return n; return null; };  // next after the highest; gaps only when full
+  const nextFree = (all, co) => { const nos = all.filter((x) => x.company_id === co && !ST.isUnknownSite(x)).map((x) => x.site_no); const used = new Set(nos); const top = Math.max(RANGE[co][0] - 1, ...nos) + 1; if (top <= RANGE[co][1]) return top; for (let n = RANGE[co][0]; n <= RANGE[co][1]; n++) if (!used.has(n)) return n; return null; };  // next after the highest; gaps only when full
   async function acronymTaken(acr, exceptId) { const r = await q(sb.rpc('acronym_taken', { p_acr: acr, p_except: exceptId || null })); return !!r; }
   const NAME_WARN = '<div class="warnbox warn">⚠ <b>Never type the client or farm name here.</b> Use a 3-letter acronym only (e.g. CVF). The full name goes in the Drive “Site Key” sheet, not in this app.</div>';
   async function sitesPage() {

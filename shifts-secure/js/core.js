@@ -19,7 +19,8 @@
   const ST_tz = () => window.CJ.tz;
   // Display helpers: workers are shown by nickname (never a real name); staff by role title. Sites by code (e.g. CVF217).
   const who = (p) => (p ? p.nickname || p.full_name || '?' : '?');
-  const siteName = (s) => (!s ? 'Site ?' : s.site_code || ('Site ' + s.site_no));
+  const isUnknownSite = (s) => !!s && (s.is_unknown || /^UNK/.test(s.site_code || ''));  // migration 010: UNK199 (CJ) / UNK299 (US)
+  const siteName = (s) => (!s ? 'Site ?' : isUnknownSite(s) ? 'Unknown site · ' + (s.company_id === 'us' ? 'US' : 'CJ') : s.site_code || ('Site ' + s.site_no));
   const COMPANIES = { cj: { name: 'Chief Janitorial', short: 'CJ' }, us: { name: 'Unscramble', short: 'US' } };
   // Unpaid break per day per site (split shifts added together): over 5 h -> 0.5 h; 8 h or more -> 1 h.
   const unpaidBreak = (w) => (w >= 8 ? 1 : w > 5 ? 0.5 : 0);
@@ -69,29 +70,59 @@
   ST.canBill = (co) => ST.can(co, ['owner', 'admin', 'billing']);
   ST.canOps = (co) => ST.can(co, ['owner', 'admin', 'ops']);
 
+  // ---------- company picker (front-end only; remembered on this device until "Switch company" or log out) ----------
+  ST.company = () => { const c = localStorage.getItem('st-company'); return c === 'cj' || c === 'us' ? c : null; };
+  ST.setCompany = (c) => (c ? localStorage.setItem('st-company', c) : localStorage.removeItem('st-company'));
+  ST.switchCompany = () => { ST.setCompany(null); location.hash = '#/pick'; ST.render(); };
+  // Branding: Unscramble is the parent company (frame, colours, logo on top); Chief Janitorial is "an Unscramble company".
+  const usMark = (cls) => `<img class="logo logo-us ${cls || ''}" src="assets/unscramble-logo.svg" alt="Unscramble">`;
+  function pickerView() {
+    document.title = 'Shift Tracker · Unscramble';
+    return `<div class="auth auth-pick"><main class="auth-wrap">
+      <header class="auth-hero">${usMark('hero-logo')}<p class="hero-app">Shift Tracker</p></header>
+      <div class="auth-card picker-card">
+        <h1 id="pickH">Choose your company</h1>
+        <div class="picker" role="group" aria-labelledby="pickH">
+          <button type="button" class="pick-btn pick-us" data-pick="us" aria-label="Unscramble, parent company">
+            <span class="pick-tag">Parent company</span>${logo('us')}<span class="pick-name">Unscramble</span></button>
+          <div class="pick-link" aria-hidden="true"></div>
+          <button type="button" class="pick-btn pick-cj pick-sub" data-pick="cj" aria-label="Chief Janitorial, an Unscramble company">
+            <span class="pick-tag">An Unscramble company</span>${logo('cj')}<span class="pick-name">Chief Janitorial</span></button>
+        </div>
+        <p class="auth-foot">One account works for both. You can switch company from the menu later.</p>
+      </div></main></div>`;
+  }
+  function bindPicker(root) {
+    root.querySelectorAll('[data-pick]').forEach((b) => b.addEventListener('click', () => { ST.setCompany(b.dataset.pick); location.hash = '#/'; ST.render(); }));
+  }
+
   // ---------- login / sign-up ----------
   function loginView(msg) {
-    return `<div class="auth"><div class="auth-card">
-      <div class="auth-logo">${logo('both')}</div>
-      <h1>Shift Tracker</h1><p class="muted center small">Chief Janitorial · Unscramble</p>
+    const co = ST.company() || 'us'; document.title = 'Shift Tracker · ' + COMPANIES[co].name;
+    return `<div class="auth auth-co-${co}"><main class="auth-wrap">
+      <header class="auth-hero">${usMark('hero-logo')}<p class="hero-app">Shift Tracker</p></header>
+      <div class="auth-card login-card">
+        ${co === 'cj' ? `<div class="sub-brand">${logo('cj')}<p><span class="sb-line"><b>Chief Janitorial</b> — an Unscramble company</span></p></div>` : `<div class="sub-brand sub-us"><p><b>Unscramble</b></p></div>`}
+        <h1>Log in</h1><p class="auth-sub">Clock in and out, and see your hours.</p>
       <form id="loginForm" class="stack">
         <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="902 555 0101" autocomplete="username" required></label>
         <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
         <div class="err" id="loginErr">${esc(msg || '')}</div>
         <button class="btn primary big" type="submit">Log in</button>
       </form>
-      <p class="muted center">New employee? <a href="#/signup">Create an account</a></p>
-      <p class="muted center small">Forgot your password? Ask the office.</p>
-    </div></div>`;
+      <p class="auth-alt">New employee? <a href="#/signup">Create an account</a></p>
+      <p class="auth-foot">Forgot your password? Ask the office.</p>
+      <p class="auth-switch"><a href="#" data-act="switchco">Not ${COMPANIES[co].name}? Switch company</a></p>
+    </div></main></div>`;
   }
   function signupView() {
-    const co = new URLSearchParams(location.search).get('co');
-    return `<div class="auth"><div class="auth-card">
-      <div class="auth-logo">${logo('both')}</div>
+    const q = new URLSearchParams(location.search).get('co'); const co = q === 'cj' || q === 'us' ? q : ST.company();
+    return `<div class="auth auth-co-${co || 'cj'}"><div class="auth-card">
+      <div class="auth-logo">${logo(co === 'us' || co === 'cj' ? co : 'both')}</div>
       <h1>Create employee account</h1>
       <p class="muted">New accounts are checked by your company's office before you can clock in.</p>
       <form id="signupForm" class="stack">
-        <label class="field"><span>Your main office (approves your account; you can clock in at any site of either company)</span><select name="company"><option value="cj" ${co === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${co === 'us' ? 'selected' : ''}>Unscramble</option></select></label>
+        <label class="field"><span>Your main office (approves your account). One account works for both companies; you can switch company from the menu.</span><select name="company"><option value="cj" ${co === 'cj' ? 'selected' : ''}>Chief Janitorial</option><option value="us" ${co === 'us' ? 'selected' : ''}>Unscramble</option></select></label>
         <p class="muted small">No real names here: you'll get a friendly nickname (like “Turbo Mop”). The office knows you by your phone number + nickname.</p>
         <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="10 digits" required></label>
         <label class="field"><span>Password (8 or more characters)</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
@@ -193,7 +224,7 @@
     if (standalone() || sessionStorage.getItem('st-install-hide')) return;
     const can = !!installEvt || isIOS(); if (!can) return;
     const p = parts(); const app = $('#app'); if (!app) return;
-    const home = !p.length || p[0] === 'login' || (p[0] === 'emp' && (!p[1] || p[1] === 'clock')) || (p[0] === 'admin' && (!p[1] || p[1] === 'dashboard'));
+    const home = !p.length || p[0] === 'login' || p[0] === 'pick' || (p[0] === 'emp' && (!p[1] || p[1] === 'clock')) || (p[0] === 'admin' && (!p[1] || p[1] === 'dashboard'));
     if (!home) return;
     const host = $('#loginForm') ? $('.auth-card', app) : $('.emp-main', app) || $('.adm-main', app) || $('.auth-card', app);
     if (!host || $('.install-bar', host)) return;
@@ -214,9 +245,10 @@
   ST.render = async function () {
     theme(); const app = $('#app'); const p = parts();
     try {
-      if (p[0] === 'signup') { app.innerHTML = signupView(); bindAuth(app); return; }
+      if (p[0] === 'signup') { app.innerHTML = signupView(); bindAuth(app); bindGlobal(app); return; }
+      if (p[0] === 'pick' || !ST.company()) { if (p[0] !== 'pick' && p.length) history.replaceState(null, '', '#/pick'); app.innerHTML = pickerView(); bindPicker(app); bindGlobal(app); mountInstall(); return; }
       const me = await loadMe();
-      if (!me || p[0] === 'login') { app.innerHTML = loginView(); bindAuth(app); mountInstall(); return; }
+      if (!me || p[0] === 'login') { app.innerHTML = loginView(); bindAuth(app); bindGlobal(app); mountInstall(); return; }
       if (!me.profile) { app.innerHTML = loginView('Your account is not set up yet. Ask the office.'); bindAuth(app); await sb.auth.signOut(); return; }
       if (me.profile.status === 'disabled') { app.innerHTML = loginView('This account is turned off. Please contact the office.'); bindAuth(app); await sb.auth.signOut(); return; }
       if (me.mustChange) { app.innerHTML = forcedPwView(); bindForcedPw(app); bindGlobal(app); return; }
@@ -227,10 +259,11 @@
   };
   function bindGlobal(root) {
     root.querySelectorAll('[data-act="theme"]').forEach((b) => b.addEventListener('click', () => { theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); ST.render(); }));
-    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { ST._loginPw = null; await sb.auth.signOut(); location.hash = '#/login'; ST.render(); }));
+    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { ST._loginPw = null; ST.setCompany(null); await sb.auth.signOut(); location.hash = '#/pick'; ST.render(); }));
+    root.querySelectorAll('[data-act="switchco"]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); ST.switchCompany(); }));
     root.querySelectorAll('[data-act="chpw"]').forEach((b) => b.addEventListener('click', () => ST.changePassword()));
   }
-  Object.assign(ST, { who, siteName, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
+  Object.assign(ST, { who, siteName, isUnknownSite, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
   window.addEventListener('hashchange', () => { document.querySelectorAll('.modal-wrap').forEach((m) => m.remove()); ST.render(); });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('sw', e)));

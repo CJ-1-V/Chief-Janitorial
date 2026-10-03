@@ -35,3 +35,82 @@
 @media (display-mode: standalone){.install-bar{display:none!important}}
 .ios-steps{width:100%;max-width:340px;display:block;margin:8px auto}
 ol.steps{padding-left:1.2em;line-height:1.5}ol.steps li{margin:4px 0}
+
+/* Unknown site (migration 010) */
+.unk-row{margin:8px 0 10px}
+.site-tile.unk-tile{width:100%;padding:12px 10px;border-style:dashed;border-color:#d97706;background:#fffbeb;color:#92400e;font-size:16px;text-align:center}
+.site-tile.unk-tile small{display:block;font-weight:500;font-size:12px;margin-top:3px;color:#a16207}
+.site-tile.unk-tile.sel{border-style:solid;border-color:var(--green-d);background:#dcfce7;color:#14532d}
+[data-theme=dark] .site-tile.unk-tile{background:#2a2110;color:#fcd34d}[data-theme=dark] .site-tile.unk-tile small{color:#fbbf24}
+.flag.unk{background:#fef3c7;color:#92400e;font-weight:700}
+
+/* ===== Unscramble brand theme (parent company). Colours from the official Unscramble icon/logo:
+   purple #332E57, gold #D9A03C. Chief Janitorial = "an Unscramble company" (keeps its logo + a small green accent). ===== */
+:root{--us:#332E57;--us-d:#241F44;--us-l:#4A4478;--gold:#D9A03C;--gold-l:#F3DDAE;--cj:#7cb342;--blue:#4A4478;
+  --font:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+[data-theme=dark]{--blue:#C9C3F0}
+body{font-family:var(--font);-webkit-font-smoothing:antialiased}
+.btn.primary{background:var(--us);border-color:var(--us);color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--us-l);border-color:var(--us-l)}
+[data-theme=dark] .btn.primary{background:var(--gold);border-color:var(--gold);color:#1b1733}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:1px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.adm-top{border-bottom:3px solid var(--gold)}
+.emp .topbar{border-bottom:3px solid var(--gold)}
+.emp .avatar{background:var(--us);color:#fff;border-color:var(--us)}
+.emp .tabbar a.on{color:var(--us);border-top-color:var(--gold)}[data-theme=dark] .emp .tabbar a.on{color:var(--gold)}
+.emp .btn.big.primary,.emp .clock-btn{background:var(--us);border-color:var(--us)}
+.emp.co-cj .topbar{box-shadow:inset 0 -3px 0 var(--gold),inset 4px 0 0 var(--cj)}  /* small CJ accent */
+
+/* ----- login / picker frame ----- */
+.auth{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;align-items:flex-start;padding:0 16px 32px;
+  background:radial-gradient(120% 60% at 85% -10%,rgba(217,160,60,.28),transparent 60%),radial-gradient(90% 50% at -10% 110%,rgba(217,160,60,.14),transparent 60%),linear-gradient(165deg,#3B3564 0%,var(--us) 45%,var(--us-d) 100%)}
+[data-theme=dark] .auth{background:radial-gradient(120% 60% at 85% -10%,rgba(217,160,60,.18),transparent 60%),linear-gradient(165deg,#221D40,#14112a)}
+.auth-wrap{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center}
+.auth-hero{display:flex;flex-direction:column;align-items:center;padding:34px 0 18px}
+.auth-hero .hero-logo{height:72px;width:auto;filter:drop-shadow(0 6px 18px rgba(0,0,0,.25))}
+.hero-app{margin:10px 0 0;color:var(--gold-l);font-weight:600;letter-spacing:.16em;text-transform:uppercase;font-size:12.5px}
+.auth .auth-card{width:100%;max-width:420px;border:0;border-radius:22px;padding:26px 22px 22px;box-shadow:0 20px 50px rgba(10,6,30,.35),0 2px 6px rgba(10,6,30,.2);position:relative;overflow:hidden}
+.auth .auth-card::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--gold),#E9BE6E)}
+.auth-co-cj .auth-card::before{background:linear-gradient(90deg,var(--gold) 0 70%,var(--cj) 70% 100%)}
+.auth h1{font-size:24px;font-weight:800;letter-spacing:-.01em;color:var(--us);text-align:left;margin:0 0 4px}
+[data-theme=dark] .auth h1{color:#fff}
+.auth-sub{margin:0 0 18px;color:var(--muted);font-size:15px}
+.sub-brand{display:flex;align-items:center;gap:12px;padding:0 0 16px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.sub-brand .logo{height:38px;width:auto}
+.sub-brand p{margin:0;display:flex;flex-direction:column;line-height:1.2}
+.sub-brand b{font-size:15px;color:var(--ink)}.sub-brand span{font-size:12.5px;color:var(--muted);font-style:italic}
+.sub-brand.sub-us b{color:var(--us);font-size:13px;letter-spacing:.08em;text-transform:uppercase}[data-theme=dark] .sub-brand.sub-us b{color:var(--gold)}
+.auth .field>span{font-size:14px;color:var(--ink);font-weight:600}
+.auth input,.auth select{min-height:54px;font-size:17px;padding:14px 16px;border-radius:14px;background:#fff;border:1.5px solid #CFCBE0}
+[data-theme=dark] .auth input,[data-theme=dark] .auth select{background:var(--soft);border-color:#3b3660}
+.auth input:focus,.auth select:focus{outline:none;border-color:var(--us);box-shadow:0 0 0 4px rgba(217,160,60,.35)}
+.auth .btn.big{min-height:56px;font-size:17px;font-weight:700;border-radius:14px;letter-spacing:.01em;box-shadow:0 6px 16px rgba(51,46,87,.28)}
+.auth-alt{text-align:center;margin:18px 0 6px;font-size:15px;color:var(--muted)}
+.auth-alt a,.auth-switch a{color:var(--us);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+[data-theme=dark] .auth-alt a,[data-theme=dark] .auth-switch a{color:var(--gold)}
+.auth-foot{text-align:center;color:var(--muted);font-size:13.5px;margin:6px 0}
+.auth-switch{text-align:center;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line);font-size:14px}
+.auth-switch a{display:inline-block;padding:8px 6px}
+.auth .err:empty{display:none}
+
+/* ----- picker: Unscramble (parent) first, Chief Janitorial as its subsidiary ----- */
+.picker-card h1{text-align:center;margin-bottom:16px}
+.picker{display:flex;flex-direction:column;align-items:stretch;margin:0 0 14px}
+.pick-btn{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:150px;padding:28px 16px 18px;border-radius:18px;border:2px solid #DCD8EA;background:#fff;color:var(--us);font:inherit;cursor:pointer;transition:transform .08s,box-shadow .15s,border-color .15s}
+.pick-btn:hover,.pick-btn:focus-visible{border-color:var(--us);box-shadow:0 10px 24px rgba(51,46,87,.18)}.pick-btn:active{transform:scale(.985)}
+.pick-btn .logo{height:58px;width:auto;max-width:240px;object-fit:contain}
+.pick-name{font-size:20px;font-weight:800}
+.pick-tag{position:absolute;top:10px;left:12px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:99px}
+.pick-us{border-color:var(--us);background:linear-gradient(180deg,#fff, #F7F5FC)}
+.pick-us .pick-tag{background:var(--us);color:var(--gold-l)}
+.pick-link{width:2px;height:22px;margin:0 auto;background:repeating-linear-gradient(180deg,#B7B1D3 0 4px,transparent 4px 7px)}
+.pick-sub{margin:0 18px;min-height:132px}
+.pick-cj{color:#1f3b16}.pick-cj .pick-tag{background:#EEF6E4;color:#3f6b1d}
+.pick-cj:hover,.pick-cj:focus-visible{border-color:var(--cj)}
+[data-theme=dark] .pick-btn{background:var(--card);border-color:#3b3660;color:#fff}[data-theme=dark] .pick-cj{color:#e5f3d6}
+@media (prefers-reduced-motion:reduce){.pick-btn{transition:none}.pick-btn:active{transform:none}}
+@media (max-width:360px){.auth-hero .hero-logo{height:58px}.pick-sub{margin:0 8px}}
+.sub-brand .logo{height:32px}.sub-brand .sb-line{font-style:normal;font-size:13px;color:var(--muted);line-height:1.35}.sub-brand .sb-line b{font-size:13px;color:#3f6b1d}
+[data-theme=dark] .sub-brand .sb-line b{color:#b9dc8f}
+.pick-btn{padding-top:42px}.pick-cj .logo{height:48px}

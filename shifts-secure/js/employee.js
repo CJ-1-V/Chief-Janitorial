@@ -3,7 +3,7 @@
 (function () {
   const ST = window.ST; const { sb, esc, fmtTime, fmtDate, fmtDateLong, fmtDur, hours, mBadge, q, toast, modal, unpaidBreak, errMsg } = ST;
   const C = window.ST_CONFIG; const T = () => ST.tz();
-  const siteLabel = (n) => (n == null ? 'Site ?' : (cache.codeOf && cache.codeOf[n]) || 'Site ' + n);  // code (e.g. CVF217) when the site has one
+  const siteLabel = (n) => (n == null ? 'Site ?' : /^UNK/.test((cache.codeOf && cache.codeOf[n]) || '') ? 'Unknown site' : (cache.codeOf && cache.codeOf[n]) || 'Site ' + n);  // code (e.g. CVF217) when the site has one
   const PRIVACY = '📍 <b>Privacy:</b> your phone location is checked <b>once, when you tap Clock in</b>, to confirm you are at the site. It is not tracked during your shift or after you clock out.';
   let cache = {};
 
@@ -16,17 +16,20 @@
     ]);
     const num = {}; const codeOf = {}; sites.forEach((s) => { num[s.id] = s.site_no; if (s.site_code) codeOf[s.site_no] = s.site_code; });
     shifts.forEach((s) => { s.site_no = num[s.site_id]; s.edits = edits.filter((e) => e.shift_id === s.id); s.inEdited = s.edits.some((e) => e.field === 'clock_in'); s.outEdited = s.edits.some((e) => e.field === 'clock_out'); });
-    cache = { sites, shifts, num, codeOf };
+    // Company picker: show only the picked company's sites/shifts (an open shift anywhere always stays visible so it can be clocked out).
+    const c = co(); const coSite = {}; sites.forEach((s) => { coSite[s.id] = s.company_id; });
+    const mine = sites.filter((s) => s.company_id === c);
+    cache = { allSites: sites, sites: mine.filter((s) => !ST.isUnknownSite(s)), unknown: mine.find((s) => ST.isUnknownSite(s)), allShifts: shifts, shifts: shifts.filter((s) => !s.clock_out || coSite[s.site_id] === c), num, codeOf };
   }
   const canEdit = (s) => !s.locked && (Date.now() - new Date(s.clock_in)) / 86400000 <= C.editDays;
-  const co = () => ST.me.profile.company_id; const coName = () => ST.COMPANIES[co()].name;
+  const co = () => ST.company() || ST.me.profile.company_id; const coName = () => ST.COMPANIES[co()].name;
 
   function shell(active, body) {
     const me = ST.me.profile; document.title = 'Shift Tracker — ' + coName();
     const open = cache.shifts.find((s) => !s.clock_out);
     const missed = open && hours(open.clock_in, new Date().toISOString()) > 14;
     return `<div class="emp co-${co()}">
-      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r">${ST.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(ST.who(me))}">${esc(ST.initials(ST.who(me)))}</a></div></header>
+      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r"><button class="btn small ghost" data-act="switchco" title="Switch company" aria-label="Switch company">⇄ Switch</button>${ST.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(ST.who(me))}">${esc(ST.initials(ST.who(me)))}</a></div></header>
       <main class="emp-main">${missed ? `<div class="reminder"><span class="ri">🔔</span><div>You're still clocked in at ${siteLabel(open.site_no)} since ${fmtDate(open.clock_in)} ${fmtTime(open.clock_in)}. Please clock out, or fix your time in My shifts.</div></div>` : ''}${body}</main>
       <nav class="tabbar">
         <a href="#/emp/clock" class="${active === 'clock' ? 'on' : ''}"><span class="ti">⏱</span>Clock</a>
@@ -46,6 +49,7 @@
         <div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b></div>
         <button class="btn primary big" data-act="recheck">Check again</button>
         <button class="btn ghost big" data-act="chpw">Change my password</button>
+        <button class="btn ghost big" data-act="switchco">Switch company</button>
         <button class="btn ghost big" data-act="logout">Log out</button>
       </div></main></div>`;
   }
@@ -96,9 +100,10 @@
         <div class="bigclock" data-live-clock>${fmtTime(now)}</div>
         <div class="label">Which site are you at? <span class="req">*</span></div>
         ${recent.length ? `<div class="sub">Your recent sites</div><div class="tiles recent">${recent.map((n) => tile(bySite(n))).join('')}</div>` : ''}
+        ${cache.unknown ? `<div class="unk-row"><button type="button" class="site-tile unk-tile" data-num="${cache.unknown.site_no}" data-code="">❓ Unknown site<small>Your site isn&apos;t in the list? Tap here. The office will set the right site later.</small></button></div>` : ''}
         <input class="site-search" id="siteSearch" autocapitalize="characters" autocomplete="off" placeholder="Type a site code or number (e.g. CVF217 or 217)…">
-        <div class="tiles all" id="allTiles">${cache.sites.map(tile).join('') || '<div class="empty">No sites yet. Ask the office.</div>'}</div>
-        <div class="muted small">Site not listed? Ask your supervisor — don't guess.</div>
+        <div class="tiles all" id="allTiles">${cache.sites.map(tile).join('') || `<div class="empty">No ${esc(coName())} sites yet. Switch company or ask the office.</div>`}</div>
+        <div class="muted small">Site not listed? Ask your driver or call the office.</div>
         <div class="label">Location check</div>
         <div class="privacy small">${PRIVACY}</div>
         <label class="field"><span>Notes (optional) <em id="cnt">0/120</em></span><textarea id="notes" maxlength="120" rows="2" placeholder="e.g. ride partner"></textarea></label>
@@ -194,7 +199,7 @@
   function profileView() {
     const me = ST.me.profile;
     return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
-      <p class="muted small">Your nickname is how the office sees you. To change your phone number, ask the office.</p><button class="btn big" data-act="chnick">Change nickname</button> <button class="btn big" data-act="chpw">Change my password</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
+      <p class="muted small">Your nickname is how the office sees you. To change your phone number, ask the office.</p><button class="btn big" data-act="chnick">Change nickname</button> <button class="btn big" data-act="chpw">Change my password</button> <button class="btn big" data-act="switchco">Switch company</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
   }
 
   // Change nickname: type one (checked by the server: 2-30 chars, letters/numbers/basic punctuation, unique, no rude words,
