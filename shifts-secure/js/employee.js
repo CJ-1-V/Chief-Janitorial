@@ -1,4 +1,4 @@
-/* EMPLOYEE screens (phone-first). Shows SITE NUMBERS ONLY and Worked / Unpaid break / Paid.
+/* EMPLOYEE screens (phone-first). Shows SITE NUMBERS ONLY and Worked / Break / hrs (no paid/unpaid wording).
  * Never shows rates, money, billable hours, the billing minimum or any client name. */
 (function () {
   const ST = window.ST; const { sb, esc, fmtTime, fmtDate, fmtDateLong, fmtDur, hours, mBadge, q, toast, modal, unpaidBreak, errMsg } = ST;
@@ -45,6 +45,7 @@
         <div class="notice">You can't clock in yet. We'll unlock clock-in as soon as you're approved.</div>
         <div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b></div>
         <button class="btn primary big" data-act="recheck">Check again</button>
+        <button class="btn ghost big" data-act="chpw">Change my password</button>
         <button class="btn ghost big" data-act="logout">Log out</button>
       </div></main></div>`;
   }
@@ -132,7 +133,7 @@
     });
   }
 
-  // ---------- My shifts: Worked / Unpaid break / Paid ----------
+  // ---------- My shifts: Worked / Break / hrs ----------
   function payDays(shifts) {
     const m = {};
     shifts.filter((s) => s.clock_out).forEach((s) => { const k = T().dayKey(s.clock_in) + '|' + s.site_no; (m[k] = m[k] || { day: T().dayKey(s.clock_in), site_no: s.site_no, worked: 0, ids: [] }); m[k].worked += hours(s.clock_in, s.clock_out); m[k].ids.push(s.id); });
@@ -141,8 +142,9 @@
   function shiftsView() {
     const now = new Date().toISOString(); const days = payDays(cache.shifts); const tk = T().todayKey(); const ws = T().weekStart(tk); const lws = T().addDays(ws, -7);
     const sum = (from, to) => { const d = days.filter((x) => x.day >= from && x.day <= to); return { n: cache.shifts.filter((s) => s.clock_out && T().dayKey(s.clock_in) >= from && T().dayKey(s.clock_in) <= to).length, worked: d.reduce((a, x) => a + x.worked, 0), unpaid: d.reduce((a, x) => a + x.unpaid, 0), paid: d.reduce((a, x) => a + x.paid, 0) }; };
-    const brk = (h) => (h > 0 ? '−' + fmtDur(h) : 'none');
-    const wk = (l, w) => `<div><span>${l} <em>${w.n} shift${w.n === 1 ? '' : 's'}</em></span><div class="wp3"><div><small>Worked</small><b>${fmtDur(w.worked)}</b></div><div><small>Unpaid break</small><b class="brk">${brk(w.unpaid)}</b></div><div><small>Paid</small><b class="pd">${fmtDur(w.paid)}</b></div></div></div>`;
+    const brk = (h) => (h > 0 ? fmtDur(h) : 'none');
+    const hrs = (h) => (Math.round(h * 100) / 100).toString() + ' hrs';   // e.g. 7.5 hrs (employees see no paid/unpaid wording)
+    const wk = (l, w) => `<div><span>${l} <em>${w.n} shift${w.n === 1 ? '' : 's'}</em></span><div class="wp3"><div><small>Worked</small><b>${fmtDur(w.worked)}</b></div><div><small>Break</small><b class="brk">${brk(w.unpaid)}</b></div><div><small>&nbsp;</small><b class="pd">${hrs(w.paid)}</b></div></div></div>`;
     const edLine = (s) => { const p = []; s.edits.forEach((e) => p.push(`${e.field.replace('_', '-')} changed by ${e.by_kind === 'worker' ? 'you' : 'the office'} on ${fmtDate(e.at)}`)); return p.length ? `<div class="edited-line"><span class="mbadge sm">M</span> ${esc(p.join(' · '))}</div>` : ''; };
     const punch = (s) => { const open = !s.clock_out; const missed = open && hours(s.clock_in, now) > 14;
       return `<div class="punch"><div class="times"><div><span class="tl">In</span><b>${fmtTime(s.clock_in)}</b>${mBadge(s.inEdited)}</div><span class="arrow">→</span><div><span class="tl">Out</span><b>${open ? '—' : fmtTime(s.clock_out)}</b>${mBadge(s.outEdited)}</div>${canEdit(s) ? `<a class="btn small edit" href="#/emp/edit/${s.id}">✎ Edit</a>` : ''}</div>
@@ -152,10 +154,10 @@
     cache.shifts.filter((s) => !s.clock_out).forEach((s) => { const missed = hours(s.clock_in, now) > 14; cards.push(`<div class="shift ${missed ? 'missed' : ''}"><div class="shift-top"><div><div class="shift-date">${fmtDate(s.clock_in)}</div><div class="shift-site">${siteLabel(s.site_no)}</div></div><div class="shift-hrs">${missed ? '<span class="tag bad">No clock-out</span>' : '<span class="tag on">On shift</span>'}</div></div>${punch(s)}</div>`); });
     days.slice(0, 30).forEach((d) => { const ps = cache.shifts.filter((x) => d.ids.includes(x.id)).sort((a, b) => a.clock_in.localeCompare(b.clock_in));
       cards.push(`<div class="shift"><div class="shift-top"><div><div class="shift-date">${fmtDate(ps[0].clock_in)}</div><div class="shift-site">${siteLabel(d.site_no)}${ps.length > 1 ? ' <span class="tag">' + ps.length + ' punches · added together</span>' : ''}</div></div></div>
-        <div class="payline"><div><small>Worked</small><b>${fmtDur(d.worked)}</b></div><div><small>Unpaid break</small><b class="brk">${brk(d.unpaid)}</b></div><div><small>Paid</small><b class="pd">${fmtDur(d.paid)}</b></div></div>${ps.map(punch).join('')}</div>`); });
+        <div class="payline"><div><small>Worked</small><b>${fmtDur(d.worked)}</b></div><div><small>Break</small><b class="brk">${brk(d.unpaid)}</b></div><div><small>&nbsp;</small><b class="pd">${hrs(d.paid)}</b></div></div>${ps.map(punch).join('')}</div>`); });
     return shell('shifts', `<h1 class="h1">My shifts</h1>
       <div class="summary">${wk('This week', sum(ws, tk))}${wk('Last week', sum(lws, T().addDays(ws, -1)))}</div>
-      <div class="rule-line">ℹ Unpaid break: shifts over 5 h have 0.5 h unpaid, 8 h or more have 1 h unpaid — worked out once per day per site (split shifts are added together).</div>
+      <div class="rule-line">ℹ Break: over 5 h worked = 0.5 h break; 8 h or more = 1 h break. Worked out once per day per site (split shifts are added together).</div>
       <div class="legend"><span class="mbadge sm">M</span> = time changed by hand (the original time is kept on record)</div>
       <div class="shift-list">${cards.join('') || '<div class="empty">No shifts yet.</div>'}</div>
       <p class="muted small center">You can fix your own times for shifts in the last ${C.editDays} days. For older shifts, ask the office.</p>`);
@@ -192,7 +194,7 @@
   function profileView() {
     const me = ST.me.profile;
     return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
-      <p class="muted small">Your nickname keeps your real name private. To change your phone, password or nickname, ask the office.</p><button class="btn ghost big" data-act="logout">Log out</button></div>`);
+      <p class="muted small">Your nickname keeps your real name private. To change your phone or nickname, ask the office.</p><button class="btn big" data-act="chpw">Change my password</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
   }
 
   ST.employeeView = async function (app, p) {

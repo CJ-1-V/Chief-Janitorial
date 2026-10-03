@@ -31,6 +31,7 @@
     if (/already registered|already exists|duplicate key.*phone/i.test(m)) return 'This phone number already has an account. Log in instead, or ask the office.';
     if (/Email not confirmed/i.test(m)) return 'Sign-up is not switched on yet (the office must change one setting). Please ask the office.';
     if (/Password should be/i.test(m)) return 'Password must be at least 8 characters.';
+    if (/Could not find the function|schema cache/i.test(m)) return 'This needs a database update first. Please tell the office.';
     return m.replace(/^.*?ERROR:\s*/, '');
   }
   function toast(msg, kind) {
@@ -60,7 +61,8 @@
     const uid = session.user.id;
     const prof = await q(sb.from('profiles').select('*').eq('id', uid).maybeSingle());
     const roles = await q(sb.from('staff_roles').select('company_id, role').eq('user_id', uid));
-    ST.me = { id: uid, profile: prof, roles, isStaff: !!(prof && prof.is_staff), companies: [...new Set(roles.map((r) => r.company_id))].sort() };
+    let mustChange = false; try { mustChange = !!(await q(sb.rpc('must_change_password'))); } catch (e) { console.warn('must_change_password', e); }
+    ST.me = { id: uid, profile: prof, roles, mustChange, isStaff: !!(prof && prof.is_staff), companies: [...new Set(roles.map((r) => r.company_id))].sort() };
     return ST.me;
   }
   ST.can = (co, list) => !!ST.me && ST.me.roles.some((r) => r.company_id === co && list.includes(r.role));
@@ -79,7 +81,7 @@
         <button class="btn primary big" type="submit">Log in</button>
       </form>
       <p class="muted center">New employee? <a href="#/signup">Create an account</a></p>
-      <p class="muted center small">Office staff: type your email address instead of a phone number.<br>Forgot your password? Ask the office.</p>
+      <p class="muted center small">Forgot your password? Ask the office.</p>
     </div></div>`;
   }
   function signupView() {
@@ -108,6 +110,7 @@
       const { error } = await sb.auth.signInWithPassword({ email: loginId(id), password: String(f.get('password')) });
       lf.classList.remove('loading');
       if (error) { $('#loginErr').textContent = errMsg(error); return; }
+      ST._loginPw = String(f.get('password'));      // memory only (never saved): lets the "choose a new password" step skip re-typing it
       location.hash = '#/'; ST.render();
     });
     const sf = $('#signupForm', root);
@@ -123,6 +126,89 @@
     });
   }
 
+  // ---------- passwords ----------
+  const pwFields = (needCurrent, curLabel) => `${needCurrent ? `<label class="field"><span>${curLabel}</span><input name="current" type="password" autocomplete="current-password" required></label>` : ''}
+      <label class="field"><span>New password (8 or more characters)</span><input name="pw1" type="password" minlength="8" autocomplete="new-password" required></label>
+      <label class="field"><span>Repeat the new password</span><input name="pw2" type="password" minlength="8" autocomplete="new-password" required></label>`;
+  async function savePw(form, current, errEl) {
+    const f = new FormData(form); const cur = current != null ? current : String(f.get('current') || ''); const a = String(f.get('pw1')); const b = String(f.get('pw2'));
+    if (a.length < 8) { errEl.textContent = 'New password must be at least 8 characters.'; return false; }
+    if (a !== b) { errEl.textContent = 'The two new passwords are not the same.'; return false; }
+    form.classList.add('loading');
+    try { await q(sb.rpc('change_my_password', { p_current: cur, p_new: a })); return true; }
+    catch (e) { errEl.textContent = errMsg(e); return false; } finally { form.classList.remove('loading'); }
+  }
+  function forcedPwView() {
+    const known = !!ST._loginPw;
+    return `<div class="auth"><div class="auth-card">
+      <div class="auth-logo">${logo('both')}</div>
+      <h1>Choose a new password</h1>
+      <p class="muted">You logged in with a temporary password. Choose your own password to continue.</p>
+      <form id="forcePwForm" class="stack">${pwFields(!known, 'Temporary password')}
+        <div class="err" id="forcePwErr"></div>
+        <button class="btn primary big" type="submit">Save new password</button>
+      </form>
+      <p class="muted center"><button class="linkbtn" data-act="logout">Log out</button></p>
+    </div></div>`;
+  }
+  function bindForcedPw(root) {
+    const f = $('#forcePwForm', root);
+    f.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const ok = await savePw(f, ST._loginPw || null, $('#forcePwErr', root));
+      if (!ok && ST._loginPw && /current password/i.test($('#forcePwErr', root).textContent)) { ST._loginPw = null; ST.render(); return; }
+      if (ok) { ST._loginPw = null; toast('New password saved ✓', 'good'); location.hash = '#/'; ST.render(); }
+    });
+  }
+  ST.changePassword = function () {
+    modal(`<h2>Change my password</h2><form id="chPwForm" class="stack">${pwFields(true, 'Current password')}
+        <div class="err" id="chPwErr"></div>
+        <div class="row-between"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`, (w, close) => {
+      const f = $('#chPwForm', w);
+      f.addEventListener('submit', async (e) => { e.preventDefault(); if (await savePw(f, null, $('#chPwErr', w))) { close(); toast('Password changed ✓', 'good'); } });
+    });
+  };
+
+  // ---------- install as an app (PWA) ----------
+  let installEvt = null;
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; mountInstall(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; document.querySelectorAll('.install-bar').forEach((x) => x.remove()); });
+  const IOS_PIC = `<svg class="ios-steps" viewBox="0 0 300 120" role="img" aria-label="Tap Share, then Add to Home Screen">
+    <rect x="1" y="1" width="138" height="118" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/><text x="70" y="22" text-anchor="middle" font-size="12" fill="#334155">1. Tap Share</text>
+    <rect x="10" y="84" width="120" height="28" rx="6" fill="#fff" stroke="#cbd5e1"/>
+    <g transform="translate(58 40)" fill="none" stroke="#0a84ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v22M5 11l7-7 7 7"/><path d="M4 18v14h16V18"/></g>
+    <path d="M70 80v10" stroke="#0a84ff" stroke-width="2"/><circle cx="70" cy="98" r="7" fill="none" stroke="#0a84ff" stroke-width="2"/>
+    <rect x="161" y="1" width="138" height="118" rx="14" fill="#f1f5f9" stroke="#cbd5e1"/><text x="230" y="22" text-anchor="middle" font-size="12" fill="#334155">2. Add to Home Screen</text>
+    <rect x="170" y="44" width="120" height="34" rx="8" fill="#fff" stroke="#0a84ff" stroke-width="2"/>
+    <rect x="178" y="51" width="20" height="20" rx="5" fill="none" stroke="#334155" stroke-width="2"/><path d="M188 56v10M183 61h10" stroke="#334155" stroke-width="2"/>
+    <text x="204" y="65" font-size="10.5" fill="#0f172a">Add to Home Screen</text></svg>`;
+  function iosSteps() {
+    modal(`<h2>Install the app on iPhone</h2>${IOS_PIC}
+      <ol class="steps"><li>In <b>Safari</b>, tap the <b>Share</b> button <span class="share-ico">⬆︎</span> (bottom of the screen).</li><li>Scroll down and tap <b>Add to Home Screen</b>, then <b>Add</b>.</li><li>Open <b>Shifts</b> from your home screen.</li></ol>
+      <div class="row-between"><span></span><button class="btn primary" data-close>OK</button></div>`);
+  }
+  function mountInstall() {
+    if (standalone() || sessionStorage.getItem('st-install-hide')) return;
+    const can = !!installEvt || isIOS(); if (!can) return;
+    const p = parts(); const app = $('#app'); if (!app) return;
+    const home = !p.length || p[0] === 'login' || (p[0] === 'emp' && (!p[1] || p[1] === 'clock')) || (p[0] === 'admin' && (!p[1] || p[1] === 'dashboard'));
+    if (!home) return;
+    const host = $('#loginForm') ? $('.auth-card', app) : $('.emp-main', app) || $('.adm-main', app) || $('.auth-card', app);
+    if (!host || $('.install-bar', host)) return;
+    const bar = document.createElement('div'); bar.className = 'install-bar';
+    bar.innerHTML = `<img src="icons/icon-192.png" alt=""><div><b>Install the app</b><span>Shifts on your home screen.</span></div>
+      <button class="btn small primary" data-inst>Install app</button><button class="iconbtn" data-inst-x title="Not now">×</button>`;
+    if (host.classList.contains('auth-card')) host.appendChild(bar); else host.prepend(bar);
+    bar.querySelector('[data-inst-x]').addEventListener('click', () => { sessionStorage.setItem('st-install-hide', '1'); bar.remove(); });
+    bar.querySelector('[data-inst]').addEventListener('click', async () => {
+      if (installEvt) { const ev = installEvt; installEvt = null; ev.prompt(); try { const r = await ev.userChoice; if (r && r.outcome === 'accepted') bar.remove(); } catch (e) {} }
+      else iosSteps();
+    });
+  }
+  ST.mountInstall = mountInstall;
+
   // ---------- router ----------
   const parts = () => location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   ST.render = async function () {
@@ -130,19 +216,24 @@
     try {
       if (p[0] === 'signup') { app.innerHTML = signupView(); bindAuth(app); return; }
       const me = await loadMe();
-      if (!me || p[0] === 'login') { app.innerHTML = loginView(); bindAuth(app); return; }
+      if (!me || p[0] === 'login') { app.innerHTML = loginView(); bindAuth(app); mountInstall(); return; }
       if (!me.profile) { app.innerHTML = loginView('Your account is not set up yet. Ask the office.'); bindAuth(app); await sb.auth.signOut(); return; }
       if (me.profile.status === 'disabled') { app.innerHTML = loginView('This account is turned off. Please contact the office.'); bindAuth(app); await sb.auth.signOut(); return; }
+      if (me.mustChange) { app.innerHTML = forcedPwView(); bindForcedPw(app); bindGlobal(app); return; }
       if (me.isStaff && me.roles.length) { if (p[0] !== 'admin') { location.hash = '#/admin/dashboard'; return; } await ST.adminView(app, p.slice(1)); }
       else { if (p[0] !== 'emp' && me.profile.status === 'active') { location.hash = '#/emp/clock'; return; } await ST.employeeView(app, p.slice(1)); }
-      bindGlobal(app);
+      bindGlobal(app); mountInstall();
     } catch (e) { console.error(e); app.innerHTML = `<div class="auth"><div class="auth-card"><h1>Something went wrong</h1><p class="err">${esc(errMsg(e))}</p><button class="btn primary big" onclick="location.reload()">Try again</button> <button class="btn ghost big" data-act="logout">Log out</button></div></div>`; bindGlobal(app); }
   };
   function bindGlobal(root) {
     root.querySelectorAll('[data-act="theme"]').forEach((b) => b.addEventListener('click', () => { theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); ST.render(); }));
-    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { await sb.auth.signOut(); location.hash = '#/login'; ST.render(); }));
+    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { ST._loginPw = null; await sb.auth.signOut(); location.hash = '#/login'; ST.render(); }));
+    root.querySelectorAll('[data-act="chpw"]').forEach((b) => b.addEventListener('click', () => ST.changePassword()));
   }
   Object.assign(ST, { who, siteName, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
-  window.addEventListener('hashchange', () => ST.render());
+  window.addEventListener('hashchange', () => { document.querySelectorAll('.modal-wrap').forEach((m) => m.remove()); ST.render(); });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('sw', e)));
+  }
   window.addEventListener('DOMContentLoaded', () => { ST.render(); setInterval(() => { document.querySelectorAll('[data-live-clock]').forEach((el) => (el.textContent = fmtTime(new Date().toISOString()))); document.querySelectorAll('[data-elapsed]').forEach((el) => (el.textContent = fmtDur(hours(el.dataset.elapsed, new Date().toISOString())))); }, 15000); });
 })();
