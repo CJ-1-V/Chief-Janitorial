@@ -3,20 +3,20 @@
 (function () {
   const ST = window.ST; const { sb, esc, fmtTime, fmtDate, fmtDateLong, fmtDur, hours, mBadge, q, toast, modal, unpaidBreak, errMsg } = ST;
   const C = window.ST_CONFIG; const T = () => ST.tz();
-  const siteLabel = (n) => (n == null ? 'Site ?' : 'Site ' + n);
+  const siteLabel = (n) => (n == null ? 'Site ?' : (cache.codeOf && cache.codeOf[n]) || 'Site ' + n);  // code (e.g. CVF217) when the site has one
   const PRIVACY = '📍 <b>Privacy:</b> your phone location is checked <b>once, when you tap Clock in</b>, to confirm you are at the site. It is not tracked during your shift or after you clock out.';
   let cache = {};
 
   async function load() {
     const uid = ST.me.id;
     const [sites, shifts, edits] = await Promise.all([
-      q(sb.from('employee_sites').select('id, site_no, label, lat, lng, radius_m').order('site_no')),
+      q(sb.from('employee_sites').select('id, site_no, site_code, label, lat, lng, radius_m, company_id').order('site_no')),
       q(sb.from('shifts').select('id, site_id, clock_in, clock_out, recorded_in, recorded_out, crew_count, in_note, out_note, loc_status, locked').eq('user_id', uid).order('clock_in', { ascending: false }).limit(200)),
       q(sb.from('shift_edits').select('shift_id, field, by_kind, at')),
     ]);
-    const num = {}; sites.forEach((s) => (num[s.id] = s.site_no));
+    const num = {}; const codeOf = {}; sites.forEach((s) => { num[s.id] = s.site_no; if (s.site_code) codeOf[s.site_no] = s.site_code; });
     shifts.forEach((s) => { s.site_no = num[s.site_id]; s.edits = edits.filter((e) => e.shift_id === s.id); s.inEdited = s.edits.some((e) => e.field === 'clock_in'); s.outEdited = s.edits.some((e) => e.field === 'clock_out'); });
-    cache = { sites, shifts, num };
+    cache = { sites, shifts, num, codeOf };
   }
   const canEdit = (s) => !s.locked && (Date.now() - new Date(s.clock_in)) / 86400000 <= C.editDays;
   const co = () => ST.me.profile.company_id; const coName = () => ST.COMPANIES[co()].name;
@@ -26,7 +26,7 @@
     const open = cache.shifts.find((s) => !s.clock_out);
     const missed = open && hours(open.clock_in, new Date().toISOString()) > 14;
     return `<div class="emp co-${co()}">
-      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r">${ST.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(me.full_name)}">${esc(ST.initials(me.full_name))}</a></div></header>
+      <header class="topbar"><a href="#/emp/clock" class="emp-brand">${ST.logo(co())}<span class="emp-co">${esc(coName())}</span></a><div class="topbar-r">${ST.themeBtn()}<a class="avatar" href="#/emp/profile" title="${esc(ST.who(me))}">${esc(ST.initials(ST.who(me)))}</a></div></header>
       <main class="emp-main">${missed ? `<div class="reminder"><span class="ri">🔔</span><div>You're still clocked in at ${siteLabel(open.site_no)} since ${fmtDate(open.clock_in)} ${fmtTime(open.clock_in)}. Please clock out, or fix your time in My shifts.</div></div>` : ''}${body}</main>
       <nav class="tabbar">
         <a href="#/emp/clock" class="${active === 'clock' ? 'on' : ''}"><span class="ti">⏱</span>Clock</a>
@@ -40,10 +40,10 @@
     return `<div class="emp co-${co()}"><header class="topbar">${ST.logo(co())}<div class="topbar-r">${ST.themeBtn()}</div></header>
       <main class="emp-main"><div class="card pending-card">
         <div class="pending-icon">⏳</div><h1>Waiting for approval</h1>
-        <p class="lead">Hi ${esc(me.full_name)}, your account was created and is waiting for the ${esc(coName())} office to approve it.</p>
+        <p class="lead">Hi ${esc(ST.who(me))}! Your account was created and is waiting for the ${esc(coName())} office to approve it.</p>
         <ol class="steps"><li class="done"><b>Account created</b><span>${fmtDate(me.created_at)}, ${fmtTime(me.created_at)}</span></li><li class="now"><b>Office approval</b><span>The office will review your account</span></li><li><b>Clock in to your shifts</b><span>Available once approved</span></li></ol>
         <div class="notice">You can't clock in yet. We'll unlock clock-in as soon as you're approved.</div>
-        <div class="kv"><span>Name</span><b>${esc(me.full_name)}</b><span>Phone</span><b>${esc(me.phone || '')}</b></div>
+        <div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b></div>
         <button class="btn primary big" data-act="recheck">Check again</button>
         <button class="btn ghost big" data-act="logout">Log out</button>
       </div></main></div>`;
@@ -71,7 +71,7 @@
   function clockView() {
     const me = ST.me.profile; const open = cache.shifts.find((s) => !s.clock_out); const now = new Date().toISOString();
     if (open) {
-      return shell('clock', `<h1 class="h1">Hi, ${esc(me.full_name.split(' ')[0])}</h1>
+      return shell('clock', `<h1 class="h1">Hi, ${esc(ST.who(me))}</h1>
         <div class="card clock-card on">
           <div class="status-pill on">● On shift</div>
           <div class="site-big">${siteLabel(open.site_no)}</div>
@@ -87,17 +87,17 @@
         </div>`);
     }
     const recent = [...new Set(cache.shifts.map((s) => s.site_no))].filter((n) => cache.sites.some((s) => s.site_no === n)).slice(0, 3);
-    const tile = (s) => `<button type="button" class="site-tile" data-num="${s.site_no}">${siteLabel(s.site_no)}</button>`;
+    const tile = (s) => `<button type="button" class="site-tile" data-num="${s.site_no}" data-code="${esc(s.site_code || '')}">${esc(siteLabel(s.site_no))}<small class="tile-co co-${s.company_id}">${ST.COMPANIES[s.company_id] ? ST.COMPANIES[s.company_id].short : ''}</small></button>`;
     const bySite = (n) => cache.sites.find((s) => s.site_no === n);
-    return shell('clock', `<h1 class="h1">Hi, ${esc(me.full_name.split(' ')[0])}</h1>
+    return shell('clock', `<h1 class="h1">Hi, ${esc(ST.who(me))}</h1>
       <div class="card clock-card">
         <div class="row-between"><div class="status-pill">○ Off shift</div><div class="muted">${fmtDate(now)}</div></div>
         <div class="bigclock" data-live-clock>${fmtTime(now)}</div>
         <div class="label">Which site are you at? <span class="req">*</span></div>
         ${recent.length ? `<div class="sub">Your recent sites</div><div class="tiles recent">${recent.map((n) => tile(bySite(n))).join('')}</div>` : ''}
-        <input class="site-search" id="siteSearch" inputmode="numeric" placeholder="Type a site number…">
+        <input class="site-search" id="siteSearch" autocapitalize="characters" autocomplete="off" placeholder="Type a site code or number (e.g. CVF217 or 217)…">
         <div class="tiles all" id="allTiles">${cache.sites.map(tile).join('') || '<div class="empty">No sites yet. Ask the office.</div>'}</div>
-        <div class="muted small">Site number not listed? Ask your supervisor — don't guess.</div>
+        <div class="muted small">Site not listed? Ask your supervisor — don't guess.</div>
         <div class="label">Location check</div>
         <div class="privacy small">${PRIVACY}</div>
         <label class="field"><span>Notes (optional) <em id="cnt">0/120</em></span><textarea id="notes" maxlength="120" rows="2" placeholder="e.g. ride partner"></textarea></label>
@@ -108,7 +108,7 @@
     let sel = null; const btn = root.querySelector('#clockinBtn');
     root.querySelectorAll('.site-tile').forEach((t) => t.addEventListener('click', () => { sel = +t.dataset.num; root.querySelectorAll('.site-tile').forEach((x) => x.classList.toggle('sel', +x.dataset.num === sel)); btn.disabled = false; btn.textContent = 'Clock in at ' + siteLabel(sel); }));
     const ss = root.querySelector('#siteSearch');
-    ss && ss.addEventListener('input', () => { const v = ss.value.replace(/\D/g, ''); root.querySelectorAll('#allTiles .site-tile').forEach((t) => (t.style.display = !v || t.dataset.num.startsWith(v) ? '' : 'none')); });
+    ss && ss.addEventListener('input', () => { const v = ss.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); const d = v.replace(/\D/g, ''); root.querySelectorAll('#allTiles .site-tile').forEach((t) => { const ok = !v || t.dataset.code.includes(v) || (d && d === v && t.dataset.num.startsWith(d)); t.style.display = ok ? '' : 'none'; }); });
     counter(root, 'notes', 'cnt'); counter(root, 'outNote', 'onCnt');
     btn && btn.addEventListener('click', async () => {
       if (!sel) return; btn.disabled = true; btn.textContent = 'Checking location…';
@@ -191,8 +191,8 @@
 
   function profileView() {
     const me = ST.me.profile;
-    return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Name</span><b>${esc(me.full_name)}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
-      <p class="muted small">To change your name, phone or password, ask the office.</p><button class="btn ghost big" data-act="logout">Log out</button></div>`);
+    return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
+      <p class="muted small">Your nickname keeps your real name private. To change your phone, password or nickname, ask the office.</p><button class="btn ghost big" data-act="logout">Log out</button></div>`);
   }
 
   ST.employeeView = async function (app, p) {

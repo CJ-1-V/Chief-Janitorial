@@ -16,3 +16,8 @@
   .adm-main{padding:0}
 }
 .emp-main{padding-bottom:120px}
+.small.ok{color:#15803d}.small.bad,b.bad{color:#be123c}.rate-row{margin:4px 0}
+.site-tile{position:relative}.tile-co{display:block;font-size:.62em;font-weight:700;opacity:.6;letter-spacing:.05em}
+
+/* Sites tab: keep the "Show turned-off" checkbox inline */
+.form-row label.chk{display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin-right:12px}.form-row label.chk input{width:auto;margin:0}
