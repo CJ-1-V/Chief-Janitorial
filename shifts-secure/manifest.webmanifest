@@ -1,0 +1,17 @@
+{
+  "name": "Unscramble Shifts",
+  "short_name": "Shifts",
+  "description": "Clock in and out, see your hours (Chief Janitorial + Unscramble).",
+  "id": "/shifts-secure/",
+  "start_url": "/shifts-secure/",
+  "scope": "/shifts-secure/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#332E57",
+  "theme_color": "#332E57",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

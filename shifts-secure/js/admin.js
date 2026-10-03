@@ -40,7 +40,7 @@
     return `<div class="adm"><header class="adm-top"><div class="adm-top-in">
         <a href="#/admin/dashboard">${ST.logo(sc.length > 1 ? 'both' : sc[0])}</a>
         <nav class="adm-nav">${link('dashboard', 'Dashboard')}${link('employees', 'Employees', pendingN ? ` <span class="count">${pendingN}</span>` : '')}${link('shifts', 'Shifts')}${link('timesheets', 'Timesheets')}${billing ? link('rates', 'Rates') + link('invoices', 'Invoices') : ''}${sc.some((c) => ST.can(c, ['owner', 'admin'])) ? link('sites', 'Sites') : ''}</nav>
-        <div class="topbar-r">${ST.themeBtn()}${switcher}<span class="who">${esc(ST.who(me.profile))} <em>${esc(top[0].toUpperCase() + top.slice(1))}</em></span><button class="btn small ghost" data-act="logout">Log out</button></div>
+        <div class="topbar-r">${ST.themeBtn()}${switcher}<span class="who">${esc(ST.who(me.profile))} <em>${esc(top[0].toUpperCase() + top.slice(1))}</em></span><button class="btn small ghost" data-act="chpw" title="Change my password">Password</button><button class="btn small ghost" data-act="logout">Log out</button></div>
       </div></header>
       ${sc.length === 1 && allowed().length > 1 ? `<div class="co-band co-${sc[0]}">Showing <b>${COMPANIES[sc[0]].name}</b> only · <a href="#" data-cof="all">show all companies</a></div>` : ''}
       <main class="adm-main">${body}</main></div>`;
@@ -92,14 +92,40 @@
 
   // ---------- Employees / approvals ----------
   async function employees() {
-    const pp = await people(); const emp = pp.list.filter((p) => !p.is_staff);
+    const pp = await people();
+    // workers of the other office who worked at our sites are visible too (RLS decides); any admin may reset any worker's password
+    const extra = Object.values(pp.byId).filter((p) => !p.is_staff && !pp.list.includes(p) && !allowed().includes(p.company_id));
+    const emp = pp.list.filter((p) => !p.is_staff).concat(extra);
+    const canResetWorkers = ['cj', 'us'].some((c) => ST.can(c, ['owner', 'admin']));
+    const isOwner = ST.me.roles.some((r) => r.role === 'owner');
+    const staff = isOwner ? Object.values(pp.byId).filter((p) => p.is_staff && p.id !== ST.me.id) : [];
+    const resetBtn = (p) => `<button class="btn small ghost" data-reset="${p.id}" data-label="${esc(ST.who(p))}" title="Set a temporary password; they choose a new one at their next login">Reset password</button>`;
     const pending = emp.filter((p) => p.status === 'pending');
     const row = (p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${!p.is_staff && ST.canOps(p.company_id) ? ` <button class="linkbtn small" data-reroll="${p.id}" title="Give this worker a new random nickname">🎲</button>` : ''}</td><td>${esc(p.phone || '')}</td><td><span class="tag ${p.status === 'active' ? 'on' : p.status === 'disabled' ? 'bad' : ''}">${p.status}</span></td><td>${fmtDT(p.created_at)}</td>
-      <td>${ST.canOps(p.company_id) ? (p.status === 'pending' ? `<button class="btn small primary" data-appr="${p.id}" data-ok="1">Approve</button> <button class="btn small ghost" data-appr="${p.id}" data-ok="0">Reject</button>` : p.status === 'active' ? `<button class="btn small ghost" data-appr="${p.id}" data-ok="0">Turn off</button>` : `<button class="btn small ghost" data-appr="${p.id}" data-ok="1">Turn back on</button>`) : ''}</td></tr>`;
+      <td>${ST.canOps(p.company_id) ? (p.status === 'pending' ? `<button class="btn small primary" data-appr="${p.id}" data-ok="1">Approve</button> <button class="btn small ghost" data-appr="${p.id}" data-ok="0">Reject</button>` : p.status === 'active' ? `<button class="btn small ghost" data-appr="${p.id}" data-ok="0">Turn off</button>` : `<button class="btn small ghost" data-appr="${p.id}" data-ok="1">Turn back on</button>`) : ''}${canResetWorkers && p.status !== 'pending' ? ' ' + resetBtn(p) : ''}</td></tr>`;
     return [shell('employees', `<div class="page-h"><h1>Employees</h1><span class="muted">${emp.length} accounts · ${pending.length} waiting</span></div>
       <section class="panel"><h2>Sign-up approvals</h2>${pending.length ? `<table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${pending.map(row).join('')}</table>` : '<div class="empty">No sign-ups waiting.</div>'}</section>
       <section class="panel"><h2>All employees</h2><table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${emp.filter((p) => p.status !== 'pending').map(row).join('') || '<tr><td colspan="6" class="empty">None yet.</td></tr>'}</table>
-      <p class="muted small">Password resets: not self-service yet (needs a small server function). Until then the owner resets a password in the Supabase dashboard.</p></section>`, pending.length), (root) => {
+      <p class="muted small">Forgot password? Use <b>Reset password</b>: a temporary password is shown once; give it to the worker. They must choose a new password at their next login.</p></section>
+      ${isOwner ? `<section class="panel"><h2>Office accounts</h2><p class="muted small">Only the owner can reset an office account.</p><table class="tbl"><tr><th></th><th>Account</th><th></th></tr>${staff.map((p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}</td><td>${resetBtn(p)}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No other office accounts.</td></tr>'}</table></section>` : ''}`, pending.length), (root) => {
+      root.querySelectorAll('[data-reset]').forEach((b) => b.addEventListener('click', () => {
+        const label = b.dataset.label;
+        modal(`<h2>Reset password</h2><p>Give <b>${esc(label)}</b> a temporary password? Their old password stops working and they are logged out on every device. They must choose a new password at their next login.</p>
+          <div class="row-between"><button class="btn ghost" data-close>Cancel</button><button class="btn primary" data-go>Reset password</button></div>`, (w, close) => {
+          w.querySelector('[data-go]').addEventListener('click', async (ev) => {
+            ev.target.disabled = true;
+            try {
+              const pw = await q(sb.rpc('admin_reset_password', { p_user: b.dataset.reset })); close();
+              modal(`<h2>Temporary password</h2><p>For <b>${esc(label)}</b>. It is shown <b>only once</b> — write it down or give it to them now.</p>
+                <div class="temp-pw" id="tempPw">${esc(pw)}</div>
+                <p class="muted small">They log in with their phone number and this password, then choose their own password.</p>
+                <div class="row-between"><button class="btn ghost" data-copy>Copy</button><button class="btn primary" data-close>Done</button></div>`, (w2) => {
+                w2.querySelector('[data-copy]').addEventListener('click', async () => { try { await navigator.clipboard.writeText(pw); toast('Copied', 'good'); } catch (e) { toast('Copy did not work — please write it down.', 'bad'); } });
+              });
+            } catch (e) { close(); toast(errMsg(e), 'bad'); }
+          });
+        });
+      }));
       root.querySelectorAll('[data-reroll]').forEach((b) => b.addEventListener('click', async () => {
         try { const n = await q(sb.rpc('reroll_nickname', { p_user: b.dataset.reroll })); toast('New nickname: ' + n, 'good'); ST.render(); } catch (e) { toast(errMsg(e), 'bad'); }
       }));

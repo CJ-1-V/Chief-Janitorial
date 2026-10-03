@@ -21,3 +21,17 @@
 
 /* Sites tab: keep the "Show turned-off" checkbox inline */
 .form-row label.chk{display:inline-flex;flex-direction:row;align-items:center;gap:6px;margin-right:12px}.form-row label.chk input{width:auto;margin:0}
+
+/* Password reset / change */
+.temp-pw{font:700 1.5em/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-align:center;padding:14px;margin:10px 0;border:2px dashed #94a3b8;border-radius:12px;background:#f8fafc;color:#0f172a;user-select:all}
+[data-theme="dark"] .temp-pw{background:#0f172a;color:#f8fafc;border-color:#475569}
+/* Install-as-app banner */
+.install-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:12px 0;border:1px solid #c7c3e6;background:#f4f3fb;border-radius:12px;color:#1e1b3a}
+.install-bar img{width:40px;height:40px;border-radius:9px;flex:none}
+.install-bar div{flex:1;display:flex;flex-direction:column;font-size:.9em;line-height:1.25}
+.install-bar div span{opacity:.75;font-size:.9em}
+.install-bar .iconbtn{flex:none}
+[data-theme="dark"] .install-bar{background:#1e1b3a;border-color:#3b3670;color:#eceaf8}
+@media (display-mode: standalone){.install-bar{display:none!important}}
+.ios-steps{width:100%;max-width:340px;display:block;margin:8px auto}
+ol.steps{padding-left:1.2em;line-height:1.5}ol.steps li{margin:4px 0}
