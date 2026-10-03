@@ -5187,6 +5187,9 @@ button {
     gap: 12px;
     margin-top: 28px;
 }
+.sanitation-page .sanitation-actions .main-btn {
+    text-transform: none;
+}
 .sanitation-page .service-grid > [class*="col-"] {
     display: flex;
     margin-bottom: 30px;
