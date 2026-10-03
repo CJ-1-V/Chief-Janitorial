@@ -19,6 +19,19 @@
   const ST_tz = () => window.CJ.tz;
   // Display helpers: workers are shown by nickname (never a real name); staff by role title. Sites by code (e.g. CVF217).
   const who = (p) => (p ? p.nickname || p.full_name || '?' : '?');
+  // Avatars (migration 012): one emoji on a coloured circle, stored in profiles.avatar / avatar_bg. Until a profile has one
+  // (or before 012 is live) the same word list picks one here, so everyone always shows a fun icon. No photos, no names.
+  const AVA_W = 'mop dustpan pumpkin broom bucket squeegee sponge duster tractor potato scarecrow lobster mussel puffin seagull fox lighthouse turnip carrot cabbage strawberry haystack wheelbarrow shovel rake sprout acorn gumboot clover bumblebee otter beaver heron plover dune ferry tide breeze scrubber vacuum apple pickle barnacle oyster cranberry parsnip radish thistle mallard pinecone cat dog bear owl frog bee fish whale crab duck horse cow pig sheep lion tiger panda koala rabbit star sun moon rocket turbo lucky sunny breezy zippy speedy mighty sparkly captain jolly'.split(' ');
+  const AVA_E = ['🧼','🧹','🎃','🧹','🪣','🧽','🧽','🪶','🚜','🥔','🌾','🦞','🐚','🐧','🕊️','🦊','🗼','🍠','🥕','🥬','🍓','🌾','🛒','⛏️','🍂','🌱','🌰','🥾','🍀','🐝','🦦','🦫','🦩','🐦','🏖️','⛴️','🌊','🍃','🫧','🌀','🍎','🥒','🐚','🦪','🍒','🥕','🥗','🌸','🦆','🌲','🐱','🐶','🐻','🦉','🐸','🐝','🐟','🐳','🦀','🦆','🐴','🐮','🐷','🐑','🦁','🐯','🐼','🐨','🐰','⭐','☀️','🌙','🚀','🏎️','🍀','🌞','🍃','⚡','💨','💪','✨','🧢','😄'];
+  const AVA_F = ['🐸','🐼','🐨','🦁','🐯','🐙','🦉','🐢','🦔','🐳','🌻','🍄','⚡','🚀','🎈','🍉','🦄','🐞','🌈','🍩'];
+  const AVA_C = ['#F59E0B','#10B981','#3B82F6','#8B5CF6','#EC4899','#EF4444','#14B8A6','#F97316','#6366F1','#84CC16','#06B6D4','#D946EF'];
+  const avaPick = (p) => {
+    let h = 0; const k = String((p && p.id) || '') + who(p); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+    let e = null; String((p && p.nickname) || '').toLowerCase().split(/[^a-z]+/).forEach((w) => { const i = AVA_W.indexOf(w); if (i >= 0) e = AVA_E[i]; });
+    return [e || AVA_F[h % AVA_F.length], AVA_C[Math.floor(h / 7) % AVA_C.length]];
+  };
+  const avatar = (p, cls) => { const [e, c] = p && p.avatar ? [p.avatar, p.avatar_bg || '#94A3B8'] : avaPick(p); return `<span class="ava ${cls || ''}" style="background:${/^#[0-9A-Fa-f]{6}$/.test(c) ? c : '#94A3B8'}" aria-hidden="true">${esc(e)}</span>`; };
+  const whoA = (p) => `<span class="who-a">${avatar(p)}<span>${esc(who(p))}</span></span>`;
   const isUnknownSite = (s) => !!s && (s.is_unknown || /^UNK/.test(s.site_code || ''));  // migration 010: UNK199 (CJ) / UNK299 (US)
   const siteName = (s) => (!s ? 'Site ?' : isUnknownSite(s) ? 'Unknown site · ' + (s.company_id === 'us' ? 'US' : 'CJ') : s.site_code || ('Site ' + s.site_no));
   const COMPANIES = { cj: { name: 'Chief Janitorial', short: 'CJ' }, us: { name: 'Unscramble', short: 'US' } };
@@ -62,6 +75,7 @@
     if (!session) { ST.me = null; return null; }
     const uid = session.user.id;
     const prof = await q(sb.from('profiles').select('*').eq('id', uid).maybeSingle());
+    if (prof && prof.avatar === null) { try { const a = await q(sb.rpc('ensure_my_avatar')); if (a) { prof.avatar = a[0]; prof.avatar_bg = a[1]; } } catch (e) { console.warn('ensure_my_avatar', e); } }  // first login after 012
     const roles = await q(sb.from('staff_roles').select('company_id, role').eq('user_id', uid));
     let mustChange = false; try { mustChange = !!(await q(sb.rpc('must_change_password'))); } catch (e) { console.warn('must_change_password', e); }
     ST.me = { id: uid, profile: prof, roles, mustChange, isStaff: !!(prof && prof.is_staff), companies: [...new Set(roles.map((r) => r.company_id))].sort() };
@@ -264,7 +278,7 @@
     root.querySelectorAll('[data-act="switchco"]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); ST.switchCompany(); }));
     root.querySelectorAll('[data-act="chpw"]').forEach((b) => b.addEventListener('click', () => ST.changePassword()));
   }
-  Object.assign(ST, { who, siteName, isUnknownSite, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
+  Object.assign(ST, { who, avatar, whoA, siteName, isUnknownSite, $, esc, fmtTime, fmtDate, fmtDateLong, fmtDay, fmtDT, hours, fmtDur, money, initials, mBadge, COMPANIES, unpaidBreak, phoneDigits, errMsg, toast, modal, logo, themeBtn, q, download, csv, bindGlobal, tz: () => window.CJ.tz });
   window.addEventListener('hashchange', () => { document.querySelectorAll('.modal-wrap').forEach((m) => m.remove()); ST.render(); });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('sw', e)));
