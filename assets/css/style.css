@@ -5079,10 +5079,11 @@ button {
     border: 1px solid rgba(88, 86, 233, 0.2);
     border-radius: 5px;
 }
-.quote-check {
+.quote-form label.quote-check {
     display: flex;
     align-items: flex-start;
     gap: 10px;
+    width: 100%;
     margin: 0;
     font-weight: 500;
     color: var(--heading);
