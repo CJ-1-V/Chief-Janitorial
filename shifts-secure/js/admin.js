@@ -101,7 +101,7 @@
     const staff = isOwner ? Object.values(pp.byId).filter((p) => p.is_staff && p.id !== ST.me.id) : [];
     const resetBtn = (p) => `<button class="btn small ghost" data-reset="${p.id}" data-label="${esc(ST.who(p))}" title="Set a temporary password; they choose a new one at their next login">Reset password</button>`;
     const pending = emp.filter((p) => p.status === 'pending');
-    const row = (p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${!p.is_staff && ST.canOps(p.company_id) ? ` <button class="linkbtn small" data-reroll="${p.id}" title="Give this worker a new random nickname">🎲</button>` : ''}</td><td>${esc(p.phone || '')}</td><td><span class="tag ${p.status === 'active' ? 'on' : p.status === 'disabled' ? 'bad' : ''}">${p.status}</span></td><td>${fmtDT(p.created_at)}</td>
+    const row = (p) => `<tr><td>${chip(p.company_id)}</td><td>${esc(ST.who(p))}${!p.is_staff && ST.canOps(p.company_id) ? ` <button class="linkbtn small" data-reroll="${p.id}" title="Give this worker a new random nickname">🎲</button> <button class="linkbtn small" data-nick="${p.id}" data-cur="${esc(ST.who(p))}" title="Edit this nickname">✎</button>` : ''}</td><td>${esc(p.phone || '')}</td><td><span class="tag ${p.status === 'active' ? 'on' : p.status === 'disabled' ? 'bad' : ''}">${p.status}</span></td><td>${fmtDT(p.created_at)}</td>
       <td>${ST.canOps(p.company_id) ? (p.status === 'pending' ? `<button class="btn small primary" data-appr="${p.id}" data-ok="1">Approve</button> <button class="btn small ghost" data-appr="${p.id}" data-ok="0">Reject</button>` : p.status === 'active' ? `<button class="btn small ghost" data-appr="${p.id}" data-ok="0">Turn off</button>` : `<button class="btn small ghost" data-appr="${p.id}" data-ok="1">Turn back on</button>`) : ''}${canResetWorkers && p.status !== 'pending' ? ' ' + resetBtn(p) : ''}</td></tr>`;
     return [shell('employees', `<div class="page-h"><h1>Employees</h1><span class="muted">${emp.length} accounts · ${pending.length} waiting</span></div>
       <section class="panel"><h2>Sign-up approvals</h2>${pending.length ? `<table class="tbl"><tr><th></th><th>Nickname</th><th>Phone (login)</th><th>Status</th><th>Signed up</th><th></th></tr>${pending.map(row).join('')}</table>` : '<div class="empty">No sign-ups waiting.</div>'}</section>
@@ -128,6 +128,15 @@
       }));
       root.querySelectorAll('[data-reroll]').forEach((b) => b.addEventListener('click', async () => {
         try { const n = await q(sb.rpc('reroll_nickname', { p_user: b.dataset.reroll })); toast('New nickname: ' + n, 'good'); ST.render(); } catch (e) { toast(errMsg(e), 'bad'); }
+      }));
+      root.querySelectorAll('[data-nick]').forEach((b) => b.addEventListener('click', () => {
+        modal(`<h2>Edit nickname</h2><form id="admNick" class="stack"><label class="field"><span>Nickname (2–30 characters)</span><input name="nick" maxlength="30" value="${esc(b.dataset.cur)}" required></label>
+          <div class="err" id="admNickErr"></div><div class="row-between"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`, (w, close) => {
+          const f = w.querySelector('#admNick');
+          f.addEventListener('submit', async (e) => { e.preventDefault();
+            try { const n = await q(sb.rpc('admin_set_nickname', { p_user: b.dataset.nick, p_nick: new FormData(f).get('nick') })); close(); toast('Nickname: ' + n, 'good'); ST.render(); }
+            catch (e2) { w.querySelector('#admNickErr').textContent = errMsg(e2); } });
+        });
       }));
       root.querySelectorAll('[data-appr]').forEach((b) => b.addEventListener('click', async () => {
         try { await q(sb.rpc('approve_employee', { p_user: b.dataset.appr, p_approve: b.dataset.ok === '1' })); toast(b.dataset.ok === '1' ? 'Approved ✓' : 'Turned off', 'good'); ST.render(); } catch (e) { toast(errMsg(e), 'bad'); }

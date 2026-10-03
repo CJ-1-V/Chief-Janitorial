@@ -194,7 +194,31 @@
   function profileView() {
     const me = ST.me.profile;
     return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
-      <p class="muted small">Your nickname keeps your real name private. To change your phone or nickname, ask the office.</p><button class="btn big" data-act="chpw">Change my password</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
+      <p class="muted small">Your nickname is how the office sees you. To change your phone number, ask the office.</p><button class="btn big" data-act="chnick">Change nickname</button> <button class="btn big" data-act="chpw">Change my password</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
+  }
+
+  // Change nickname: type one (checked by the server: 2-30 chars, letters/numbers/basic punctuation, unique, no rude words,
+  // 5 changes a day) or tap "Suggest one" for a random funny one from the safe word lists.
+  function changeNickname() {
+    modal(`<h2>Change nickname</h2><form id="nickForm" class="stack">
+      <label class="field"><span>Your nickname (2–30 characters)</span><input name="nick" id="nickInput" maxlength="30" autocomplete="off" autocapitalize="words" value="${esc(ST.who(ST.me.profile))}" required></label>
+      <button class="btn" type="button" id="nickSuggest">🎲 Suggest one</button>
+      <p class="muted small" id="nickLeft">Letters, numbers, spaces and . , ' ! ? &amp; ( ) _ - only.</p><div class="err" id="nickErr"></div>
+      <div class="row-between"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`, (w, close) => {
+      const f = w.querySelector('#nickForm'); const inp = w.querySelector('#nickInput'); const errEl = w.querySelector('#nickErr');
+      inp.addEventListener('input', () => (errEl.textContent = ''));
+      q(sb.rpc('my_nickname_changes_left')).then((n) => { w.querySelector('#nickLeft').textContent += ` ${n} change${n === 1 ? '' : 's'} left today.`; }).catch(() => {});
+      w.querySelector('#nickSuggest').addEventListener('click', async () => {
+        errEl.textContent = ''; try { inp.value = await q(sb.rpc('suggest_my_nickname')); inp.focus(); } catch (e) { errEl.textContent = errMsg(e); }
+      });
+      f.addEventListener('submit', async (e) => {
+        e.preventDefault(); errEl.textContent = ''; const v = inp.value.trim().replace(/\s+/g, ' ');
+        if (v.length < 2 || v.length > 30) { errEl.textContent = 'Nickname must be 2 to 30 characters.'; return; }
+        f.classList.add('loading');
+        try { const n = await q(sb.rpc('set_my_nickname', { p_nick: v })); close(); toast('You are now ' + n + ' ✓', 'good'); ST.render(); }
+        catch (e2) { errEl.textContent = errMsg(e2); } finally { f.classList.remove('loading'); }
+      });
+    });
   }
 
   ST.employeeView = async function (app, p) {
@@ -203,7 +227,7 @@
     const v = p[0] || 'clock';
     if (v === 'shifts') app.innerHTML = shiftsView();
     else if (v === 'edit') { app.innerHTML = editView(p[1]); bindEdit(app, p[1]); }
-    else if (v === 'profile') app.innerHTML = profileView();
+    else if (v === 'profile') { app.innerHTML = profileView(); app.querySelector('[data-act="chnick"]').addEventListener('click', changeNickname); }
     else { app.innerHTML = clockView(); bindClock(app); }
   };
 })();
