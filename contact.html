@@ -279,6 +279,137 @@
                 </div>
             </div>
         </section>
+        <!--====== Start Quote Form ======-->
+        <section class="quote-section" id="quote">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-10">
+                        <div class="section-title mb-40">
+                            <span class="sub-title st-one">Free Quote</span>
+                            <h2 id="quote-heading">Get a Free Quote</h2>
+                            <p>Tell us about the property and the cleaning you need. We’ll reply with a free quote.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-10">
+                        <div class="quote-form">
+                            <form id="quote-form" action="https://formsubmit.co/sandra@chiefjanitorial.com" method="POST" accept-charset="UTF-8" novalidate aria-labelledby="quote-heading">
+                                <input type="hidden" name="_cc" value="admin@chiefjanitorial.com">
+                                <input type="hidden" name="_subject" value="New quote request - chiefjanitorial.com">
+                                <input type="hidden" name="_template" value="table">
+                                <input type="hidden" name="_captcha" value="false">
+                                <input type="hidden" name="_next" value="https://www.chiefjanitorial.com/thanks.html">
+                                <div class="quote-hp" aria-hidden="true">
+                                    <label for="quote-honey">Leave this field blank</label>
+                                    <input type="text" id="quote-honey" name="_honey" tabindex="-1" autocomplete="off" style="display:none">
+                                </div>
+                                <p class="quote-note">Fields marked with <span aria-hidden="true">*</span><span class="quote-sr">an asterisk</span> are required.</p>
+                                <p class="quote-summary" id="quote-summary" role="alert"></p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-name">Name <span class="req" aria-hidden="true">*</span><span class="quote-sr">required</span></label>
+                                            <input class="form_control" type="text" id="quote-name" name="Name" autocomplete="name" required maxlength="200" aria-describedby="quote-name-error">
+                                            <p class="quote-error" id="quote-name-error"></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-company">Company / Business name</label>
+                                            <input class="form_control" type="text" id="quote-company" name="Company / Business name" autocomplete="organization" maxlength="200">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-email">Email <span class="req" aria-hidden="true">*</span><span class="quote-sr">required</span></label>
+                                            <input class="form_control" type="email" id="quote-email" name="email" autocomplete="email" required maxlength="200" inputmode="email" aria-describedby="quote-email-error">
+                                            <p class="quote-error" id="quote-email-error"></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-phone">Phone <span class="quote-optional">(optional)</span></label>
+                                            <input class="form_control" type="tel" id="quote-phone" name="Phone" autocomplete="tel" inputmode="tel" maxlength="30" aria-describedby="quote-phone-error">
+                                            <p class="quote-error" id="quote-phone-error"></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form_group">
+                                            <label for="quote-address">Property address / city <span class="req" aria-hidden="true">*</span><span class="quote-sr">required</span></label>
+                                            <input class="form_control" type="text" id="quote-address" name="Property address / city" autocomplete="street-address" required maxlength="300" aria-describedby="quote-address-error">
+                                            <p class="quote-error" id="quote-address-error"></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-facility">Type of facility</label>
+                                            <select class="form_control" id="quote-facility" name="Type of facility">
+                                                <option value="">Select a facility type</option>
+                                                <option>Office</option>
+                                                <option>Food plant / CFIA facility</option>
+                                                <option>Retail</option>
+                                                <option>Medical/clinic</option>
+                                                <option>Industrial/warehouse</option>
+                                                <option>Post-construction</option>
+                                                <option>Event</option>
+                                                <option>Other</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-size">Approx. size (sq ft)</label>
+                                            <input class="form_control" type="number" id="quote-size" name="Approx. size (sq ft)" inputmode="numeric" min="1" step="1" aria-describedby="quote-size-error">
+                                            <p class="quote-error" id="quote-size-error"></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-frequency">Service frequency</label>
+                                            <select class="form_control" id="quote-frequency" name="Service frequency">
+                                                <option value="">Select a frequency</option>
+                                                <option>One-time</option>
+                                                <option>Daily</option>
+                                                <option>Weekly</option>
+                                                <option>Bi-weekly</option>
+                                                <option>Monthly</option>
+                                                <option>Not sure</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form_group">
+                                            <label for="quote-start">Preferred start date</label>
+                                            <input class="form_control" type="date" id="quote-start" name="Preferred start date">
+                                        </div>
+                                    </div>
+                                </div>
+                                <fieldset>
+                                    <legend>Services needed</legend>
+                                    <div class="quote-checks">
+                                        <label class="quote-check" for="svc-office"><input type="checkbox" id="svc-office" name="Service: General office cleaning" value="Yes"> <span>General office cleaning</span></label>
+                                        <label class="quote-check" for="svc-food"><input type="checkbox" id="svc-food" name="Service: Food plant sanitation" value="Yes"> <span>Food plant sanitation</span></label>
+                                        <label class="quote-check" for="svc-floor"><input type="checkbox" id="svc-floor" name="Service: Floor care" value="Yes"> <span>Floor care</span></label>
+                                        <label class="quote-check" for="svc-disinfect"><input type="checkbox" id="svc-disinfect" name="Service: Disinfection" value="Yes"> <span>Disinfection</span></label>
+                                        <label class="quote-check" for="svc-post"><input type="checkbox" id="svc-post" name="Service: Post-construction" value="Yes"> <span>Post-construction</span></label>
+                                        <label class="quote-check" for="svc-event"><input type="checkbox" id="svc-event" name="Service: Event cleaning" value="Yes"> <span>Event cleaning</span></label>
+                                        <label class="quote-check" for="svc-windows"><input type="checkbox" id="svc-windows" name="Service: Windows" value="Yes"> <span>Windows</span></label>
+                                        <label class="quote-check" for="svc-other"><input type="checkbox" id="svc-other" name="Service: Other" value="Yes"> <span>Other</span></label>
+                                    </div>
+                                </fieldset>
+                                <div class="form_group">
+                                    <label for="quote-message">Message / details</label>
+                                    <textarea class="form_control" id="quote-message" name="Message / details" rows="5" maxlength="4000"></textarea>
+                                </div>
+                                <button class="main-btn" type="submit">Get a Free Quote</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!--====== End Quote Form ======-->
         <!--====== Start Footer ======-->
         <footer class="footer-area page-footer light-gray-bg">
             <div class="container">
@@ -336,5 +467,6 @@
         <script src="./assets/vendor/parallax.min.js"></script>
         <!--====== Main js ======-->
         <script src="./assets/js/theme.js"></script>
+        <script src="./assets/js/quote-form.js"></script>
     </body>
 </html>
