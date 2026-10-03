@@ -173,9 +173,9 @@ select.wcb{padding:6px 8px;font-size:13px}select.wcb.open{border-color:#f59e0b;b
 .wf-steps li.done{color:#15803d}.wf-steps li.done:before{content:'✓';background:#16a34a;color:#fff}.wf-steps li.now{background:#0f172a;color:#fff}.wf-steps li.now:before{background:#fff;color:#0f172a}
 .issues{list-style:none;padding:0;margin:0 0 12px}.issues li{padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}.row-gap{display:flex;gap:8px;flex-wrap:wrap}
 .wf-hist{list-style:none;padding:0;margin:0;font-size:13px}.wf-hist li{padding:4px 0;border-bottom:1px dashed var(--line)}.wf-hist li.ovr{color:#9f1239}
-.age{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);color:var(--muted)}.age.a15{background:#fef9c3;color:#854d0e}.age.a30{background:#fed7aa;color:#9a3412}.age.a45{background:#fecdd3;color:#9f1239}
+.age{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--soft);color:var(--muted)}.age.a0{background:#dcfce7;color:#166534}.age.a1{background:#fef9c3;color:#854d0e}.age.a31{background:#fed7aa;color:#9a3412}.age.a61{background:#fecdd3;color:#9f1239}
 .stat span.age{display:inline-block}
-.ist{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px}.ist-draft{background:#f1f5f9;color:#475569;border:1px dashed #94a3b8}.ist-issued{background:#e0f2fe;color:#075985}.ist-partiallypaid{background:#fef3c7;color:#92400e}.ist-paid{background:#dcfce7;color:#15803d}
+.ist{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:99px}.ist-draft{background:#f1f5f9;color:#475569;border:1px dashed #94a3b8}.ist-issued{background:#e0f2fe;color:#075985}.ist-partiallypaid{background:#fef3c7;color:#92400e}.ist-pastdue{background:#fecdd3;color:#9f1239}.ist-paid{background:#dcfce7;color:#15803d}
 .inv-farm{margin-bottom:14px}
 .sheet.invoice{position:relative;overflow:hidden}.sheet.invoice .wm{display:none}.sheet.invoice.is-draft .wm{display:block;position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-28deg);font-size:150px;font-weight:900;color:rgba(225,29,72,.10);letter-spacing:.1em;pointer-events:none;z-index:0}
 .draft-pill{display:inline-block;font-size:13px;vertical-align:middle;background:#e11d48;color:#fff;border-radius:6px;padding:2px 8px;letter-spacing:.1em}

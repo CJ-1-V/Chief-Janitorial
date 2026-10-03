@@ -77,7 +77,7 @@
       crew: CJ.api.admin.crewMismatches(14), ot: otList(), fatigue: fatigueList(),
       incidents: db().incidents.filter((i) => incOpen(i) && V(i)),
       unsigned: unsignedSiteDays(lastWk, T().addDays(T().todayKey(), -1)),
-      overdue: invoiceRows().filter((r) => r.balance > 0.005 && r.age >= 30),
+      overdue: invoiceRows().filter((r) => r.balance > 0.005 && r.pastDue > 0), // past the one-month due date
     };
   }
 
@@ -142,10 +142,10 @@
   function createInvoice(siteId, ws, byId) {
     if (!V(site(siteId))) return { error: 'Not found.' }; if (!can('billing', coOf(site(siteId)))) return { error: 'Only the billing login for this company (or the owner) can draft invoices.' };
     if (!isLocked(siteId, ws)) return { error: 'Invoices can only be drafted once the timesheet is Billing locked.' };
-    { const why = F().invoiceBlock(site(siteId)); if (why) return { error: why, blocked: true }; }
     if (invoiceFor(siteId, ws)) return { error: 'An invoice already exists for this farm-week.', id: invoiceFor(siteId, ws).id };
     const st = site(siteId); const days = CJ.rules.groupDays(db().shifts.filter((s) => s.siteId === siteId && CJ.rules.inWeek(dk(s), ws)));
-    const amt = F().invoiceLines(days, st, S().hstRate); // rate in effect on each shift date
+    { const why = F().invoiceBlock(st, days); if (why) return { error: why, blocked: true }; } // missing rate (incl. a role in use), monthly / per-visit
+    const amt = F().invoiceLines(days, st, S().hstRate); // rate in effect on each shift date, for each shift's role
     const n = db().invoices.filter((i) => i.siteId === siteId).length + 1; // per-farm sequence; prefix carries the company (CJ-… / US-…), so companies never share a sequence
     const inv = { id: 'inv-' + siteId + '-' + ws, company: coOf(st), number: st.invoicePrefix + '-' + String(n).padStart(4, '0'), siteId, weekStart: ws, date: T().todayKey(), ...amt, status: 'draft', createdBy: byId, createdAt: new Date().toISOString(), payments: [] };
     db().invoices.push(inv); save(); return { ok: true, id: inv.id };
@@ -153,13 +153,14 @@
   function invoiceRows() {
     const today = T().todayKey();
     return db().invoices.filter(V).map((i) => {
-      const paid = paidOf(i), balance = Math.round((i.total - paid) * 100) / 100; const base = i.issuedAt || i.date;
-      const age = Math.max(0, Math.round((T().zoned(today, 12, 0) - T().zoned(base, 12, 0)) / 86400000));
-      const status = i.status === 'draft' ? 'Draft' : balance <= 0.005 ? 'Paid' : paid > 0 ? 'Partially paid' : 'Issued';
-      return { inv: i, site: site(i.siteId), paid, balance, age, ageFlag: balance > 0.005 && i.status !== 'draft' ? F().ageFlag(age) : 0, status, datePaid: i.payments.length ? i.payments[i.payments.length - 1].date : '' };
+      const paid = paidOf(i), balance = Math.round((i.total - paid) * 100) / 100; const base = i.receivedAt || i.issuedAt || i.date;
+      const days = (a, b) => Math.round((T().zoned(b, 12, 0) - T().zoned(a, 12, 0)) / 86400000);
+      const age = Math.max(0, days(base, today)); const due = F().dueDate(i); const pastDue = due && i.status !== 'draft' && balance > 0.005 ? Math.max(0, days(due, today)) : 0;
+      const status = i.status === 'draft' ? 'Draft' : balance <= 0.005 ? 'Paid' : pastDue > 0 ? 'Past due' : paid > 0 ? 'Partially paid' : 'Issued';
+      return { inv: i, site: site(i.siteId), paid, balance, age, due, pastDue, ageFlag: balance > 0.005 && i.status !== 'draft' ? F().ageFlag(pastDue) : 0, status, datePaid: i.payments.length ? i.payments[i.payments.length - 1].date : '' };
     }).sort((a, b) => b.inv.weekStart.localeCompare(a.inv.weekStart) || a.site.number - b.site.number);
   }
-  function markIssued(id, byId) { const i = db().invoices.find((x) => x.id === id); if (!i || !V(i)) return { error: 'Not found' }; if (!can('billing', coOf(i))) return { error: 'Billing login or owner only.' }; i.status = 'issued'; i.issuedAt = T().todayKey(); i.issuedBy = byId; save(); return { ok: true }; }
+  function markIssued(id, byId, receivedAt) { const i = db().invoices.find((x) => x.id === id); if (!i || !V(i)) return { error: 'Not found' }; if (!can('billing', coOf(i))) return { error: 'Billing login or owner only.' }; i.status = 'issued'; i.issuedAt = T().todayKey(); i.issuedBy = byId; if (receivedAt && /^\d{4}-\d\d-\d\d$/.test(receivedAt)) i.receivedAt = receivedAt; save(); return { ok: true, due: F().dueDate(i) }; }
   function recordPayment(id, amount, date, note, byId) {
     const i = db().invoices.find((x) => x.id === id); const a = Math.round(Number(amount) * 100) / 100;
     if (!i || !V(i)) return { error: 'Not found' }; if (!can('billing', coOf(i))) return { error: 'Billing login or owner only.' }; if (!(a > 0)) return { error: 'Enter an amount.' }; if (a > i.total - paidOf(i) + 0.005) return { error: 'More than the balance.' };
@@ -217,19 +218,35 @@
     reviewLocation(id, byId, note) { const s = db().shifts.find((x) => x.id === id); if (!s || !VS(s) || !s.location) return { error: 'Not found' }; s.location.reviewed = { by: byId, at: new Date().toISOString(), note: note || '' }; save(); return { ok: true }; },
     locFlag, tsStatus, lockIssues, advance, isLocked, isLockedShift, invoiceFor, createInvoice, invoiceRows, markIssued, recordPayment, accountingCsv, seasonSummary, otList, fatigueList, weekHours,
     // Rate history: add a rate with a past or future effective date. Audit-logged (db.rateLog); saved invoices keep their amounts.
-    addRate(id, rate, from, note, byId) {
-      const s = site(id); const v = Math.round(Number(rate) * 100) / 100;
+    addRate(id, rate, from, note, byId, role) {
+      const s = site(id); const v = Math.round(Number(rate) * 100) / 100; role = String(role || '').trim();
       if (!s || !V(s)) return { error: 'Not found' }; if (!can('billing', coOf(s))) return { error: 'Only the owner or this company\'s billing login can change rates.' };
       if (!(v > 0)) return { error: 'Enter a rate above $0.' }; if (!/^\d{4}-\d\d-\d\d$/.test(from || '')) return { error: 'Pick an effective date.' };
-      if ((s.rates || []).some((r) => r.from === from)) return { error: 'A rate already starts on ' + from + '. Pick another date.' };
-      const prev = F().rateOn(s, from); const at = new Date().toISOString(); const by = user(byId) ? user(byId).name : 'Owner';
-      s.rates = [...(s.rates || []), { rate: v, from, sample: false, by, at, note: note || '' }].sort((a, b) => a.from.localeCompare(b.from));
-      s.rate = F().rateOn(s, T().todayKey()); s.rateSample = s.rates.some((r) => r.sample && r.rate === s.rate); if (s.rateStatus === 'missing') s.rateStatus = 'ok'; // a FLAGGED warning stays until marked checked
-      (db().rateLog = db().rateLog || []).push({ id: 'rl' + Date.now(), siteId: id, company: coOf(s), action: 'add', rate: v, from, prev, by, byId, at, note: note || '' });
-      const affected = db().invoices.filter((i) => i.siteId === id && T().addDays(i.weekStart, 6) >= from).map((i) => i.number);
+      if (role && !s.defaultRole) { if (role === 'General labour') role = ''; else s.defaultRole = 'General labour'; } // first extra role on a one-rate site: existing rates become the default role
+      if (role === (s.defaultRole || '')) role = '';
+      const rk = role || s.defaultRole || ''; const known = !rk || F().siteRoles(s).includes(rk);
+      if ((s.rates || []).some((r) => r.from === from && (r.role || s.defaultRole || '') === rk)) return { error: 'A rate already starts on ' + from + (rk ? ' for ' + rk : '') + '. Pick another date.' };
+      const prev = known ? F().rateOn(s, from, role) : undefined; const at = new Date().toISOString(); const by = user(byId) ? user(byId).name : 'Owner';
+      s.rates = [...(s.rates || []), { rate: v, from, ...(role ? { role } : {}), sample: false, by, at, note: note || '' }].sort((a, b) => a.from.localeCompare(b.from));
+      s.rate = F().rateOn(s, T().todayKey()); s.rateSample = s.rates.some((r) => r.sample && r.rate === s.rate); if (s.rateStatus === 'missing' && !role) s.rateStatus = 'ok'; // a FLAGGED warning stays until marked checked
+      (db().rateLog = db().rateLog || []).push({ id: 'rl' + Date.now(), siteId: id, company: coOf(s), action: 'add', rate: v, from, ...(rk && F().siteRoles(s).length > 1 ? { role: rk } : {}), prev, by, byId, at, note: note || '' });
+      // Back-dated rate (Grok Bot, Oct 3): saved invoices are NOT changed. If the new rate changes what a saved invoice would bill,
+      // the difference is recorded on that invoice as an adjustment note (bill or credit it separately).
+      const affected = []; db().invoices.filter((i) => i.siteId === id && T().addDays(i.weekStart, 6) >= from).forEach((i) => {
+        const days = CJ.rules.groupDays(db().shifts.filter((x) => x.siteId === id && CJ.rules.inWeek(dk(x), i.weekStart)));
+        const now = F().invoiceLines(days, s, S().hstRate); const dSub = Math.round((now.subtotal - i.subtotal) * 100) / 100;
+        if (Math.abs(dSub) < 0.005) return;
+        const dHst = Math.round((now.hst - i.hst) * 100) / 100;
+        (i.adjustments = i.adjustments || []).push({ at, by, byId, rate: v, from, role: rk, diffSubtotal: dSub, diffHst: dHst, diffTotal: Math.round((dSub + dHst) * 100) / 100, recalcSubtotal: now.subtotal, note: 'Rate ' + F().money(v) + '/h' + (rk && F().siteRoles(s).length > 1 ? ' (' + rk + ')' : '') + ' from ' + from + ' was added after this invoice was saved. Invoice amounts are unchanged; difference ' + (dSub > 0 ? '+' : '−') + F().money(Math.abs(dSub)) + ' before HST — bill or credit it separately.' });
+        affected.push(i.number);
+      });
       save(); return { ok: true, affected };
     },
-    invoiceBlock: (id) => (site(id) ? F().invoiceBlock(site(id)) : 'Not found'),
+    invoiceBlock: (id, ws) => (site(id) ? F().invoiceBlock(site(id), ws ? CJ.rules.groupDays(db().shifts.filter((x) => x.siteId === id && CJ.rules.inWeek(dk(x), ws))) : undefined) : 'Not found'),
+    // Roles: which role a worker has at this site (picks the rate), and a per-shift override. Audit-logged.
+    setWorkerRole(id, uid, role, byId) { const s = site(id); if (!s || !V(s)) return { error: 'Not found' }; if (!can('billing', coOf(s)) && !can('ops', coOf(s))) return { error: 'Not allowed' }; if (role && !F().siteRoles(s).includes(role)) return { error: 'Unknown role for this site' }; const was = (s.workerRoles || {})[uid] || s.defaultRole || ''; s.workerRoles = { ...(s.workerRoles || {}) }; if (!role || role === s.defaultRole) delete s.workerRoles[uid]; else s.workerRoles[uid] = role; adminOps.siteLog(id, 'role', user(uid).name + ': role ' + (was || 'default') + ' → ' + (role || s.defaultRole || 'default'), byId); save(); return { ok: true }; },
+    setShiftRole(shiftId, role, byId) { const x = db().shifts.find((y) => y.id === shiftId); if (!x || !VS(x)) return { error: 'Not found' }; const s = site(x.siteId); if (!can('billing', coOf(s)) && !can('ops', coOf(s))) return { error: 'Not allowed' }; if (role && !F().siteRoles(s).includes(role)) return { error: 'Unknown role' }; if (role) x.jobRole = role; else delete x.jobRole; adminOps.siteLog(s.id, 'role', 'Shift ' + dk(x) + ' (' + user(x.userId).name + '): role set to ' + (role || 'worker default'), byId); save(); return { ok: true }; },
+    roleOfShift(shiftId) { const x = db().shifts.find((y) => y.id === shiftId); if (!x) return ''; return F().roleOf(site(x.siteId), { userId: x.userId, shifts: [x] }); },
     siteLog(id, action, note, byId) { const s = site(id); (db().rateLog = db().rateLog || []).push({ id: 'rl' + Date.now() + Math.random().toString(36).slice(2, 5), siteId: id, company: coOf(s), action, note, by: user(byId) ? user(byId).name : 'Owner', byId, at: new Date().toISOString() }); },
     // 'Probable' / 'possible' legacy-code matches need a human to confirm (audit-logged)
     confirmMatch(id, byId) { const s = site(id); if (!s || !V(s)) return { error: 'Not found' }; if (!can('billing', coOf(s)) && !can('ops', coOf(s))) return { error: 'Not allowed' }; const was = s.match; s.match = 'confirmed'; s.matchConfirmed = { by: user(byId) ? user(byId).name : 'Owner', at: new Date().toISOString(), was }; adminOps.siteLog(id, 'match', 'Site code ' + (s.legacyCode || '') + ' match confirmed (was ' + was + ')', byId); save(); return { ok: true }; },

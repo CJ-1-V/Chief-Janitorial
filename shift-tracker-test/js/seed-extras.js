@@ -47,6 +47,11 @@
       noRate(site('s21'), 'per-visit');                                           // CJ per-visit site
       noRate(site('s53'), 'hourly');                                              // Unscramble farm with no rate on file
       { const f = site('s54'); f.rates[0].rate = 16; f.rates[1].rate = 16.3; f.rate = CJ.F.rateOn(f, today); { const l = db.rateLog.find((x) => x.siteId === 's54'); if (l) { l.rate = 16.3; l.prev = 16; } } f.rateStatus = 'flagged'; f.flagNote = 'SAMPLE flag: $16/h is far below every other farm — may be a worker pay rate entered as the bill rate. Confirm before invoicing.'; }
+      { // SAMPLE rate per role (approved Oct 3): Site 51 has Labourer (default) + Truck driver, each with its own history; Mateo drives there.
+        const f = site('s51'); const lab = f.rates[0].rate; f.defaultRole = 'Labourer'; f.workerRoles = { 'u-us-mateo': 'Truck driver' };
+        f.rates.push({ rate: +(lab + 5).toFixed(2), from: f.rates[0].from, role: 'Truck driver', sample: true, by: 'Owner', at: f.rates[0].at, note: 'SAMPLE truck-driver rate' }, { rate: +(lab + 5.3).toFixed(2), from: RATE_CHANGE_FROM, role: 'Truck driver', sample: true, by: 'Owner', at: f.rates[1].at, note: '+$0.30/h from Oct 1, 2026 (owner decision)' });
+        db.rateLog.push({ id: 'rl51td', siteId: 's51', company: f.company, action: 'add', rate: +(lab + 5.3).toFixed(2), from: RATE_CHANGE_FROM, role: 'Truck driver', prev: +(lab + 5).toFixed(2), by: 'Owner', byId: 'u-owner', at: f.rates[1].at, note: '+$0.30/h from Oct 1, 2026 (owner decision)' });
+      }
       [['s15', 'probable', 'SAMPLE: initials + onboarding order'], ['s18', 'probable', 'SAMPLE: initials + partial activity match'], ['s16', 'possible', 'SAMPLE: initials only'], ['s23', 'possible', 'SAMPLE: initials only — two candidate farms']].forEach(([id, m, n]) => { site(id).match = m; site(id).matchNote = n; });
     }
     db.rateLog = db.rateLog.filter((l) => { const st = site(l.siteId); return st && st.rates.length > 1; });
@@ -145,8 +150,8 @@
     const seq = {};
     Object.keys(db.tsStatus).filter((k) => db.tsStatus[k].status === 'locked').sort((a, b) => a.split('|')[1].localeCompare(b.split('|')[1])).forEach((k) => {
       const [sid, ws] = k.split('|'); const st = site(sid);
-      if (CJ.F.invoiceBlock(st)) return; // MISSING rate / monthly / per-visit: no invoice (never invent a value)
       const days = CJ.rules.groupDays(db.shifts.filter((s) => s.siteId === sid && CJ.rules.inWeek(dk(s), ws)));
+      if (CJ.F.invoiceBlock(st, days)) return; // MISSING rate / monthly / per-visit: no invoice (never invent a value)
       const bill = days.reduce((a, d) => a + d.billable, 0); if (!bill) return;
       const amt = CJ.F.invoiceLines(days, st, db.settings.hstRate);
       seq[sid] = (seq[sid] || 0) + 1;
@@ -163,6 +168,15 @@
       db.invoices.push(inv);
     });
 
+    { // SAMPLE back-dated rate (decided Oct 3): saved invoices stay unchanged; the difference shows as an adjustment note on each affected invoice
+      const f = site('s13'); const from = T.addDays(lastWk, -14); const invs = db.invoices.filter((i) => i.siteId === 's13' && T.addDays(i.weekStart, 6) >= from);
+      if (!REAL && invs.length) { const old = CJ.F.rateOn(f, from); const v = +(old + 0.5).toFixed(2); const atIso = iso(at(today, -1, 15, 40));
+        f.rates.push({ rate: v, from, sample: true, by: 'CJ Sandra', at: atIso, note: 'SAMPLE back-dated correction (contract said +$0.50)' }); f.rates.sort((p, q) => p.from.localeCompare(q.from));
+        db.rateLog.push({ id: 'rl13bd', siteId: 's13', company: f.company, action: 'add', rate: v, from, prev: old, by: 'CJ Sandra', byId: 'u-cj-billing', at: atIso, note: 'SAMPLE back-dated correction (contract said +$0.50)' });
+        invs.forEach((i) => { const days = CJ.rules.groupDays(db.shifts.filter((x) => x.siteId === 's13' && CJ.rules.inWeek(dk(x), i.weekStart))); const now = CJ.F.invoiceLines(days, f, db.settings.hstRate); const dS = Math.round((now.subtotal - i.subtotal) * 100) / 100; if (Math.abs(dS) < 0.005) return; const dH = Math.round((now.hst - i.hst) * 100) / 100;
+          (i.adjustments = i.adjustments || []).push({ at: atIso, by: 'CJ Sandra', byId: 'u-cj-billing', rate: v, from, role: '', diffSubtotal: dS, diffHst: dH, diffTotal: Math.round((dS + dH) * 100) / 100, recalcSubtotal: now.subtotal, note: 'Rate ' + CJ.F.money(v) + '/h from ' + from + ' was added after this invoice was saved. Invoice amounts are unchanged; difference ' + (dS > 0 ? '+' : '−') + CJ.F.money(Math.abs(dS)) + ' before HST — bill or credit it separately.' }); });
+        f.rate = CJ.F.rateOn(f, today); }
+    }
     seedUnscramble(db, ctx, { site, sched, hist });
     // ---- Tag every record with its company (site's company; workers default to CJ) ----
     const coSite = (sid) => (site(sid) || {}).company || 'cj';
@@ -190,14 +204,17 @@
       Object.assign(s, { clientName: r.name, company: r.company, billingType: r.billingType, realNotes: r.notes, terms: r.terms, roles: r.roles, stale: r.stale, rateSample: false });
       if (r.code) { s.match = r.match; s.matchNote = r.matchNote; } else delete s.match;
       if (r.rateStatus === 'missing') { s.rates = []; s.rateStatus = 'missing'; s.rate = undefined; return; }
-      s.rates = [{ rate: r.old, from: '2026-01-01', sample: false, by: 'Owner', at: iso(at('2026-01-01', 0, 9, 0)), note: 'Saved rate (farm-rates.csv, last seen ' + (r.lastSeen || '?') + ')' }, { rate: r.new, from: r.from, sample: false, by: 'Owner', at: iso(at('2026-10-03', 0, 9, 0)), note: '+$0.30/h from Oct 1, 2026 (owner decision)' }];
+      const two = (old, nw, role) => [{ rate: old, from: '2026-01-01', ...(role ? { role } : {}), sample: false, by: 'Owner', at: iso(at('2026-01-01', 0, 9, 0)), note: 'Saved rate (farm-rates.csv, last seen ' + (r.lastSeen || '?') + ')' }, { rate: nw, from: r.from, ...(role ? { role } : {}), sample: false, by: 'Owner', at: iso(at('2026-10-03', 0, 9, 0)), note: '+$0.30/h from Oct 1, 2026 (owner decision)' }];
+      s.rates = two(r.old, r.new);
+      const roles = (r.roles || []).filter((x) => x.role); // per-role rates from the CSV (approved Oct 3); the main (first priced) role is the default
+      if (roles.length > 1) { const main = roles.find((x) => x.old != null) || roles[0]; s.defaultRole = main.role; s.roleNames = roles.map((x) => x.role); roles.filter((x) => x !== main && x.old != null).forEach((x) => s.rates.push(...two(x.old, x.new, x.role))); }
       s.rateStatus = r.rateStatus; s.flagNote = r.flagNote || ''; s.rate = CJ.F.rateOn(s, today);
     };
     db.sites.forEach((s) => { if (s.number >= 51) { s.clientName = 'SAMPLE — ' + s.clientName; return; } const r = byNum[s.number];
       if (r) setReal(s, r); else { s.clientName = 'Unmatched code ' + s.legacyCode; s.match = 'unmatched'; s.matchNote = 'No farm matched to this code'; s.company = /^CJCT/.test(s.legacyCode) ? 'cj' : 'us'; s.rates = []; s.rateStatus = 'missing'; s.rate = undefined; s.rateSample = false; } });
     let n = 60; RS.sites.filter((r) => !r.code).forEach((r) => { const s = { id: 's' + n, number: n, company: r.company, clientName: r.name, type: r.company === 'us' ? 'Staffing' : 'Commercial', location: 'PEI', legacyCode: '', active: true, lat: 46.2382, lng: -63.1311, radiusM: 300 }; n++; setReal(s, r); db.sites.push(s); });
     const used = new Set(); db.sites.forEach((s) => { let p = s.clientName.replace(/^SAMPLE — |^Unmatched code /, '').replace(/&|Ltd\.|Inc\.|Co\.|\(.*?\)/g, '').split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 3) || 'X'; let q = p, k = 2; while (used.has(s.company + q)) q = p + k++; used.add(s.company + q); s.invoicePrefix = CJ.F.COMPANIES[s.company].invPrefix + '-' + q; });
-    db.rateLog = db.sites.filter((s) => s.rates.length > 1).map((s) => ({ id: 'rl' + s.number, siteId: s.id, company: s.company, action: 'add', rate: s.rates[1].rate, from: s.rates[1].from, prev: s.rates[0].rate, by: 'Owner', byId: 'u-owner', at: s.rates[1].at, note: s.rates[1].note }));
+    db.rateLog = []; db.sites.forEach((s) => { for (let i = 1; i < s.rates.length; i += 2) db.rateLog.push({ id: 'rl' + s.number + '-' + i, siteId: s.id, company: s.company, action: 'add', rate: s.rates[i].rate, from: s.rates[i].from, ...(s.rates[i].role ? { role: s.rates[i].role } : s.defaultRole ? { role: s.defaultRole } : {}), prev: s.rates[i - 1].rate, by: 'Owner', byId: 'u-owner', at: s.rates[i].at, note: s.rates[i].note }); });
     db.realHst = RS.hst || {};
   }
 
