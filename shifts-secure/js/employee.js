@@ -6,6 +6,28 @@
   const siteLabel = (n) => (n == null ? 'Site ?' : /^UNK/.test((cache.codeOf && cache.codeOf[n]) || '') ? 'Unknown site' : (cache.codeOf && cache.codeOf[n]) || 'Site ' + n);  // code (e.g. CVF217) when the site has one
   const PRIVACY = '📍 <b>Privacy:</b> your phone location is checked <b>once, when you tap Clock in</b>, to confirm you are at the site. It is not tracked during your shift or after you clock out.';
   let cache = {};
+  // ---------- Registration (016) – only for people with a registration account; everyone else sees no change ----------
+  const isReg = () => !!(ST.regHome && ST.regHome.reg);
+  const regLink = () => (isReg() ? `<a class="btn big" href="register/#/checklist">📋 Registration &amp; documents</a>` : '');
+  // Documents still needed never block clocking: show them, let the person "Continue anyway", and log it for the office.
+  async function regMissing() {
+    if (!isReg()) return [];
+    try { const r = await q(sb.rpc('reg_clock_reminders')); return (r && r.reg && Array.isArray(r.missing)) ? r.missing : []; } catch (e) { return []; }
+  }
+  function regAsk(missing, action) {
+    return new Promise((res) => {
+      if (!missing.length) return res(true);
+      modal(`<h2>Documents still needed</h2><p>You can still ${action === 'Clock in' ? 'clock in' : 'clock out'}. Please bring or upload these soon:</p><ul>${missing.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>
+        <p class="muted small">The office and your employer will see that you continued without them.</p>
+        <div class="row-end"><a class="btn ghost" href="register/#/docs">Upload now</a><button class="btn ghost" data-close id="regNo">Cancel</button><button class="btn primary" id="regYes">Continue anyway</button></div>`, (w, close) => {
+        let done = false; const fin = (v) => { if (done) return; done = true; close(); res(v); };
+        w.querySelector('#regYes').addEventListener('click', () => fin(true));
+        w.querySelector('#regNo').addEventListener('click', () => fin(false));
+        w.addEventListener('click', (e) => { if (e.target === w) fin(false); });
+      });
+    });
+  }
+  const regLog = (shiftId, action, missing) => { if (shiftId && missing.length) sb.rpc('reg_log_bypass', { p_shift: shiftId, p_action: action, p_missing: missing }).then(() => {}, () => {}); };
 
   async function load() {
     const uid = ST.me.id;
@@ -105,6 +127,7 @@
           ${crewPicker(open.site_no)}
           ${quarterPicker('qOut', 'What time did you finish?', new Date(tIn(open)).getTime())}
           <label class="field outnote"><span>Clock-out note (optional) <em id="onCnt">0/120</em></span><textarea id="outNote" maxlength="120" rows="2" placeholder="e.g. finished early, supplies low, gate left open"></textarea><small class="muted">Saved when you clock out. You can't change it afterwards.</small></label>
+          ${isReg() ? '<label class="field"><span><input type="checkbox" id="regBreakMissed"> Break missed or interrupted</span><small class="muted">Tick this if you did not get your full break. The office is told.</small></label>' : ''}
           <button class="btn danger huge" data-act="clockout" disabled>Enter workers on site to clock out</button>
           <a class="btn ghost" href="#/emp/edit/${open.id}">Wrong start time? Edit times</a>
         </div>`);
@@ -136,18 +159,26 @@
     ss && ss.addEventListener('input', () => { const v = ss.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); const d = v.replace(/\D/g, ''); root.querySelectorAll('#allTiles .site-tile').forEach((t) => { const ok = !v || t.dataset.code.includes(v) || (d && d === v && t.dataset.num.startsWith(d)); t.style.display = ok ? '' : 'none'; }); });
     counter(root, 'notes', 'cnt'); counter(root, 'outNote', 'onCnt');
     btn && btn.addEventListener('click', async () => {
-      if (!sel) return; btn.disabled = true; btn.textContent = 'Checking location…';
+      if (!sel) return; btn.disabled = true;
+      const regM = await regMissing();
+      if (!(await regAsk(regM, 'Clock in'))) { btn.disabled = false; return; }
+      btn.textContent = 'Checking location…';
       const site = cache.sites.find((s) => s.site_no === sel);
       const pos = site && site.lat != null ? await getPosition() : null; // GPS only when the site has a GPS point
       try {
         const args = { p_site_no: sel, p_lat: pos ? pos.lat : null, p_lng: pos ? pos.lng : null, p_note: root.querySelector('#notes').value.trim() || null };
-        try { await q(sb.rpc('clock_in_q', { ...args, p_chosen: qIn() })); } catch (e1) { if (!missingFn(e1)) throw e1; await q(sb.rpc('clock_in', args)); }  // before migration 012
+        let newId = null;
+        try { newId = await q(sb.rpc('clock_in_q', { ...args, p_chosen: qIn() })); } catch (e1) { if (!missingFn(e1)) throw e1; newId = await q(sb.rpc('clock_in', args)); }  // before migration 012
+        regLog(typeof newId === 'string' ? newId : null, 'Clock in', regM);
         toast('Clocked in ✓', 'good'); ST.render();
       } catch (e) { toast(errMsg(e), 'bad'); btn.disabled = false; btn.textContent = 'Clock in at ' + siteLabel(sel); }
     });
     const cob = root.querySelector('[data-act="clockout"]'); let crew = null;
     bindCrew(root, (n) => { crew = n; if (cob) { cob.disabled = !n; cob.textContent = n ? 'Clock out' : 'Enter workers on site to clock out'; } });
-    cob && cob.addEventListener('click', () => {
+    cob && cob.addEventListener('click', async () => {
+      const regM = await regMissing();
+      if (!(await regAsk(regM, 'Clock out'))) return;
+      const openShift = cache.shifts.find((s) => !s.clock_out); const bm = root.querySelector('#regBreakMissed');
       const note = (root.querySelector('#outNote').value || '').trim();
       const fin = qOut();
       if (!fin) { toast('Pick the time you finished.', 'bad'); return; }
@@ -155,6 +186,7 @@
         w.querySelector('#yes').addEventListener('click', async () => {
           try {
             try { await q(sb.rpc('clock_out_q', { p_crew: crew, p_chosen: fin, p_note: note || null })); } catch (e1) { if (!missingFn(e1)) throw e1; await q(sb.rpc('clock_out', { p_crew: crew, p_note: note || null })); }
+            if (openShift) { regLog(openShift.id, 'Clock out', regM); if (bm && bm.checked) sb.rpc('reg_set_break_missed', { p_shift: openShift.id, p_missed: true }).then(() => {}, () => {}); }
             close(); toast('Clocked out ✓', 'good'); ST.render(); }
           catch (e) { toast(errMsg(e), 'bad'); }
         });
@@ -266,7 +298,7 @@
   function profileView() {
     const me = ST.me.profile;
     return shell('profile', `<h1 class="h1">Profile</h1><div class="card"><div class="kv"><span>Nickname</span><b>${esc(ST.who(me))}</b><span>Phone</span><b>${esc(me.phone || '')}</b><span>Company</span><b>${esc(coName())}</b></div>
-      <p class="muted small">Your nickname is how the office sees you. To change your phone number, ask the office.</p><button class="btn big" data-act="chnick">Change nickname</button> <button class="btn big" data-act="chpw">Change my password</button> <button class="btn big" data-act="switchco">Switch company</button> <button class="btn ghost big" data-act="logout">Log out</button></div>`);
+      <p class="muted small">Your nickname is how the office sees you. To change your phone number, ask the office.</p><button class="btn big" data-act="chnick">Change nickname</button> <button class="btn big" data-act="chpw">Change my password</button> <button class="btn big" data-act="switchco">Switch company</button> <button class="btn ghost big" data-act="logout">Log out</button>${regLink() ? '<div style="margin-top:12px">' + regLink() + '</div>' : ''}</div>`);
   }
 
   // Change nickname: type one (checked by the server: 2-30 chars, letters/numbers/basic punctuation, unique, no rude words,

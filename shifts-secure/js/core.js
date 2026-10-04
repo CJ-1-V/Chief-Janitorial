@@ -38,7 +38,11 @@
   // Unpaid break per day per site (split shifts added together): over 5 h -> 0.5 h; 8 h or more -> 1 h.
   const unpaidBreak = (w) => (w >= 8 ? 1 : w > 5 ? 0.5 : 0);
   const phoneDigits = (p) => String(p || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
-  const loginId = (input) => (String(input).includes('@') ? String(input).trim().toLowerCase() : phoneDigits(input) + '@' + C.loginDomain);
+  // Registration (016): a person who signed up without email or phone signs in with a username -> u-<username>@<loginDomain>
+  const isUsername = (input) => /^[a-z][a-z0-9._-]{2,39}$/i.test(String(input).trim());
+  const loginId = (input) => (String(input).includes('@') ? String(input).trim().toLowerCase()
+    : phoneDigits(input).length === 10 ? phoneDigits(input) + '@' + C.loginDomain
+    : isUsername(input) ? 'u-' + String(input).trim().toLowerCase() + '@' + C.loginDomain : phoneDigits(input) + '@' + C.loginDomain);
   function errMsg(e) {
     const m = (e && (e.message || e.msg || e.error_description)) || String(e);
     if (/Invalid login credentials/i.test(m)) return 'Wrong phone number or password.';
@@ -120,7 +124,8 @@
         ${co === 'cj' ? `<div class="sub-brand">${logo('cj')}<p><span class="sb-line"><b>Chief Janitorial</b> — an Unscramble company</span></p></div>` : `<div class="sub-brand sub-us"><p><b>Unscramble</b></p></div>`}
         <h1>Log in</h1><p class="auth-sub">Clock in and out, and see your hours.</p>
       <form id="loginForm" class="stack">
-        <label class="field"><span>Phone number</span><input name="phone" inputmode="tel" placeholder="902 555 0101" autocomplete="username" required></label>
+        <label class="field"><span>Phone number</span><input name="phone" placeholder="902 555 0101" autocomplete="username" required></label>
+        <p class="muted small">Signed up on the registration site with an email or username? You can use that here too.</p>
         <label class="field"><span>Password</span><input name="password" type="password" autocomplete="current-password" required></label>
         <div class="err" id="loginErr">${esc(msg || '')}</div>
         <button class="btn primary big" type="submit">Log in</button>
@@ -151,7 +156,7 @@
     const lf = $('#loginForm', root);
     lf && lf.addEventListener('submit', async (e) => {
       e.preventDefault(); const f = new FormData(lf); const id = String(f.get('phone'));
-      if (!id.includes('@') && phoneDigits(id).length !== 10) { $('#loginErr').textContent = 'Enter your 10-digit phone number.'; return; }
+      if (!id.includes('@') && phoneDigits(id).length !== 10 && !isUsername(id)) { $('#loginErr').textContent = 'Enter your 10-digit phone number.'; return; }
       lf.classList.add('loading');
       const { error } = await sb.auth.signInWithPassword({ email: loginId(id), password: String(f.get('password')) });
       lf.classList.remove('loading');
@@ -268,13 +273,18 @@
       if (me.profile.status === 'disabled') { app.innerHTML = loginView(me.profile.removed_at ? 'This account was removed. Please contact the office.' : 'This account is turned off. Please contact the office.'); bindAuth(app); await sb.auth.signOut(); return; }
       if (me.mustChange) { app.innerHTML = forcedPwView(); bindForcedPw(app); bindGlobal(app); return; }
       if (me.isStaff && me.roles.length) { if (p[0] !== 'admin') { location.hash = '#/admin/dashboard'; return; } await ST.adminView(app, p.slice(1)); }
-      else { if (p[0] !== 'emp' && me.profile.status === 'active') { location.hash = '#/emp/clock'; return; } await ST.employeeView(app, p.slice(1)); }
+      else {
+        // Registration (016): US sign-ups that are not (yet) approved workers/employees use the registration app instead.
+        // Before migration 016 the call fails and is ignored, so nothing changes for anyone.
+        if (ST.regHome === undefined) { ST.regHome = null; try { ST.regHome = await q(sb.rpc('reg_home')); } catch (e) { ST.regHome = null; } }
+        if (ST.regHome && ST.regHome.reg && ST.regHome.home === 'register') { location.href = 'register/#/home'; return; }
+        if (p[0] !== 'emp' && me.profile.status === 'active') { location.hash = '#/emp/clock'; return; } await ST.employeeView(app, p.slice(1)); }
       bindGlobal(app); mountInstall();
     } catch (e) { console.error(e); app.innerHTML = `<div class="auth"><div class="auth-card"><h1>Something went wrong</h1><p class="err">${esc(errMsg(e))}</p><button class="btn primary big" onclick="location.reload()">Try again</button> <button class="btn ghost big" data-act="logout">Log out</button></div></div>`; bindGlobal(app); }
   };
   function bindGlobal(root) {
     root.querySelectorAll('[data-act="theme"]').forEach((b) => b.addEventListener('click', () => { theme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); ST.render(); }));
-    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { ST._loginPw = null; ST.setCompany(null); await sb.auth.signOut(); location.hash = '#/pick'; ST.render(); }));
+    root.querySelectorAll('[data-act="logout"]').forEach((b) => b.addEventListener('click', async () => { ST._loginPw = null; ST.regHome = undefined; ST.setCompany(null); await sb.auth.signOut(); location.hash = '#/pick'; ST.render(); }));
     root.querySelectorAll('[data-act="switchco"]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); ST.switchCompany(); }));
     root.querySelectorAll('[data-act="chpw"]').forEach((b) => b.addEventListener('click', () => ST.changePassword()));
   }

@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /shift-tracker-test/
 Disallow: /shifts-secure/
+Disallow: /shifts-secure/register/
 
 Sitemap: https://www.chiefjanitorial.com/sitemap.xml
