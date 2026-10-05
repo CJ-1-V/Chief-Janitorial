@@ -25,12 +25,19 @@
     marketing: 'reg_marketing', convReq: 'reg_conversion_requests', rates: 'reg_sub_rates', deductions: 'reg_deductions',
     holdbackReleases: 'reg_holdback_releases', firmSigs: 'reg_client_signatures', farmRates: 'reg_client_rates', quizAttempts: 'reg_quiz_attempts',
     trainConfirms: 'reg_training_confirmations', clientInvoices: 'reg_client_invoices', crewOrders: 'reg_crew_orders', docBypass: 'reg_doc_bypass',
-    changes: 'reg_time_proposals' };
-  var INSERT_ONLY = { acceptances: 1, consents: 1, firmSigs: 1, audit: 1, events: 1, logins: 1 };          // history: never changed or removed
+    changes: 'reg_time_proposals',
+    timeVoided: 'reg_time_voided', payExports: 'reg_pay_exports' };                // 016i manual timesheets (office only, insert-only)
+  var INSERT_ONLY = { acceptances: 1, consents: 1, firmSigs: 1, audit: 1, events: 1, logins: 1, timeVoided: 1, payExports: 1 };          // history: never changed or removed
   var NEVER_DELETE = { notes: 1, audit: 1, events: 1, logins: 1, acceptances: 1, consents: 1, firmSigs: 1, quizAttempts: 1, docBypass: 1,
-    changes: 1, crewOrders: 1, farmRates: 1, users: 1 };                                                      // the app trims these lists locally
+    changes: 1, crewOrders: 1, farmRates: 1, users: 1, timeVoided: 1, payExports: 1 };                                                      // the app trims these lists locally
   var SERVER_ONLY = { quizAttempts: 1 };                                                                        // written by server functions only
   var HIDDEN_ID = { audit: 1, events: 1, logins: 1 };
+  // 016h (Oct 5 2026): pre-loaded client records (no login yet) are saved to reg_clients (office only; saved before accounts so a
+  // login can be linked to a client made in the same save); invite codes (SHA-256 hash only, never the code) to reg_client_invites.
+  MAP = Object.assign({ clientRecs: 'reg_clients' }, MAP, { clientInvites: 'reg_client_invites' });
+  NEVER_DELETE.clientRecs = 1; NEVER_DELETE.clientInvites = 1;
+  function rowsOf(c) { return c === 'clientRecs' ? (DB.users || []).filter(function (u) { return u.preloaded; }) : (DB[c] || []); }
+  var MY_ID = null;                                        // the signed-in account (a linked farm login acts for its client; see v2-clientlink.js)
 
   var BASE = {}, SUSPEND = false, HOLD = 0, TIMER = null, BUSY = false, AGAIN = false, SIGNED_IN = false, SESSION_USER = null;
   var FILES = {}, WARNED = {}, LAST_REFRESH = 0, OFFICE = false, ROLE = null, LOADING = false;
@@ -45,7 +52,7 @@
   }
   function payload(coll, row) {
     var d = clone(row); delete d._id;
-    if (coll === 'users') {
+    if (coll === 'users' || coll === 'clientRecs') {
       delete d.passHash; delete d.failed; delete d.lockedUntil; delete d.twoStep;
       if (d.profile) { delete d.profile.sin; delete d.profile.bankAcct; }
       if (d.company) { delete d.company.bankAcct; }
@@ -53,7 +60,10 @@
     return d;
   }
   function skipRow(coll, row) {
-    if (coll === 'users') return row.type === 'admin' || row.employerView || row.crewView || row.anonymous;
+    if (coll === 'users') return row.type === 'admin' || row.employerView || row.crewView || row.anonymous
+      || !!row.preloaded                                   // saved as 'clientRecs' (reg_clients)
+      || (ROLE === 'firm' && !!MY_ID && row.id !== MY_ID);  // a farm login only ever saves its own account (the client record is office-edited)
+    if (coll === 'clientRecs' || coll === 'clientInvites') return !OFFICE;
     if (coll === 'time') return String(row.id || '').indexOf('st-') === 0 || ROLE === 'firm';
     if (coll === 'shifts') return ROLE === 'firm';
     return false;
@@ -114,7 +124,7 @@
   }
   function takeBaseline() {
     BASE = {};
-    Object.keys(MAP).forEach(function (c) { BASE[c] = {}; (DB[c] || []).forEach(function (r) { if (!skipRow(c, r)) BASE[c][rowKey(c, r)] = JSON.stringify(payload(c, r)); }); });
+    Object.keys(MAP).forEach(function (c) { BASE[c] = {}; rowsOf(c).forEach(function (r) { if (!skipRow(c, r)) BASE[c][rowKey(c, r)] = JSON.stringify(payload(c, r)); }); });
     BASE.__settings = JSON.stringify(settingsPayload());
     BASE.__banks = JSON.stringify((DB.settings && DB.settings.quizBanks) || {});
   }
@@ -129,19 +139,25 @@
   async function loadPublic() {
     var db = emptyDB(), r = await sb.rpc('reg_public_info');
     if (!r.error && r.data) { Object.assign(db.settings, r.data.settings || {}); db.users = (r.data.subs || []).map(function (s) { s.profile = {}; s.roles = []; s.orientations = []; return s; }); }
-    ROLE = null; OFFICE = false; installDB(db); ME = null; sessionStorage.removeItem('us-test-me');
+    ROLE = null; OFFICE = false; MY_ID = null; installDB(db); ME = null; sessionStorage.removeItem('us-test-me');
   }
   async function loadSnapshot() {
     var r = await sb.rpc('reg_snapshot');
     if (r.error) throw r.error;
     var s = r.data || {};
     if (s.role === 'none') { await loadPublic(); PAGE_STATE.notReg = true; return false; }
-    ROLE = s.role; OFFICE = s.role === 'office';
+    ROLE = s.role; OFFICE = s.role === 'office'; MY_ID = s.me || null;
     var db = emptyDB();
     Object.keys(MAP).forEach(function (k) { db[k] = s[k] || []; });
     db.settings = Object.assign(baseSettings(), s.settings || {});
     db.orderSeq = s.orderSeq || 0;
     db.users.forEach(applyMasks);
+    if (OFFICE) {                                       // 016i: voided manual hours + Wagepoint export records (office-only tables, not in reg_snapshot)
+      for (var mk of ['timeVoided', 'payExports']) {
+        var mq = await sb.from(MAP[mk]).select('id,data').order('created_at');
+        db[mk] = (!mq.error && mq.data) ? mq.data.map(function (x) { return Object.assign(x.data || {}, { id: x.id }); }) : [];
+      }
+    }
     if (OFFICE) {                                       // office edits quiz banks: load them (with answers) from the server
       var q = await sb.from('reg_quiz_questions').select('bank,qid,q,opts,ans,why,sort').eq('active', true).order('sort');
       if (!q.error && q.data) { var by = {}; q.data.forEach(function (x) { (by[x.bank] = by[x.bank] || []).push({ id: x.qid, q: x.q, opts: x.opts, ans: x.ans, why: x.why }); }); Object.keys(by).forEach(function (b) { QUIZ_BANK[b] = by[b]; }); }
@@ -232,7 +248,7 @@
       });
       for (var c in MAP) {
         if (SERVER_ONLY[c]) continue;
-        var rows = DB[c] || [], seen = {}, ins = [], upd = [];
+        var rows = rowsOf(c), seen = {}, ins = [], upd = [];
         for (var i = 0; i < rows.length; i++) {
           var r = rows[i]; if (skipRow(c, r)) continue;
           var k = rowKey(c, r); seen[k] = 1;
@@ -438,7 +454,11 @@
   FORMS.signup = function (f, d) { if (!TYPES[d.type] || d.type === 'admin' || d.type === 'firm') return; selfSignup(d, d.type); };
   FORMS.firmsignup = function (f, d) {
     if (!d.name || !d.contact || !d.email) { toast('Enter the business name, contact person and email.'); return; }
-    selfSignup(d, 'firm', function (u) { u.firm = Object.assign({}, u.firm || {}, { contact: d.contact, siteRequest: d.site || '' }); });
+    // 016h: optional invite code from the office (js/v2-clientlink.js). Nothing about the client is shown; the office links after approval.
+    var rawInv = String(d.invite || '').trim(), inv = rawInv && typeof clNormCode === 'function' ? clNormCode(rawInv) : '';
+    if (rawInv && !inv) { toast('Invite codes look like ABCD-2345 (8 letters/numbers). Check the code, or leave it empty.'); return; }
+    selfSignup(d, 'firm', function (u) { u.firm = Object.assign({}, u.firm || {}, { contact: d.contact, siteRequest: d.site || '' });
+      if (inv) { u.firm.inviteCode = inv; audit('Sign-up with invite code', u.name, 'code ending ' + inv.slice(-4) + ' – waiting for office approval'); } });
   };
 
   /* ---------- accounts made by someone else (a subcontractor adds a worker, the office adds a client) ----------
@@ -479,6 +499,65 @@
   }
   wrapCreate('addworker', 'worker');
   wrapCreate('newfirm', 'firm');
+
+  /* ---------- 016j: office "Add person", welcome email, username changes, new login details ----------
+   * STAGED – NOT DEPLOYED, NOT RUN AGAINST LIVE. Paste into app/js/store-supabase.js right after
+   *   wrapCreate('newfirm', 'firm');
+   * (uses that file's sb, C, digits, friendly, busy, loadSnapshot, HOLD). Needs migration 016j (+016h, 016e recommended)
+   * and, for "Send welcome email", the Edge Function reg-send-welcome deployed with its email secrets.
+   * Front end: js/v2-addperson.js calls these hooks only in live mode. */
+  function throwawayPw() { var a = new Uint8Array(24); crypto.getRandomValues(a); return Array.from(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('') + 'Aa1!'; }
+  async function reloadData() { try { if (window.REG_FLUSH) await window.REG_FLUSH(); } catch (e) {} await loadSnapshot(); }
+  window.REG_OFFICE_ADD_PERSON = async function (p) {
+    HOLD++; busy(true, 'Creating the account…');
+    try {
+      var email = String(p.email || '').trim().toLowerCase();
+      var chk = await sb.rpc('reg_add_person_check', { p: p });             // office only: username / email / role rules
+      if (chk.error) return { error: friendly(chk.error) };
+      if (chk.data && chk.data.error) return { error: chk.data.error };
+      var me = (await sb.auth.getUser()).data.user; if (!me) return { error: 'Please sign in again.' };
+      var kind = { employee: 'employee', worker: 'worker', crewlead: 'worker', sub: 'sub', firm: 'firm' }[p.role];
+      // throw-away client: the office stays signed in. "Confirm email" is OFF in this project, so Supabase sends nothing.
+      var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
+      var r = await tmp.auth.signUp({ email: email, password: throwawayPw(), options: { data: { company: 'us', reg_kind: kind,
+        reg_sub: kind === 'worker' ? p.subId : null, full_name: p.name, username: p.username, contact_email: email,
+        phone: digits(p.phone).slice(-10) || null, added_by_office: me.id } } });
+      if (r.error || !r.data.user) return { error: friendly(r.error || 'Could not create the account.') };
+      try { await tmp.auth.signOut(); } catch (e) {}
+      // server: temporary password (same generator as Reset password), must-change flag, approval, audit row
+      var f = await sb.rpc('reg_office_add_person', { p_user: r.data.user.id, p: p });
+      if (f.error) return { error: friendly(f.error) + ' (A sign-in was started but not finished: it is not approved and its password is unknown to anyone, so it cannot be used.)' };
+      await reloadData();
+      return { id: r.data.user.id, tempPassword: f.data.temp_password };
+    } catch (e) { return { error: friendly(e) }; }
+    finally { busy(false); HOLD--; }
+  };
+  // the office clicked "Send welcome email" after seeing the exact preview (owner rule: no automatic outside email)
+  // Gate: only wire the sender when store-config has welcomeEmail:true (Edge Function + secrets live).
+  if (C.welcomeEmail) window.REG_SEND_WELCOME = async function (userId, tempPassword) {
+    busy(true, 'Sending the welcome email…');
+    try {
+      var r = await sb.functions.invoke('reg-send-welcome', { body: { user_id: userId, temp_password: tempPassword } });
+      if (r.error) { var m = r.error.message; try { var j = await r.error.context.json(); m = j.error || m; } catch (e) {} return { error: friendly(m) }; }
+      if (!r.data || !r.data.ok) return { error: (r.data && r.data.error) || 'The email could not be sent. Use "Copy login details".' };
+      return { ok: true };
+    } catch (e) { return { error: friendly(e) }; }
+    finally { busy(false); }
+  };
+  window.REG_CHANGE_USERNAME = async function (userId, name) {
+    var r = await sb.rpc('reg_change_username', { p_user: userId, p_new: name });
+    if (r.error) return { error: friendly(r.error) };
+    if (r.data && r.data.error) return { error: r.data.error };
+    await reloadData();
+    return { ok: true, username: r.data.username };
+  };
+  // "Send login details again": the existing one-password reset (signs the person out, must change at next sign-in)
+  window.REG_NEW_TEMP_PASSWORD = async function (userId) {
+    var r = await sb.rpc('admin_reset_password', { p_user: userId });
+    if (r.error) return { error: friendly(r.error) };
+    return { tempPassword: r.data };
+  };
+
 
   /* ---------- SIN / bank reveal: password re-check + log on the server ---------- */
   FORMS.reauthreveal = async function (f, d) {

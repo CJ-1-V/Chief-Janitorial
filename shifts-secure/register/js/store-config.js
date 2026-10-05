@@ -4,7 +4,9 @@
  *   mode 'supabase' = the real database (Shift Tracker project) with the Shift Tracker login.
  * Override for testing (only on this computer / file://): ?store=mock or ?store=supabase (remembered for this tab). */
 window.REG_STORE = {
-  mode: 'supabase',                                         // the deploy build (tools/build-dist.sh) sets 'supabase'
+  mode: 'supabase',
+  manualTime: true,                                   // 016i: Add hours manually on
+  welcomeEmail: false,                                // 016j: Edge Function not live yet – Copy login details only                                         // the deploy build (tools/build-dist.sh) sets 'supabase'
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com

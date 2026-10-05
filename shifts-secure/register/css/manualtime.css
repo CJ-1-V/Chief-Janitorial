@@ -1,0 +1,17 @@
+/* manualtime.css – "Add hours manually" (TEST ONLY) */
+.s-manual{background:#efe7fb;color:#5b2a9e;border:1px solid #d9c6f5}
+#mtformcard .mt-head{justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.mt-modes{display:flex;gap:6px;flex-wrap:wrap}
+.mt-wfield{grid-column:1/-1}
+.mt-wlist{display:flex;flex-wrap:wrap;gap:4px 14px;max-height:220px;overflow:auto;border:1px solid #e3e3ea;border-radius:8px;padding:8px 10px;background:#fff}
+.mt-wgrp{flex:1 1 100%}
+.mt-wgrp .mt-w{margin-right:14px}
+.mt-w{white-space:nowrap}
+.mt-confirm{margin:8px 0;padding:8px 10px;border:1px solid #f0c36d;background:#fff8e6;border-radius:8px}
+#mthint{margin:6px 0;min-height:1.2em}
+.mt-filters{gap:6px;margin:12px 0 6px;flex-wrap:wrap}
+ul.mt-hist{padding-left:18px}
+table.mt-prev td,table.mt-prev th{font-size:12px;white-space:nowrap}
+#mtlist td .pill{margin:1px 0}
+@media(max-width:640px){.mt-w{white-space:normal}.mt-wlist{max-height:260px}#mtformcard .mt-head h3{width:100%}table.mt-prev td,table.mt-prev th{white-space:normal}}
+#modal .modal.mt-wide{max-width:min(1180px,96vw);width:min(1180px,96vw)}
