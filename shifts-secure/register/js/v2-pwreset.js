@@ -54,7 +54,7 @@
     u.passHash=hashPw(pw);u.mustChangePw=true;u.failed=0;u.lockedUntil=0;
     audit('Office reset password',u.name,'Temporary password made by the app and shown once to '+(ME?ME.name:'the office')+' (never stored in the log). '+u.name+' must choose a new password at next sign-in.');
     notify(u.id,'The office reset your password. Sign in with the temporary password they give you, then choose your own new password.');
-    save();showTempPassword(u,pw);};
+    save();window.showTempPassword(u,pw);};
 
   function showTempPassword(u,pw){
     modal('<div class="pwreset" data-step="done"><h2>Temporary password for '+esc(nm(u))+'</h2>'+
