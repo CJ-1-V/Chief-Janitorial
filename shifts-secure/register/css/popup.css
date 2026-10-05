@@ -1,0 +1,14 @@
+/* Oct 4, 2026: pop-ups always close (see js/v2-popup.js).
+   1) Animate the pop-up box as ONE piece, and only "backwards" (no fill afterwards). The old rule
+      ".motion .modal > *" left every child on its own layer above the × button, so taps on × did nothing.
+   2) × is a big (44×44) target, always on top, and stays visible while a long pop-up is scrolled. */
+.motion .modal > * { animation: none; }
+.motion .modal-bg > .modal { animation: m-pop .22s ease backwards; }
+.modal-bg { overscroll-behavior: contain; -webkit-tap-highlight-color: transparent; }
+.modal-bg .modal > .x, .modal-bg .modal > .x:hover {
+  position: sticky; top: 4px; float: right; z-index: 10; margin: -8px -10px 0 8px;
+  width: 44px; height: 44px; min-width: 44px; padding: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 28px; line-height: 1; color: #444; background: #fff; border: 0; border-radius: 50%; box-shadow: none;
+  transform: none !important; cursor: pointer; touch-action: manipulation; }
+.modal-bg .modal > .x:focus-visible { outline: 3px solid #d9a03c; outline-offset: 1px; }
+.modal-bg .modal > .x:active { background: #f1eff7; }
