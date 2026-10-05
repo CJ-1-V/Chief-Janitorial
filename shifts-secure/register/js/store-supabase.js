@@ -357,6 +357,7 @@
       '<form data-form="login">' + inp('login', 'Email, phone number or username', '', { req: true, extra: ' data-autofocus autocomplete="username"' }) + inp('password', 'Password', '', { type: 'password', req: true, extra: ' autocomplete="current-password"' }) +
       '<div class="row" style="margin-top:12px"><button type="submit">Sign in</button><a href="#/forgot" class="right small">Forgot password?</a></div></form>' +
       '<p class="small muted">Same login as Shift Tracker.</p>' +
+      '<p class="small muted">Applying to clean for Chief Janitorial? Use the <a href="../">CJ Shift Tracker</a> instead.</p>' +
       '<div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px"><span class="muted small">New here?</span><br><a class="btn" href="#/signup" style="margin-top:6px">Create an account</a></div></div></div>';
   };
   VIEWS.forgot = function () {
