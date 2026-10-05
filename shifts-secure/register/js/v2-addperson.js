@@ -20,7 +20,7 @@
 (function(){
 if(typeof ACT!=='object'||typeof FORMS!=='object'||typeof VIEWS!=='object')return;
 var AP_LOGIN_URL='https://www.chiefjanitorial.com/shifts-secure/register/';
-var AP_FROM='UnScramble <noreply@unscramble.ca>';            /* placeholder sender – the owner picks the real one for live */
+var AP_FROM='UnScramble <admin@unscramble.ca>';             /* real sender (owner approved Oct 5 2026) – same as reg-send-welcome */
 var AP_WORDS='acorn amber apple aspen barley beacon berry birch breeze brook canyon cedar clover comet copper coral cove daisy delta ember falcon fern finch fjord forest garden harbor harvest hazel heron island juniper kettle lantern laurel lilac maple marble meadow mint nova oak orchard otter pebble pine plum prairie quail raven ridge river robin rowan sage sparrow spruce summit sunny thistle tulip valley willow wren'.split(' ');
 var AP_RESERVED=['admin','administrator','office','unscramble','support','root','system','owner','test'];
 var AP_ROLES=[['employee','Worker – UnScramble employee'],['worker',"Worker – a subcontractor's worker"],['crewlead',"Crew lead – a subcontractor's worker"],
