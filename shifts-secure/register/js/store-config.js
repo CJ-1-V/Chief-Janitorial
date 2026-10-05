@@ -6,7 +6,7 @@
 window.REG_STORE = {
   mode: 'supabase',
   manualTime: true,                                   // 016i: Add hours manually on
-  welcomeEmail: false,                                // 016j: Edge Function not live yet – Copy login details only                                         // the deploy build (tools/build-dist.sh) sets 'supabase'
+  welcomeEmail: true,                                 // 016j/016k: Send welcome email ON (Edge Function reg-send-welcome, Google SMTP from admin@unscramble.ca)                                         // the deploy build (tools/build-dist.sh) sets 'supabase'
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com
