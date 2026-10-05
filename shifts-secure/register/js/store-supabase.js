@@ -363,6 +363,8 @@
     return '<div class="login-wrap"><div class="card"><h1>Forgot your password?</h1><p>Please contact the UnScramble office. They will give you a temporary password, and you choose a new one the next time you sign in.</p><p><a href="#/">Back to sign in</a></p></div></div>';
   };
   FORMS.reset1 = FORMS.reset2 = function () { go('#/forgot'); };
+  /* 016l: self-service forgot + office temp-password email (gated by store-config flags). v2-pwemail.js
+     replaces VIEWS.forgot / FORMS.reset1/reset2 when forgotPassword is on. */
   FORMS.login = async function (f, d) {
     var email = authEmail(d.login); if (!email) return;
     busy(true, 'Signing in…');
@@ -557,6 +559,55 @@
     if (r.error) return { error: friendly(r.error) };
     return { tempPassword: r.data };
   };
+
+  // ---------- 016l: password reset by email (self-service + office temp-password email) ----------
+  // Gate: store-config forgotPassword / resetEmail. Needs migration 016l + Edge Functions.
+  if (C.forgotPassword) {
+    window.REG_FORGOT_REQUEST = async function (login) {
+      busy(true, 'Sending…');
+      try {
+        var r = await sb.functions.invoke('reg-forgot-password', { body: { action: 'request', login: String(login || '').trim() } });
+        // Always succeed from the person's point of view (neutral message). Network/setup errors still surface.
+        if (r.error) {
+          var m = r.error.message;
+          try { var j = await r.error.context.json(); m = j.error || m; } catch (e) {}
+          // If the function is missing, tell them to contact the office without revealing account state.
+          if (/not set up|Failed to send|FunctionsRelayError|404/i.test(String(m))) {
+            return { error: 'Password reset by email is not available right now. Please contact the UnScramble office.' };
+          }
+        }
+        return { ok: true };
+      } catch (e) { return { error: friendly(e) }; }
+      finally { busy(false); }
+    };
+    window.REG_FORGOT_CONFIRM = async function (login, code, password) {
+      busy(true, 'Saving your new password…');
+      try {
+        var r = await sb.functions.invoke('reg-forgot-password', { body: { action: 'confirm', login: String(login || '').trim(), code: String(code || '').trim(), password: password } });
+        if (r.error) {
+          var m = r.error.message;
+          try { var j = await r.error.context.json(); m = j.error || m; } catch (e) {}
+          return { error: friendly(m) };
+        }
+        if (!r.data || !r.data.ok) return { error: (r.data && r.data.error) || 'That code is not valid or has expired. Request a new one, or contact the office.' };
+        return { ok: true };
+      } catch (e) { return { error: friendly(e) }; }
+      finally { busy(false); }
+    };
+  }
+  if (C.resetEmail) {
+    window.REG_SEND_TEMP_PW = async function (userId, tempPassword) {
+      busy(true, 'Sending the email…');
+      try {
+        var r = await sb.functions.invoke('reg-send-temp-pw', { body: { user_id: userId, temp_password: tempPassword } });
+        if (r.error) { var m = r.error.message; try { var j = await r.error.context.json(); m = j.error || m; } catch (e) {} return { error: friendly(m) }; }
+        if (!r.data || !r.data.ok) return { error: (r.data && r.data.error) || 'The email could not be sent. Use Copy.' };
+        return { ok: true };
+      } catch (e) { return { error: friendly(e) }; }
+      finally { busy(false); }
+    };
+  }
+
 
 
   /* ---------- SIN / bank reveal: password re-check + log on the server ---------- */
