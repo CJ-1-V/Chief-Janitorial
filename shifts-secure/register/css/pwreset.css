@@ -1,0 +1,9 @@
+/* Oct 4, 2026: office "Reset password" – one temporary password, shown once (see js/v2-pwreset.js). */
+.pwreset h2{margin-top:0;padding-right:40px}
+.pwreset-actions{gap:8px;flex-wrap:wrap;margin-top:12px}
+.tpw-box{margin:12px 0 6px;padding:16px 10px;background:var(--pl,#ece9f6);border:2px dashed var(--p,#332E57);border-radius:10px;text-align:center}
+.tpw{display:inline-block;font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:34px;font-weight:700;letter-spacing:3px;color:var(--p,#332E57);background:none;user-select:all;-webkit-user-select:all;word-break:break-all}
+.tpw-copy{min-width:120px;min-height:44px;font-size:16px}
+.tpw-note{font-size:17px;font-weight:600;color:#222;margin:12px 0 6px}
+.pwforce .ok-note{color:var(--ok,#1f8a4c);font-weight:600}
+@media(max-width:480px){.tpw{font-size:26px;letter-spacing:2px}.tpw-note{font-size:16px}}

@@ -178,7 +178,7 @@
     });
   }
   function fileFolder(row) {
-    var c = [row.userId, row.workerId, row.subId, ME.id];
+    var c = [row.userId, row.workerId, row.subId, row.firmId, ME.id];   // firmId: client invoice files (e.g. uploaded past invoices) go in that client's folder so the client can read them
     for (var i = 0; i < c.length; i++) { var x = c[i]; if (!x) continue; if (x === ME.id || OFFICE) return x; var u = user(x); if (ME.type === 'sub' && u && u.subId === ME.id) return x; }
     return ME.id;
   }
@@ -310,6 +310,14 @@
   var _runAlerts = runAlerts; runAlerts = function () { if (OFFICE) return _runAlerts(); processTemp(); };
 
   /* ---------- files: view through a 60-second private link ---------- */
+  /* Oct 4, 2026 (past invoices, js/v2-pastinvoices.js): turn a stored file ('sb:path' or data URL) into a blob URL, or '' if not allowed */
+  window.REG_FILE_BLOB = function (data) {
+    data = String(data || '');
+    if (data.indexOf('data:') === 0) return Promise.resolve(dataToBlobUrl(data));
+    if (FILES[data]) return Promise.resolve(dataToBlobUrl(FILES[data]));
+    if (data.indexOf('sb:') !== 0) return Promise.resolve('');
+    return sb.storage.from(C.bucket).download(data.slice(3)).then(function (r) { return r.error ? '' : URL.createObjectURL(r.data); }, function () { return ''; });
+  };
   var _showFile = showFile;
   showFile = function (name, type, data, label) {
     data = String(data || '');
@@ -381,12 +389,15 @@
   async function officeReset(id) {
     var u = user(id), r = await sb.rpc('admin_reset_password', { p_user: id });
     if (r.error) { toast(friendly(r.error)); return; }
-    audit('Office reset password', u ? u.name : id); save();
+    // the server made ONE temporary password, signed the person out, set must-change and wrote its own audit row
+    audit('Office reset password', u ? u.name : id, 'Temporary password made by the server and shown once (never stored in the log). Must choose a new password at next sign-in.'); save();
+    if (typeof window.showTempPassword === 'function') { window.showTempPassword(u, r.data); return; }   // js/v2-pwreset.js
     modal('<h2>Temporary password</h2><p>Give this to ' + esc(u ? u.name : 'the person') + ' in person or by phone. They must choose a new one when they sign in.</p><p style="font-size:1.4em"><code>' + esc(r.data) + '</code></p><p class="small muted">It is shown only now.</p>');
   }
+  window.REG_OFFICE_RESET = officeReset;                   // Oct 4, 2026: used by js/v2-pwreset.js (one Reset password flow)
   FORMS.adminpw = function (f, d) { officeReset(d.id); };
   ACT.forcereset = function (el) { if (!confirmBox('fr' + el.dataset.id, 'Give this person a temporary password (they must change it at next sign-in)?')) return; officeReset(el.dataset.id); };
-  ACT.unlock = function () { toast('Sign-in limits are handled by the login service – nothing to unlock. Use "Force password reset" if needed.'); };
+  ACT.unlock = function () { toast('Sign-in limits are handled by the login service – nothing to unlock. Use "Reset password" if needed.'); };
   ACT.toggle2fa = ACT.my2fa = function () { toast('2-step sign-in will be added with the login service later (owner decision).'); };
 
   /* ---------- sign up (self) ---------- */
