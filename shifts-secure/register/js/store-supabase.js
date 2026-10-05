@@ -351,6 +351,15 @@
     var email = authEmail(d.login); if (!email) return;
     busy(true, 'Signing in…');
     var r = await sb.auth.signInWithPassword({ email: email, password: d.password });
+    /* Oct 4, 2026 (016g): an account made with an email AND a phone/username signs in with the email. If the phone or
+       username was typed, ask the server for that account's real login (it answers only when the password is right). */
+    if (r.error && /Invalid login credentials/i.test(String(r.error.message || '')) && String(d.login || '').indexOf('@') < 0) {
+      try {
+        var alt = await sb.rpc('reg_login_email', { p_login: String(d.login || '').trim(), p_password: d.password });
+        if (alt.error && /too many/i.test(String(alt.error.message || ''))) r = { error: alt.error };
+        else if (!alt.error && alt.data && alt.data !== email) r = await sb.auth.signInWithPassword({ email: alt.data, password: d.password });
+      } catch (e) {}
+    }
     if (r.error) { busy(false); toast(friendly(r.error)); return; }
     try { await afterSignIn('Password'); } finally { busy(false); }
   };
