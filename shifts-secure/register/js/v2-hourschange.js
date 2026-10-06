@@ -4,7 +4,8 @@
      (for a late entry approved by the office: 7 days from that approval);
    - the office approves, changes or rejects; approved (or office-changed) hours are final;
    - until the office answers, the original hours stay on the bill;
-   - billing: break deducted only if taken (shifts of 5 h or more), 5-hour daily minimum per worker.
+   - billing (Oct 6 2026, minwaive1): a worker's shifts at the farm that day are added up; break off once if the day is over 5 h and
+     it was taken; 5-hour daily minimum per worker per day unless the office waived it for that farm-day.
    Workers are only ever shown as Worker #n.
    What this file changes:
    - plain-English 3-step box on the shifts list; deadline on each shift; button hidden after the deadline ("Hours final");
@@ -33,10 +34,10 @@ function hcBrk(v){return v==='none'?'No break':v==='taken'?'Break taken':'';}
 function hcSpan(a,b,brk){return esc(a)+'–'+esc(b)+plus1(a,b)+(brk?' · '+hcBrk(brk):'');}
 function hcState(r){var c=latestChange(r.key);if(c&&c.status==='Pending')return 'pending';if(c&&(c.status==='Approved'||c.status==='Adjusted'))return 'final';return hcOpen(r)?'open':'final';}
 function hcMin(){return typeof CB==='function'?Number(CB().minHours)||0:0;}
-function hcRaw(h,brk){return h>=5&&brk!=='none'?Math.max(0,h-BREAK_MIN/60):h;}
-/* billable hours of this shift, counting the daily minimum together with the same worker's other shifts that day */
-function hcOthers(r){var s=0;Object.keys(PAGE_STATE.frRows||{}).forEach(function(k){var x=PAGE_STATE.frRows[k];if(x!==r&&x.uid===r.uid&&x.date===r.date)s+=x.bill-(x.minTopUp||0);});return s;}
-function hcBill(h,brk,others){var raw=hcRaw(h,brk),min=hcMin(),day=others+raw;if(min>0&&day<min)day=min;return Math.round((day-others)*100)/100;}
+/* minwaive1: billing is per worker-day at the farm, so the preview shows the WORKER-DAY billable hours (this shift + the same worker's
+   other shifts at this farm that day), using the same rule as the bill (billDay in v2-clientbilling.js). */
+function hcOthers(r){var o={h:0,missed:false,n:0,waived:!!r.waived};Object.keys(PAGE_STATE.frRows||{}).forEach(function(k){var x=PAGE_STATE.frRows[k];if(x!==r&&x.uid===r.uid&&x.date===r.date){o.h+=x.hours;o.n++;if(x.breakMissed)o.missed=true;}});return o;}
+function hcBill(h,brk,others){var o=others||{h:0,missed:false,waived:false};return Math.round(billDay(o.h+h,o.missed||brk==='none',o.waived)*100)/100;}
 
 /* ---------- status labels ---------- */
 changeStatusHtml=function(c){if(!c)return '';var hb=c.propBreak!=null;
@@ -84,9 +85,9 @@ ACT.firmedit=function(el){var r=(PAGE_STATE.frRows||{})[el.dataset.key];if(!r)re
     '<div class="hc-l">Finish</div><div class="hc-o">'+esc(r.end)+plus1(r.start,r.end)+'</div><div>'+hcTimeSel('end',r.end,'Correct finish time')+'</div>'+
     '<div class="hc-l">Break<br><span class="hc-sub">'+BREAK_MIN+' min</span></div><div class="hc-o">'+(ob==='none'?'No':'Yes')+'</div><div><select name="brk" id="hc_brk" aria-label="Was the break taken?"><option value="taken"'+(ob==='taken'?' selected':'')+'>Yes, taken</option><option value="none"'+(ob==='none'?' selected':'')+'>No break</option></select></div>'+
     '<div class="hc-l">Worked</div><div class="hc-o">'+r.hours.toFixed(2)+' h</div><div class="hc-v" id="hcnewh">'+r.hours.toFixed(2)+' h</div>'+
-    '<div class="hc-l">Billable</div><div class="hc-o">'+ob2.toFixed(2)+' h</div><div class="hc-v" id="hcnewb">'+ob2.toFixed(2)+' h</div>'+
+    '<div class="hc-l">Billable'+(others.n?'<br><span class="hc-sub">whole day, '+(others.n+1)+' shifts</span>':'')+'</div><div class="hc-o">'+ob2.toFixed(2)+' h</div><div class="hc-v" id="hcnewb">'+ob2.toFixed(2)+' h</div>'+
   '</div><div class="hc-diff" id="hcdiff" aria-live="polite">Change the time or the break above.</div>'+
-  '<div class="hc-note">Billable = hours worked, minus '+BREAK_MIN+' min only if a break was taken (shifts of 5 h or more).'+(hcMin()?' Minimum '+hcMin()+' billable hours per worker per day.':'')+'</div>'+
+  '<div class="hc-note">Billable = this worker\'s hours at your farm that day (all shifts added up), minus '+CB().breakMin+' min once if the day is over '+BILL_BREAK_OVER+' h and a break was taken.'+(hcMin()?(others.waived?' Minimum waived for this day.':' Minimum '+hcMin()+' billable hours per worker per day.'):'')+'</div>'+
   '<label class="req" for="hcreason">Reason (short)</label><textarea name="comment" id="hcreason" required minlength="3" maxlength="200" rows="2" placeholder="e.g. Worker went home at 2 pm because of rain"></textarea>'+
   '<div class="hc-note"><b>Until the office answers, the original hours stay on your bill.</b></div>'+
   '<div class="hc-btns"><button type="submit" id="hcsend">Send to office</button><button type="button" class="sec" data-act="closeModal">Cancel</button></div></form>');
