@@ -15,3 +15,21 @@
 .ordreply{display:flex;gap:8px;align-items:flex-start;background:#eef6ff;border:1px solid #b9d6f2;color:#1c3d5a;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:15px;line-height:1.4}
 .ordreply a{font-weight:700;white-space:nowrap;color:#1c3d5a}
 .ordcard .ordreply{font-size:14px;padding:8px 10px;margin:8px 0 4px}
+/* crew order form: "How long?" One day / Several days (owner, Oct 6 2026) */
+.ordlen{border:0;padding:0;margin:4px 0 12px}
+.ordlen legend{font-weight:700;color:var(--p);padding:0;margin-bottom:6px;font-size:15px}
+.ordlen-opts{display:flex;gap:8px;flex-wrap:wrap}
+.ordlen-opt{flex:1 1 160px;display:flex;align-items:center;gap:8px;margin:0;border:1.5px solid #cfd3dc;border-radius:10px;padding:11px 12px;cursor:pointer;font-weight:600;background:#fff;min-height:48px}
+.ordlen-opt input{width:20px;height:20px;margin:0;accent-color:var(--p)}
+.ordlen-opt small{font-weight:400;color:#555}
+.ordlen-opt:has(input:checked){border-color:var(--p);background:#f1f0f8;box-shadow:0 0 0 1px var(--p) inset}
+.ordrep{background:#f6f7fb;border:1px solid #dcdfea;border-radius:10px;padding:10px 12px;margin:4px 0 10px}
+.ordrep[hidden]{display:none}
+.ordrep .daypick{gap:6px}
+.ordrep .daypick label.inline{align-items:center;border:1px solid #cfd3dc;border-radius:8px;padding:7px 9px;background:#fff;min-height:38px;cursor:pointer}
+.ordrep .daypick label.inline input{margin:0;width:18px;height:18px}
+.ordrep .daypick label.inline:has(input:checked){border-color:var(--p);background:#f1f0f8}
+.ordcount{margin-top:8px;font-weight:600;color:#1c3d5a;line-height:1.4}
+.ordcount.bad{color:#a12a1a}
+.ordcount:empty{display:none}
+@media (max-width:640px){.ordlen-opt{flex-basis:100%}.ordrep .daypick label.inline{flex:1 0 calc(25% - 6px);justify-content:center}}

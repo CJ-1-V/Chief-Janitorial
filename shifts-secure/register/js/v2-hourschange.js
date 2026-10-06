@@ -109,6 +109,7 @@ FORMS.firmchg=function(f,d){var firm=ME;var r=(PAGE_STATE.frRows||{})[d.key];
   if(d.start===r.start&&d.end===r.end&&brk===ob){toast('You did not change anything.');return;}
   if(!d.comment||d.comment.length<3){toast('Please write a short reason.');return;}
   var c={id:uid('fc'),firmId:firm.id,firmName:firm.name,by:firm.name+' ('+(firm.username||firm.email)+')',key:d.key,site:r.site,date:r.date,workerNo:r.no,uid:r.uid,origStart:r.start,origEnd:r.end,origBreak:ob,propStart:d.start,propEnd:d.end,propBreak:brk,comment:d.comment,at:new Date().toISOString(),status:'Pending'};
+  if(String(d.key).indexOf('c:')===0){var csh=DB.shifts.filter(function(x){return x.id===String(d.key).split(':')[1];})[0];if(csh)c.crewSize=(csh.booked||[]).length;} /* count only, for the office check */
   DB.changes.push(c);
   audit('Farm proposed shift time change',firm.name,r.site+' '+r.date+' Worker #'+r.no+': '+r.start+'–'+r.end+plus1(r.start,r.end)+' ('+hcBrk(ob)+') → '+d.start+'–'+d.end+plus1(d.start,d.end)+' ('+hcBrk(brk)+') ("'+d.comment+'")');
   notify('admin','Farm change to review: '+firm.name+' asks for '+d.start+'–'+d.end+plus1(d.start,d.end)+', '+hcBrk(brk).toLowerCase()+' (was '+r.start+'–'+r.end+plus1(r.start,r.end)+', '+hcBrk(ob).toLowerCase()+') for '+r.site+' on '+r.date+'. Reason: '+d.comment);
@@ -119,7 +120,25 @@ FORMS.firmchg=function(f,d){var firm=ME;var r=(PAGE_STATE.frRows||{})[d.key];
 
 /* ---------- office: Farm changes review (same Approve / Adjust / Reject, plus the break) ---------- */
 /* live: the farm only has an anonymous id (anon-1…), so the office finds the person through the time entry */
-function hcWorker(c){var u=user(c.uid);if(u&&!u.anonymous)return u;var k=String(c.key||''),t=k.indexOf('t:')===0?DB.time.filter(function(x){return x.id===k.slice(2);})[0]:DB.time.filter(function(x){return x.key0===k;})[0];return t?user(t.userId):(k.indexOf('c:')===0?user(k.split(':')[2]):null);}
+/* Fix, Oct 6 2026: on a scheduled crew row (no clock-in yet) the farm's key is 'c:<shift id>:anon-N'. The server numbers each
+   shift's real crew list for the farm (reg_client_bookings: anon-1 = 1st person on the list, anon-2 = 2nd, …), so the office,
+   which has the real list, can turn anon-N back into the real worker. Before this fix the approval saved the hours under 'anon-N'.
+   If the crew list changed after the farm asked (crewSize differs), or the person can't be found, nothing is saved and the office
+   is told to check. Farms still only ever see Worker #n; no worker id or name is written to the request the farm can read. */
+function hcCrewReal(c){var p=String(c&&c.key||'').split(':');if(p[0]!=='c'||p.length<3)return null;var m=/^anon-(\d+)$/.exec(p[2]);if(!m)return null;
+  var FIX=' Please check with the farm, then enter the hours by hand in Hours, or reject this request.',sh=DB.shifts.filter(function(x){return x.id===p[1];})[0];
+  if(!sh)return {err:'This shift is no longer in the schedule, so the app can\'t tell which worker this is.'+FIX};
+  var b=sh.booked||[],n=+m[1];
+  if(c.crewSize!=null&&+c.crewSize!==b.length)return {err:'The crew list for this shift changed after the farm sent this request, so the app can\'t be sure which worker it is.'+FIX};
+  var u=user(b[n-1]);if(!u||u.anonymous)return {err:'The app can\'t find this worker on the shift\'s crew list.'+FIX};
+  return {uid:u.id,user:u,sh:sh};}
+(function(){var orig=applyFarmChange;
+  applyFarmChange=function(c,st,en){var r=hcCrewReal(c);if(!r)return orig(c,st,en);if(r.err)return;
+    var t=DB.time.filter(function(x){return x.key0===c.key;})[0]||DB.time.filter(function(x){return x.userId===r.uid&&x.shiftId===r.sh.id&&!x.test;})[0];
+    if(!t){t={id:uid('t'),userId:r.uid,site:r.sh.site,shiftId:r.sh.id,role:r.sh.role||(typeof jobRoleOf==='function'?jobRoleOf(r.user):''),date:c.date||r.sh.date,in:r.sh.start,out:r.sh.end,test:false,subId:r.user.subId,key0:c.key,fromSchedule:true};DB.time.push(t);}
+    else if(/^anon-/.test(String(t.userId))){t.userId=r.uid;t.site=t.site||r.sh.site;t.subId=r.user.subId;} /* repairs an entry an earlier approval saved under the farm's id */
+    if(!t.orig)t.orig={in:t.in,out:t.out};t.in=st;t.out=en;t.changeId=c.id;};})();
+function hcWorker(c){var u=user(c.uid);if(u&&!u.anonymous)return u;var cr=hcCrewReal(c);if(cr)return cr.user||null;var k=String(c.key||''),t=k.indexOf('t:')===0?DB.time.filter(function(x){return x.id===k.slice(2);})[0]:DB.time.filter(function(x){return x.key0===k;})[0];return t?user(t.userId):(k.indexOf('c:')===0?user(k.split(':')[2]):null);}
 function hcOfficeList(){var f=PAGE_STATE.fcf||'Pending';var list=DB.changes.filter(function(c){return f==='All'||c.status===f;}).slice().reverse();
   var brkSel=function(v){return '<select name="brk" aria-label="Break" style="max-width:150px"><option value="taken"'+(v!=='none'?' selected':'')+'>Break taken</option><option value="none"'+(v==='none'?' selected':'')+'>No break</option></select>';};
   return '<h1>Farm changes</h1><p class="small muted">Shift time changes asked for by farms and other clients (start, finish and whether the '+BREAK_MIN+'-minute break was taken). Only approved (or adjusted) changes affect hours, pay and billing. Every decision is written to the audit log and the farm sees the outcome and your note.</p>'+
@@ -136,6 +155,7 @@ ACT.fcdec=function(el){var c=DB.changes.filter(function(x){return x.id===el.data
   if((dec==='Rejected'||dec==='Adjusted')&&!note){toast('Please write a reply note for the farm.');return;}
   if(dec==='Adjusted'){if(spanErr(st,en)){toast(spanErr(st,en));return;}var sameBrk=hb?brk===c.propBreak:brk===null;if(st===c.propStart&&en===c.propEnd&&sameBrk){toast('Times are the same as proposed – use Approve, or change the times.');return;}}
   if(dec==='Approved'){st=c.propStart;en=c.propEnd;brk=hb?c.propBreak:null;}
+  if(dec!=='Rejected'){var cr=hcCrewReal(c);if(cr&&cr.err){toast(cr.err);return;}}
   if(dec!=='Rejected'){applyFarmChange(c,st,en);if(brk){var t=DB.time.filter(function(x){return x.changeId===c.id;})[0];if(t){if(t.orig&&t.orig.breakMissed===undefined)t.orig.breakMissed=!!t.breakMissed;t.breakMissed=brk==='none';}}}
   c.status=dec;c.note=note;c.decStart=dec==='Rejected'?'':st;c.decEnd=dec==='Rejected'?'':en;c.decBreak=dec==='Rejected'?'':(brk||'');c.decidedBy=ME.name;c.decidedAt=new Date().toISOString();
   var applied=st+'–'+en+plus1(st,en)+(brk?', '+hcBrk(brk).toLowerCase():'');

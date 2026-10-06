@@ -87,8 +87,8 @@ function ordCanChange(o){var s=ordStatus(o);if(['Declined','Cancelled'].indexOf(
 /* ---------- client: create (one short screen; extras under "More options") ---------- */
 FORMS.crewOrder=function(f,d){var firm=ME;var b=orderBlock(firm);if(b){toast(b.why+' '+b.fix);return;}
   var base=ordFieldsFrom(d);var dates=[base.date];
-  if(d.until){var days=(d.days||[]).map(Number);if(d.until<d.date){toast('"Repeat until" must be on or after the first date.');return;}if(daysBetween(d.date,d.until)>ORDER_MAX_DAYS-1){toast('A repeat order can cover at most '+ORDER_MAX_DAYS+' days. Send another order for later dates.');return;}if(!days.length){toast('Pick the days of the week to repeat on.');return;}
-    dates=[];for(var x=d.date;x<=d.until;x=addDays(x,1))if(days.indexOf(parseD(x).getDay())>=0)dates.push(x);if(!dates.length){toast('None of the picked days fall in that date range.');return;}}
+  /* "Several days" (or an older form that only sends "until"): one order per picked weekday, at most ORDER_MAX_DAYS days */
+  if(d.span==='multi'||(!d.span&&d.until)){var rp=ordRepeat(d.date,d.until,d.days);if(rp.err){toast(rp.err);return;}dates=rp.dates;}
   for(var i=0;i<dates.length;i++){var ff=JSON.parse(JSON.stringify(base));ff.date=dates[i];var e=ordCheck(firm,ff);if(e){toast(e+(dates.length>1?' ('+dates[i]+')':''));return;}}
   var series=dates.length>1?uid('ser'):null,made=[];
   dates.forEach(function(dt){var ff=JSON.parse(JSON.stringify(base));ff.date=dt;var hb=hoursBefore(ff),late=hb<orderCutoffH();
@@ -97,7 +97,7 @@ FORMS.crewOrder=function(f,d){var firm=ME;var b=orderBlock(firm);if(b){toast(b.w
   notify('admin','New crew order'+(made.length>1?'s ('+made.length+' days)':'')+' from '+firm.name+': '+made.map(function(o){return o.no+' '+o.req.date;}).join(', ')+' – '+base.workers+' × '+orderRoleName(firm,base.role)+' at '+base.site+', start '+base.start+'. Confirm, decline or adjust in Crew orders.');
   notify(firm.id,'We got your crew order '+made.map(function(o){return o.no;}).join(', ')+'. The office will confirm it.');
   PAGE_STATE.coForm=false;save();render();
-  modal(clientWord('<h2 id="orderdone">Order sent ✓</h2><p>Thank you. We got your order'+(made.length>1?'s for '+made.length+' days':'')+':</p><p><b>'+base.workers+' × '+esc(orderRoleName(firm,base.role))+'</b><br>'+made.map(function(o){return esc(shortDay(o.req.date));}).join(', ')+' · start '+esc(base.start)+'<br>'+esc(siteName(base.site))+'</p>'+ordReplyBox('ordreplydone',ordReplyWhen())+'<p>You can see it, change it or cancel it under "My crew orders".</p><p><button data-act="closeModal">OK</button></p>',firm));};
+  modal(clientWord('<h2 id="orderdone">Order sent ✓</h2><p>Thank you. We got your order'+(made.length>1?'s for '+made.length+' days':'')+':</p><p><b>'+base.workers+' × '+esc(orderRoleName(firm,base.role))+'</b><br>'+(made.length>3?esc(ordRange(made.map(function(o){return o.req.date;})))+' ('+made.length+' days'+(d.days?', '+esc(ordDaysLabel(d.days)):'')+')':made.map(function(o){return esc(shortDay(o.req.date));}).join(', '))+' · start '+esc(base.start)+'<br>'+esc(siteName(base.site))+'</p>'+ordReplyBox('ordreplydone',ordReplyWhen())+'<p>You can see it, change it or cancel it under "My crew orders".</p><p><button data-act="closeModal">OK</button></p>',firm));};
 ACT.coopen=function(){PAGE_STATE.coForm=!PAGE_STATE.coForm;render();};
 
 /* ---------- client: change ---------- */
@@ -137,21 +137,51 @@ function roleSelect(firm,cur){var l=orderRoleList(firm),ok=l.filter(function(r){
   return '<div><label class="req">Job</label><select name="role" required>'+(ok.length===1&&cur?'':'<option value="">– choose –</option>')+l.map(function(r){return '<option value="'+esc(r.key)+'"'+(r.ok?'':' disabled')+(r.key===cur&&r.ok?' selected':'')+'>'+esc(r.label)+(r.ok?'':' – no agreed rate, ask the office')+'</option>';}).join('')+'</select>'+(l.some(function(r){return !r.ok;})?'<div class="hint norate">Jobs without an agreed rate can\'t be ordered – ask the office.</div>':'')+'</div>';}
 
 /* ---------- client page ---------- */
-function orderForm(firm){var sites=DB.sites.filter(function(s){return s.firmId===firm.id;});
-  return '<div class="card hl" id="orderform"><form data-form="crewOrder">'+(sites.length===1?'<input type="hidden" name="site" value="'+esc(sites[0].code)+'"><p class="small muted">Site: <b>'+esc(siteName(sites[0].code))+'</b></p>':'')+'<div class="grid2">'+
-  (sites.length>1?sel('site','Site',sites.map(function(s){return [s.code,s.code+' – '+s.name];}),'',{req:true,blank:true}):'')+
-  inp('date','Date',addDays(today(),1),{type:'date',req:true,extra:' min="'+today()+'"'})+
-  qSel('start','Start time','07:00',{req:true})+
+function orderForm(firm){var sites=DB.sites.filter(function(s){return s.firmId===firm.id;}),first=addDays(today(),1);
+  return '<div class="card hl" id="orderform"><form data-form="crewOrder">'+(sites.length===1?'<input type="hidden" name="site" value="'+esc(sites[0].code)+'"><p class="small muted">Site: <b>'+esc(siteName(sites[0].code))+'</b></p>':'')+
+  /* Owner, Oct 6 2026: the repeat option sits on the main form – "How long?" One day / Several days (up to 31) */
+  '<fieldset class="ordlen" id="ordlen"><legend>How long?</legend><div class="ordlen-opts">'+
+    '<label class="ordlen-opt"><input type="radio" name="span" value="one" checked> <span>One day</span></label>'+
+    '<label class="ordlen-opt"><input type="radio" name="span" value="multi"> <span>Several days <small>(up to '+ORDER_MAX_DAYS+')</small></span></label></div></fieldset>'+
+  '<div class="grid2">'+(sites.length>1?sel('site','Site',sites.map(function(s){return [s.code,s.code+' – '+s.name];}),'',{req:true,blank:true}):'')+
+  '<div class="orddate"><label class="req" id="orddatelab">Date</label><input type="date" name="date" value="'+first+'" required min="'+today()+'"></div></div>'+
+  '<div class="ordrep" id="ordrep" hidden><div class="grid2">'+
+    '<div><label class="req">Last day</label><input type="date" name="until" value="" min="'+first+'" max="'+addDays(first,ORDER_MAX_DAYS-1)+'"><div class="hint">Up to '+ORDER_MAX_DAYS+' days from the first day.</div></div>'+
+    '<div><label>Repeat on</label><div class="daypick">'+WEEKDAYS.map(function(w){return '<label class="inline"><input type="checkbox" name="days[]" value="'+w[0]+'"'+(w[0]>=1&&w[0]<=5?' checked':'')+'> '+w[1]+'</label>';}).join('')+'</div></div></div>'+
+    '<div class="ordcount" id="ordcount" aria-live="polite"></div></div>'+
+  '<div class="grid2">'+qSel('start','Start time','07:00',{req:true})+
   inp('workers','Number of workers','',{type:'number',req:true,extra:' min="1" max="'+ORDER_MAX_WORKERS+'" step="1" inputmode="numeric"'})+
   roleSelect(firm,'')+'</div>'+
   '<details class="more"><summary>More options</summary><div class="grid2">'+
   qSel('end','Finish time (optional)','',{blank:'– not set –',hint:'Earlier than the start = next day (overnight), max '+MAX_SHIFT_H+' h.'})+
   inp('hours','…or hours (optional)','',{type:'number',extra:' min="0.25" max="16" step="0.25"'})+
-  '<div><label>Safety gear (PPE) supplied by:</label><select name="ppe"><option value="">Not sure – office will confirm</option>'+GEAR_OPTS.map(function(g){return '<option value="'+g+'">'+esc(gearLabel(g,firm))+'</option>';}).join('')+'</select></div>'+
-  inp('until','Repeat until (optional)','',{type:'date',hint:'Up to '+ORDER_MAX_DAYS+' days. One order per picked day.'})+
-  '<div><label>Repeat on</label><div class="daypick">'+WEEKDAYS.map(function(w){return '<label class="inline"><input type="checkbox" name="days[]" value="'+w[0]+'"'+(w[0]>=1&&w[0]<=5?' checked':'')+'> '+w[1]+'</label>';}).join('')+'</div></div></div>'+
+  '<div><label>Safety gear (PPE) supplied by:</label><select name="ppe"><option value="">Not sure – office will confirm</option>'+GEAR_OPTS.map(function(g){return '<option value="'+g+'">'+esc(gearLabel(g,firm))+'</option>';}).join('')+'</select></div></div>'+
   '<label>Note (optional)</label><textarea name="note" placeholder="e.g. meet at the packing shed"></textarea></details>'+
-  ordReplyBox('ordreplyform')+'<p><button type="submit" class="big">Send order</button></p><p class="small muted">Changes less than '+orderCutoffH()+' hours before the start may be charged per your agreement.</p></form></div>';}
+  ordReplyBox('ordreplyform')+'<p><button type="submit" class="big" id="ordsend">Send order</button></p><p class="small muted">Changes less than '+orderCutoffH()+' hours before the start may be charged per your agreement.</p></form></div>';}
+/* ---------- "Several days": one order per picked weekday, at most ORDER_MAX_DAYS days from the first day ---------- */
+function ordDaysLabel(days){days=(days||[]).map(Number);if(days.length===7)return 'every day';var runs=[],cur=[];
+  WEEKDAYS.forEach(function(w){if(days.indexOf(w[0])>=0)cur.push(w[1]);else if(cur.length){runs.push(cur);cur=[];}});if(cur.length)runs.push(cur);
+  return runs.map(function(r){return r.length>=3?r[0]+'–'+r[r.length-1]:r.join(', ');}).join(', ');}
+function ordRange(dates){return dates.length===1?shortDay(dates[0]):shortDay(dates[0])+' – '+shortDay(dates[dates.length-1]);}
+function ordRepeat(first,until,days){days=(days||[]).map(Number);
+  if(!first)return {err:'Please pick the first day.'};
+  if(!until)return {err:'Please pick the last day.'};
+  if(until<first)return {err:'The last day must be on or after the first day.'};
+  if(daysBetween(first,until)>ORDER_MAX_DAYS-1)return {err:'That is more than '+ORDER_MAX_DAYS+' days. Pick a last day up to '+shortDay(addDays(first,ORDER_MAX_DAYS-1))+', and send another order for later dates.'};
+  if(!days.length)return {err:'Please pick at least one day of the week.'};
+  var dates=[];for(var x=first;x<=until;x=addDays(x,1))if(days.indexOf(parseD(x).getDay())>=0)dates.push(x);
+  if(!dates.length)return {err:'None of the picked days fall between '+shortDay(first)+' and '+shortDay(until)+'. Pick other days or a later last day.'};
+  return {dates:dates,text:'This will send '+dates.length+' order'+(dates.length===1?'':'s')+': '+ordRange(dates)+' ('+ordDaysLabel(days)+').'};}
+function ordRepUpdate(){var f=document.querySelector('form[data-form=crewOrder]');if(!f||!f.until)return;
+  var sp=f.querySelector('input[name=span]:checked'),multi=!!sp&&sp.value==='multi',box=document.getElementById('ordrep'),lab=document.getElementById('orddatelab'),out=document.getElementById('ordcount'),btn=document.getElementById('ordsend');
+  if(box)box.hidden=!multi;if(lab)lab.textContent=multi?'First day':'Date';
+  if(f.date.value){f.until.min=f.date.value;f.until.max=addDays(f.date.value,ORDER_MAX_DAYS-1);}
+  if(!multi){if(btn)btn.textContent='Send order';return;}
+  if(!f.until.value&&f.date.value)f.until.value=addDays(f.date.value,6);
+  var days=[].map.call(f.querySelectorAll('input[name="days[]"]:checked'),function(c){return c.value;}),r=ordRepeat(f.date.value,f.until.value,days);
+  if(out){out.className='ordcount'+(r.err?' bad':'');out.textContent=r.err||r.text;}
+  if(btn)btn.textContent=r.err?'Send orders':'Send '+r.dates.length+' order'+(r.dates.length===1?'':'s');}
+['input','change'].forEach(function(ev){document.addEventListener(ev,function(e){if(e.target&&e.target.closest&&e.target.closest('#orderform'))ordRepUpdate();});});
 /* Owner, Oct 6 2026: reply promise for crew orders (farm/client views only) */
 var ORDER_REPLY_URGENT='If it\'s urgent, call or text <a href="tel:+19022004888" class="nw">902-200-4888</a> and someone will get back to you.';
 var ORDER_REPLY_HTML='Someone from our office will confirm your order by 9 PM the same day. '+ORDER_REPLY_URGENT;
