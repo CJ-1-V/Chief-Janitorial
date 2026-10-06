@@ -1,0 +1,21 @@
+/* minwaive.css – Oct 6 2026: 5-hour daily minimum + office waiver (v2-minwaive.js) */
+.mw-note{display:inline-block;font-size:12px;font-weight:500;color:var(--warn,#b7791f);background:var(--warnl,#fdf3dc);border-radius:9px;padding:1px 8px;margin-left:4px;white-space:nowrap}
+tr.mw-waived td{background:#fffaf0}
+.dc-head.mw-waived .mw-note{margin-left:6px}
+.mw-topup span{font-size:12.5px}
+.mw-ctl .small{margin-top:2px}
+.mw-ctl .mw-pill{white-space:nowrap}
+.mw-ctl button{margin-top:4px}
+.mw-table td:last-child{min-width:190px}
+.mw-table tr.mw-empty td{color:var(--mut,#666)}
+.mw-card .mw-ctl{margin-top:8px;padding-top:8px;border-top:1px solid #eee}
+.mw-card .mw-ctl button{width:100%;min-height:44px}
+.daycard.mw-waived{border-left:4px solid var(--g,#D9A03C)}
+#mweff{margin:6px 0 10px}
+#mwrange select{min-width:180px}
+@media (max-width:640px){#mwrange{flex-direction:column;align-items:stretch}#mwrange select{min-width:0;width:100%}#mwok{width:100%;min-height:44px}}
+#mweff{width:100%}
+#mweff th,#mweff td{padding:6px 8px}
+.mw-was{margin:-4px 0 8px}
+@media (max-width:640px){#mweff{font-size:13.5px}#mweff th,#mweff td{padding:5px 4px}}
+.mw-totnote{margin:2px 0 6px;text-align:right}

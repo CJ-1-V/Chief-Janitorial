@@ -1,5 +1,6 @@
 /* v2-clientbilling.js – client (farm and other client) billing per the Independent Contractor Service Agreement, plus the driver's abstract age rule. TEST ONLY.
-   - Billable hours: 30-minute unpaid break on shifts of 5 h or more (unless "break missed"), then a 5-hour DAILY MINIMUM per worker per day.
+   - Billable hours (Oct 6 2026): per worker per farm per day – shifts added up, 30-minute break off once if the total is over 5 h
+     (unless "break missed"), then a 5-hour DAILY MINIMUM per worker per day; the office can waive the minimum for one farm-day (v2-minwaive.js).
    - Monthly client invoices, net 30, 2% per month interest on overdue invoices (shown on the farm/client view and office billing).
    - Driver's abstract must be dated within the last 30 days when uploaded or typed in.
    All numbers editable in office Settings. */
@@ -8,11 +9,27 @@ function CB(){var d={minHours:5,breakMin:30,netDays:30,interestPct:2,abstractMax
 function syncBreak(){if(DB&&DB.settings){DB.settings.clientBilling=CB();BREAK_MIN=CB().breakMin;}}
 (function(){var ol=load;load=function(){ol();syncBreak();};})();
 
-/* 5-hour daily minimum per worker per day (after the break rule) */
-(function(){var ofr=firmRows;firmRows=function(firm,from,to){var rows=ofr(firm,from,to),min=CB().minHours,g={};
+/* Farm billing per worker-day (owner, Oct 3 + Oct 6 2026 #7). Applies to client (farm) billing ONLY – employee pay is unchanged.
+   For each worker, add up that worker's shifts at the same farm on the same day. If the total is over 5 h, take the unpaid break
+   (30 min) off ONCE – not when the worker reported a missed break on a shift that day. Then bill at least the daily minimum (5 h),
+   unless the office waived the minimum for that farm on that day (then actual hours after the break rule, no floor).
+   Waivers live in DB.settings.minWaivers {"<farm id>|<date>": {firmId,date,by,at,note}} (live: the existing reg_settings 'main' JSON row,
+   office-write only – no schema change). Rows get: bill (allocated), brkDed, minTopUp, waived, dayHours, dayBill. */
+var BILL_BREAK_OVER=5; /* hours: the break comes off only when the worker-day total is OVER this */
+function minWaivers(){return (DB&&DB.settings&&DB.settings.minWaivers)||{};}
+function minWaiver(firmId,date){return minWaivers()[firmId+'|'+date]||null;}
+function billDay(hours,missed,waived){var c=CB(),min=Number(c.minHours)||0,b=hours;
+  if(hours>BILL_BREAK_OVER+1e-9&&!missed)b=hours-(Number(c.breakMin)||0)/60;
+  if(!waived&&min>0&&b<min)b=min;return Math.max(0,b);}
+(function(){var ofr=firmRows;firmRows=function(firm,from,to){var rows=ofr(firm,from,to),c=CB(),brk=(Number(c.breakMin)||0)/60,g={};
   rows.forEach(function(r){var k=r.uid+'|'+r.date;(g[k]=g[k]||[]).push(r);});
-  Object.keys(g).forEach(function(k){var l=g[k],b=l.reduce(function(a,r){return a+r.bill;},0);if(min>0&&b<min){var last=l[l.length-1];last.minTopUp=Math.round((min-b)*100)/100;last.bill=Math.round((last.bill+last.minTopUp)*100)/100;}});return rows;};})();
-(function(){var op=firmPage;firmPage=function(firm){var c=CB();return op(firm).replace(/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more \(test default – owner to confirm\)\./,'Billable hours = hours worked minus a '+c.breakMin+'-minute unpaid break on shifts of 5 hours or more (not when the worker reports a missed break), with a minimum of '+c.minHours+' billable hours per worker per day (Independent Contractor Service Agreement, s. 3).')+clientInvoicesHtml(firm,false);};})();
+  Object.keys(g).forEach(function(k){var l=g[k],sum=l.reduce(function(a,r){return a+r.hours;},0),missed=l.some(function(r){return r.breakMissed;}),w=!!minWaiver(firm.id,l[0].date),day=billDay(sum,missed,w);
+    l.forEach(function(r){r.bill=r.hours;r.brkDed=0;r.minTopUp=0;r.waived=w;r.dayHours=sum;r.dayBill=day;r.dayShifts=l.length;});
+    var ded=sum>BILL_BREAK_OVER+1e-9&&!missed?brk:0,left=ded; /* the break comes off the longest shift(s) */
+    l.slice().sort(function(a,b){return b.hours-a.hours;}).forEach(function(r){if(left<=0)return;var t=Math.min(left,r.bill);r.brkDed=Math.round(t*10000)/10000;r.bill-=t;left-=t;});
+    var top=day-(sum-ded);if(top>1e-9){var last=l[l.length-1];last.minTopUp=Math.round(top*10000)/10000;last.bill+=top;}});
+  return rows;};})();
+(function(){var op=firmPage;firmPage=function(firm){var c=CB();return op(firm).replace(/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more\./,'Billable hours, per worker per day at this farm: all of that worker\'s shifts that day are added up; if the total is over '+BILL_BREAK_OVER+' hours, a '+c.breakMin+'-minute unpaid break is taken off once (not when the worker reported a missed break); then a minimum of '+c.minHours+' billable hours per worker per day applies (Independent Contractor Service Agreement, s. 3).')+clientInvoicesHtml(firm,false);};})();
 
 /* ---------- monthly client invoices: net 30, 2% per month on overdue ---------- */
 function clientInvs(firm){return (DB.clientInvoices||[]).filter(function(i){return !firm||i.firmId===firm.id;});}
