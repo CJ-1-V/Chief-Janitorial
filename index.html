@@ -6,13 +6,25 @@
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!--====== Security (GitHub Pages cannot send HTTP security headers, so these are set as meta tags) ======-->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://ad.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://*.g.doubleclick.net; connect-src 'self' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://ad.doubleclick.net https://*.g.doubleclick.net; frame-src https://www.google.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net; form-action 'self' https://formsubmit.co; base-uri 'self'; object-src 'none'; upgrade-insecure-requests">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <script>
+            /* HTTPS enforcement: send any plain-HTTP visit (apex or www) to https://www. Keep until GitHub Pages "Enforce HTTPS" is on. */
+            (function () {
+                var h = location.hostname;
+                if (location.protocol === 'http:' && (h === 'chiefjanitorial.com' || h === 'www.chiefjanitorial.com')) {
+                    location.replace('https://www.chiefjanitorial.com' + location.pathname + location.search + location.hash);
+                }
+            })();
+        </script>
         <title>Commercial Cleaning &amp; Janitorial Services in Charlottetown, PEI | Chief Janitorial Inc.</title>
-        <meta name="description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call for a free quote.">
+        <meta name="description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call +1 902-200-4888 for a free quote.">
         <link rel="canonical" href="https://www.chiefjanitorial.com/">
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="Chief Janitorial Inc.">
         <meta property="og:title" content="Commercial Cleaning &amp; Janitorial Services in Charlottetown, PEI | Chief Janitorial Inc.">
-        <meta property="og:description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call for a free quote.">
+        <meta property="og:description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call +1 902-200-4888 for a free quote.">
         <meta property="og:url" content="https://www.chiefjanitorial.com/">
         <meta property="og:image" content="https://www.chiefjanitorial.com/assets/images/og-image.jpg">
         <meta property="og:image:width" content="1200">
@@ -20,7 +32,7 @@
         <meta property="og:locale" content="en_CA">
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="Commercial Cleaning &amp; Janitorial Services in Charlottetown, PEI | Chief Janitorial Inc.">
-        <meta name="twitter:description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call for a free quote.">
+        <meta name="twitter:description" content="Commercial cleaning and janitorial services in Charlottetown, PEI. Chief Janitorial Inc. keeps offices and facilities spotless. Call +1 902-200-4888 for a free quote.">
         <meta name="twitter:image" content="https://www.chiefjanitorial.com/assets/images/og-image.jpg">
         <meta name="theme-color" content="#5956e9">
         <!--======  Icon ======-->
@@ -87,13 +99,6 @@
                     "email": "admin@chiefjanitorial.com",
                     "areaServed": "CA",
                     "availableLanguage": "English"
-                },
-                {
-                    "@type": "ContactPoint",
-                    "telephone": "+1-705-650-0024",
-                    "contactType": "customer service",
-                    "areaServed": "CA",
-                    "availableLanguage": "English"
                 }
             ]
         }
@@ -144,7 +149,6 @@
                         </li>
                         <li>
                             <i class="fal fa-phone"></i>
-                            <a href="tel:+17056500024">+1 (705) 650-0024</a>
                             <a href="tel:+19022004888">+1 (902) 200-4888</a>
                         </li>
                     </ul>
@@ -533,7 +537,6 @@
                                     </div>
                                     <div class="info">
                                         <h5 class="blue-dark">Phone Us</h5>
-                                        <h5><a href="tel:+17056500024">+1 (705) 650-0024</a></h5>
                                         <h5><a href="tel:+19022004888">+1 (902) 200-4888</a></h5>
                                     </div>
                                 </div>
