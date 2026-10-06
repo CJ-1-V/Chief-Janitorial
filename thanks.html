@@ -6,6 +6,18 @@
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!--====== Security (GitHub Pages cannot send HTTP security headers, so these are set as meta tags) ======-->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://ad.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://*.g.doubleclick.net; connect-src 'self' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://ad.doubleclick.net https://*.g.doubleclick.net; frame-src https://www.google.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net; form-action 'self' https://formsubmit.co; base-uri 'self'; object-src 'none'; upgrade-insecure-requests">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <script>
+            /* HTTPS enforcement: send any plain-HTTP visit (apex or www) to https://www. Keep until GitHub Pages "Enforce HTTPS" is on. */
+            (function () {
+                var h = location.hostname;
+                if (location.protocol === 'http:' && (h === 'chiefjanitorial.com' || h === 'www.chiefjanitorial.com')) {
+                    location.replace('https://www.chiefjanitorial.com' + location.pathname + location.search + location.hash);
+                }
+            })();
+        </script>
         <title>Quote Request Received | Chief Janitorial Inc.</title>
         <meta name="description" content="Thank you. Chief Janitorial Inc. received your free quote request and will be in touch.">
         <meta name="robots" content="noindex">
@@ -51,6 +63,31 @@
             <link rel="stylesheet" href="./assets/vendor/magnific-popup/dist/magnific-popup.css">
             <link rel="stylesheet" href="./assets/vendor/nice-select/css/nice-select.css">
         </noscript>
+        <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-10989324097"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-10989324097');
+</script>
+        <!-- Google Ads conversion: quote request submitted.
+             FormSubmit sends the visitor here (_next) only after the form and its reCAPTCHA succeed.
+             >>> OWNER: replace REPLACE_WITH_CONVERSION_LABEL below with the conversion label from Google Ads
+                 (Goals > Conversions > your "Quote request" action > Tag setup > "send_to": 'AW-10989324097/XXXXXXX').
+                 Nothing is sent to Google Ads while the placeholder is still here. <<< -->
+<script>
+  (function () {
+    var CJ_ADS_SEND_TO = 'AW-10989324097/REPLACE_WITH_CONVERSION_LABEL';
+    if (CJ_ADS_SEND_TO.indexOf('REPLACE_WITH') !== -1) { return; }
+    try {
+      if (window.sessionStorage && sessionStorage.getItem('cj_quote_conversion_sent')) { return; }
+      if (window.sessionStorage) { sessionStorage.setItem('cj_quote_conversion_sent', '1'); }
+    } catch (e) {}
+    gtag('event', 'conversion', { 'send_to': CJ_ADS_SEND_TO });
+  })();
+</script>
     </head>
     <body>
         <!--====== Start Preloader ======-->
@@ -88,7 +125,6 @@
                         </li>
                         <li>
                             <i class="fal fa-phone"></i>
-                            <a href="tel:+17056500024">+1 (705) 650-0024</a>
                             <a href="tel:+19022004888">+1 (902) 200-4888</a>
                         </li>
                     </ul>
@@ -170,7 +206,7 @@
                                 <h2>We received your request</h2>
                             </div>
                             <p>Thank you for contacting Chief Janitorial Inc. We have your quote details and will be in touch shortly.</p>
-                            <p>If you need us sooner, call <a href="tel:+19022004888">+1 (902) 200-4888</a> or <a href="tel:+17056500024">+1 (705) 650-0024</a>.</p>
+                            <p>If you need us sooner, call <a href="tel:+19022004888">+1 (902) 200-4888</a>.</p>
                             <div class="thanks-actions">
                                 <a class="main-btn" href="index.html">Back to Home</a>
                                 <a class="main-btn bordered-btn btn-blue" href="contact.html">Contact</a>

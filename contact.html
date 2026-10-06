@@ -6,6 +6,18 @@
         <meta charset="utf-8">
         <meta http-equiv="x-ua-compatible" content="ie=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!--====== Security (GitHub Pages cannot send HTTP security headers, so these are set as meta tags) ======-->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.googleadservices.com https://www.google.com https://googleads.g.doubleclick.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://ad.doubleclick.net https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://*.g.doubleclick.net; connect-src 'self' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://www.google.com https://www.google.ca https://ad.doubleclick.net https://*.g.doubleclick.net; frame-src https://www.google.com https://www.googletagmanager.com https://td.doubleclick.net https://bid.g.doubleclick.net; form-action 'self' https://formsubmit.co; base-uri 'self'; object-src 'none'; upgrade-insecure-requests">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
+        <script>
+            /* HTTPS enforcement: send any plain-HTTP visit (apex or www) to https://www. Keep until GitHub Pages "Enforce HTTPS" is on. */
+            (function () {
+                var h = location.hostname;
+                if (location.protocol === 'http:' && (h === 'chiefjanitorial.com' || h === 'www.chiefjanitorial.com')) {
+                    location.replace('https://www.chiefjanitorial.com' + location.pathname + location.search + location.hash);
+                }
+            })();
+        </script>
         <title>Contact Chief Janitorial Inc. | Commercial Cleaning in Charlottetown, PEI</title>
         <meta name="description" content="Contact Chief Janitorial Inc. for commercial cleaning in Charlottetown, PEI. 209 Queen St, 2nd floor. Call +1 902-200-4888 or email admin@chiefjanitorial.com.">
         <link rel="canonical" href="https://www.chiefjanitorial.com/contact.html">
@@ -86,13 +98,6 @@
                     "email": "admin@chiefjanitorial.com",
                     "areaServed": "CA",
                     "availableLanguage": "English"
-                },
-                {
-                    "@type": "ContactPoint",
-                    "telephone": "+1-705-650-0024",
-                    "contactType": "customer service",
-                    "areaServed": "CA",
-                    "availableLanguage": "English"
                 }
             ]
         }
@@ -143,7 +148,6 @@
                         </li>
                         <li>
                             <i class="fal fa-phone"></i>
-                            <a href="tel:+17056500024">+1 (705) 650-0024</a>
                             <a href="tel:+19022004888">+1 (902) 200-4888</a>
                         </li>
                     </ul>
@@ -259,7 +263,6 @@
                                     </div>
                                     <div class="info">
                                         <h4>Phone Number</h4>
-                                        <p><a href="tel:+17056500024">+1 (705) 650-0024</a></p>
                                         <p><a href="tel:+19022004888">+1 (902) 200-4888</a></p>
                                     </div>
                                 </div>
@@ -300,11 +303,11 @@
                 <div class="row">
                     <div class="col-lg-10">
                         <div class="quote-form">
-                            <form id="quote-form" action="https://formsubmit.co/sandra@chiefjanitorial.com" method="POST" accept-charset="UTF-8" novalidate aria-labelledby="quote-heading">
+                            <form id="quote-form" action="https://formsubmit.co/02945dfa7949be6395f1a22e0d5fca93" method="POST" accept-charset="UTF-8" novalidate aria-labelledby="quote-heading">
                                 <input type="hidden" name="_cc" value="admin@chiefjanitorial.com">
                                 <input type="hidden" name="_subject" value="New quote request - chiefjanitorial.com">
                                 <input type="hidden" name="_template" value="table">
-                                <input type="hidden" name="_captcha" value="false">
+                                <input type="hidden" name="_captcha" value="true"><!-- FormSubmit reCAPTCHA ON (owner approved Oct 6, 2026). Do not set to false. -->
                                 <input type="hidden" name="_next" value="https://www.chiefjanitorial.com/thanks.html">
                                 <div class="quote-hp" aria-hidden="true">
                                     <label for="quote-honey">Leave this field blank</label>
