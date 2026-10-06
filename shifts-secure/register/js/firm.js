@@ -12,7 +12,12 @@ function firmRows(firm,from,to){var codes=firmCodes(firm),rows=[];
   /* subcontractor crews: no clocked hours, so scheduled crew hours are used for past dates */
   DB.shifts.forEach(function(sh){if(sh.test||sh.kind!=='crew'||codes.indexOf(sh.site)<0||sh.date>today()||sh.date<from||sh.date>to)return;(sh.booked||[]).forEach(function(id){var u=user(id);if(!u||u.type==='tester')return;if(DB.time.some(function(t){return t.userId===id&&t.shiftId===sh.id&&!t.test;}))return;rows.push({key:'c:'+sh.id+':'+id,date:sh.date,site:sh.site,start:sh.start,end:sh.end,uid:id,crew:true});});});
   rows.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.site<b.site?-1:a.site>b.site?1:a.start<b.start?-1:a.start>b.start?1:a.key<b.key?-1:1;});
-  var n={};rows.forEach(function(r){n[r.date]=(n[r.date]||0)+1;r.no=n[r.date];r.hours=hrs(r.start,r.end);r.bill=r.hours>=5&&!r.breakMissed?Math.max(0,r.hours-BREAK_MIN/60):r.hours;});
+  /* stable Worker #: the same person keeps the same number for that farm and day, on every visit and after time changes.
+     Numbers are kept in DB.workerNos; first given in order of the ORIGINAL start time, then person id; someone new gets the next number. */
+  var map=DB.workerNos=DB.workerNos||{},byDate={};rows.forEach(function(r){(byDate[r.date]=byDate[r.date]||[]).push(r);});
+  Object.keys(byDate).forEach(function(dt){var k=firm.id+'|'+dt,m=map[k]=map[k]||{},next=Object.keys(m).reduce(function(a,id){return Math.max(a,m[id]);},0);
+    byDate[dt].slice().sort(function(a,b){var x=(a.orig&&a.orig.in)||a.start,y=(b.orig&&b.orig.in)||b.start;return x<y?-1:x>y?1:a.uid<b.uid?-1:a.uid>b.uid?1:0;}).forEach(function(r){if(!m[r.uid])m[r.uid]=++next;});});
+  rows.forEach(function(r){r.no=map[firm.id+'|'+r.date][r.uid];r.hours=hrs(r.start,r.end);r.bill=r.hours>=5&&!r.breakMissed?Math.max(0,r.hours-BREAK_MIN/60):r.hours;});
   return rows;}
 function firmReport(firm,from,to){
   var rows={},d=from;while(d<=to){rows[d]={date:d,workers:{},hours:0,bill:0,temp:0};d=addDays(d,1);}

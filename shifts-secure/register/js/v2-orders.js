@@ -29,8 +29,8 @@ function gearLabel(g,firm){if(!g)return 'Office to confirm';return g==='Client'?
 /* ---------- who can order ---------- */
 function orderBlock(firm){
   if(!firm||firm.type!=='firm')return {why:'Only client accounts can order crews.',fix:''};
-  if(firm.accountApproved===false)return {why:'Your account is still pending office review.',fix:'The office will approve your account and set your rates. You can order crews after you sign the agreement and Rate Schedule.'};
-  if(firm.active===false)return {why:'Your account is switched off.',fix:'Contact the office.'};
+  if(firm.accountApproved===false)return {why:'The office is still checking your account.',fix:'The office will approve your account and set your rates. You can order crews after you sign the agreement and Rate Schedule.'};
+  if(firm.active===false)return {why:'Your account is switched off.',fix:'Please contact the office.'};
   if(!farmRatesCur(firm))return {why:'The office has not set your labour rates yet, so there is no signed agreement.',fix:'Contact the office to set your rates. Then sign the agreement and your Rate Schedule on "Workers, hours & billing" and come back here.'};
   if(!firmSignedEver(firm)||!farmSigsOf(firm).some(function(s){return s.rateVersion;}))return {why:'You have not signed the agreement and your Rate Schedule yet.',fix:'Open "Workers, hours & billing", sign the agreement and Rate Schedule, then come back here to order.'};
   if(!farmRatesReady(firm))return {why:'The office changed your rates and you have not accepted the new Rate Schedule yet.',fix:'Open "Workers, hours & billing" and accept the new Rate Schedule, then come back here to order.'};
@@ -50,7 +50,8 @@ function ordersOf(firm){return crewOrders().filter(function(o){return o.firmId==
 function ordById(id){return crewOrders().filter(function(o){return o.id===id;})[0]||null;}
 function ordView(o){return o.cur||(o.pending&&o.pending.fields)||o.req;}
 function ordShift(o){return o.shiftId?DB.shifts.filter(function(s){return s.id===o.shiftId;})[0]||null:null;}
-function ordAssigned(o){var s=ordShift(o);return s?(s.booked||[]).filter(function(id){var u=user(id);return u&&u.type!=='tester';}).length:0;}
+/* live: a farm only gets anonymous ids ('anon-1'…) in booked (reg_client_bookings), so count those too */
+function ordAssigned(o){var s=ordShift(o);return s?(s.booked||[]).filter(function(id){var u=user(id);return u?u.type!=='tester':/^anon-/.test(String(id));}).length:0;}
 function ordStatus(o){if(o.status==='Confirmed'&&o.cur){var s=ordShift(o);if(s&&ordAssigned(o)>=o.cur.workers)return 'Filled';}return o.status;}
 function ordPill(o){var s=ordStatus(o);var lab=s==='Changed - awaiting office'&&o.pending&&o.pending.kind==='cancel'?'Changed - awaiting office (cancel requested)':s;return '<span class="pill '+ORDER_ST[s]+' ordst">'+esc(lab)+'</span>';}
 function ordActor(){return ME?ME.name+' ('+(ME.type==='admin'?'office':(ME.username||ME.email))+')':'system';}
@@ -68,17 +69,17 @@ function diffHtml(d){return '<ul class="chglist">'+d.map(function(x){return '<li
 
 /* validate one set of fields (shared by client and office) */
 function ordCheck(firm,f,o){o=o||{};
-  if(!o.office&&firmCodes(firm).indexOf(f.site)<0)return 'Pick one of your own sites.';
-  if(!f.date)return 'Pick a date.';
+  if(!o.office&&firmCodes(firm).indexOf(f.site)<0)return 'Please pick a site.';
+  if(!f.date)return 'Please pick a date.';
   if(!quarterOk(f.start))return 'Pick a start time on the quarter hour (:00, :15, :30, :45).';
   if(f.end&&!quarterOk(f.end))return 'Pick a finish time on the quarter hour.';
-  if(f.end&&f.hours)return 'Give a finish time OR a number of hours, not both.';
+  if(f.end&&f.hours)return 'Please give a finish time or a number of hours – not both.';
   if(f.hours){var h=+f.hours;if(!(h>0)||h>MAX_SHIFT_H||Math.round(h*4)!==h*4)return 'Hours must be between 0.25 and '+MAX_SHIFT_H+', in quarter hours.';}
   if(f.end){var se=spanErr(f.start,f.end);if(se)return se;}
-  var w=+f.workers;if(!(w>=1)||w!==Math.floor(w)||w>ORDER_MAX_WORKERS)return 'Number of workers must be a whole number from 1 to '+ORDER_MAX_WORKERS+'.';
-  if(!roleOk(firm,f.role))return 'That role has no agreed rate yet – ask the office to add it to your Rate Schedule.';
+  var w=+f.workers;if(!(w>=1)||w!==Math.floor(w)||w>ORDER_MAX_WORKERS)return 'Please enter how many workers you need (a whole number from 1 to '+ORDER_MAX_WORKERS+').';
+  if(!f.role)return 'Please choose the job.';if(!roleOk(firm,f.role))return 'That job has no agreed rate yet – ask the office to add it to your Rate Schedule.';
   if(f.ppe&&GEAR_OPTS.indexOf(f.ppe)<0)return 'Choose who supplies the safety gear (PPE).';
-  if(!o.office&&ordStartMs(f)<=nowMsApp())return 'The start must be in the future.';
+  if(!o.office&&ordStartMs(f)<=nowMsApp())return 'That start time has already passed. Please pick a later date or time.';
   return '';}
 function ordFieldsFrom(d,base){base=base||{};var f={site:d.site||base.site,date:d.date||base.date,start:d.start||base.start,end:d.end||'',hours:d.hours?+d.hours:null,workers:d.workers?+d.workers:base.workers,role:d.role||base.role,ppe:d.ppe||base.ppe,note:d.note!==undefined?String(d.note||'').trim().slice(0,500):(base.note||'')};return f;}
 function ordCanChange(o){var s=ordStatus(o);if(['Declined','Cancelled'].indexOf(s)>=0)return '';if(o.pending&&o.pending.kind==='cancel')return '';var f=o.cur||o.pending&&o.pending.fields;if(!f||ordStartMs(f)<=nowMsApp())return '';return 'ok';}
@@ -96,40 +97,41 @@ FORMS.crewOrder=function(f,d){var firm=ME;var b=orderBlock(firm);if(b){toast(b.w
   notify('admin','New crew order'+(made.length>1?'s ('+made.length+' days)':'')+' from '+firm.name+': '+made.map(function(o){return o.no+' '+o.req.date;}).join(', ')+' – '+base.workers+' × '+orderRoleName(firm,base.role)+' at '+base.site+', start '+base.start+'. Confirm, decline or adjust in Crew orders.');
   notify(firm.id,'We got your crew order '+made.map(function(o){return o.no;}).join(', ')+'. The office will confirm it.');
   PAGE_STATE.coForm=false;save();render();
-  modal(clientWord('<h2 id="orderdone">Order sent ✓</h2><p>Thank you. We got your order'+(made.length>1?'s for '+made.length+' days':'')+':</p><p><b>'+base.workers+' × '+esc(orderRoleName(firm,base.role))+'</b><br>'+made.map(function(o){return esc(shortDay(o.req.date));}).join(', ')+' · start '+esc(base.start)+'<br>'+esc(siteName(base.site))+'</p><p>The office will confirm it soon. You can see it, change it or cancel it under "My crew orders".</p><p><button data-act="closeModal">OK</button></p>',firm));};
+  modal(clientWord('<h2 id="orderdone">Order sent ✓</h2><p>Thank you. We got your order'+(made.length>1?'s for '+made.length+' days':'')+':</p><p><b>'+base.workers+' × '+esc(orderRoleName(firm,base.role))+'</b><br>'+made.map(function(o){return esc(shortDay(o.req.date));}).join(', ')+' · start '+esc(base.start)+'<br>'+esc(siteName(base.site))+'</p>'+ordReplyBox('ordreplydone',ordReplyWhen())+'<p>You can see it, change it or cancel it under "My crew orders".</p><p><button data-act="closeModal">OK</button></p>',firm));};
 ACT.coopen=function(){PAGE_STATE.coForm=!PAGE_STATE.coForm;render();};
 
 /* ---------- client: change ---------- */
-ACT.coedit=function(el){var o=ordById(el.dataset.id);if(!o||o.firmId!==ME.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast('This order can no longer be changed here – please call the office.');return;}
+var ORD_LOCKED='This order can\'t be changed here any more (it has started, is closed, or is being cancelled). Please contact the office.',ORD_LOCKED_CANCEL='This order can\'t be cancelled here any more (it has started, is closed, or is already being cancelled). Please contact the office.';
+ACT.coedit=function(el){var o=ordById(el.dataset.id);if(!o||o.firmId!==ME.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast(ORD_LOCKED);return;}
   var f=(o.pending&&o.pending.kind==='change'&&o.pending.fields)||ordView(o),base=o.cur||f,late=hoursBefore(base)<orderCutoffH();
   modal(clientWord('<h2>Change order</h2><p class="small">'+esc(o.no)+' · '+esc(siteName(f.site))+'</p>'+(o.cur?'<p class="small">Confirmed now: <b>'+shortDay(o.cur.date)+' '+ordTime(o.cur)+' · '+o.cur.workers+' × '+esc(orderRoleName(ME,o.cur.role))+'</b>. This stays until the office says yes to your change.</p>':'')+
   (late?'<div class="alert warn small latewarn"><b>Late change:</b> this starts in less than '+orderCutoffH()+' hours. You can still change it, but late changes may be charged per your agreement.</div>':'')+
   '<form data-form="crewOrderEdit"><input type="hidden" name="id" value="'+o.id+'"><div class="grid2">'+inp('date','Date',f.date,{type:'date',req:true})+qSel('start','Start time',f.start,{req:true})+inp('workers','Number of workers',f.workers,{type:'number',req:true,extra:' min="1" max="'+ORDER_MAX_WORKERS+'" step="1" inputmode="numeric"'})+roleSelect(ME,f.role)+'</div>'+
   '<details class="more"><summary>More options</summary><div class="grid2">'+qSel('end','Finish time (optional)',f.end||'',{blank:'– not set –',hint:'Earlier than the start = next day.'})+inp('hours','…or hours (optional)',f.hours&&!f.end?f.hours:'',{type:'number',extra:' min="0.25" max="16" step="0.25"'})+'</div><label>Note (optional)</label><textarea name="note">'+esc(f.note||'')+'</textarea></details><p><button>Send change</button></p></form>',ME));};
 FORMS.crewOrderEdit=function(f,d){var o=ordById(d.id),firm=ME;if(!o||o.firmId!==firm.id){toast('Not allowed.');audit('Blocked crew order change (not own order)',firm.name);save();return;}
-  if(!ordCanChange(o)){toast('This order can no longer be changed here – please call the office.');return;}
+  if(!ordCanChange(o)){toast(ORD_LOCKED);return;}
   var cur=(o.pending&&o.pending.kind!=='cancel'&&o.pending.fields)||o.cur;var nf=ordFieldsFrom(d,cur);nf.site=cur.site;nf.ppe=cur.ppe;
   var e=ordCheck(firm,nf);if(e){toast(e);return;}
-  var base=o.cur||cur,diff=ordDiff(cur,nf,firm);if(!diff.length){toast('Nothing changed.');return;}
+  var base=o.cur||cur,diff=ordDiff(cur,nf,firm);if(!diff.length){toast('You did not change anything. Change a field, or close this box.');return;}
   var hb=hoursBefore(base),late=hb<orderCutoffH();
   if(!o.cur){o.pending.fields=nf;o.pending.late=o.pending.late||late;if(late)o.pending.lateEdit=true;o.pending.at=new Date().toISOString();ordLog(o,'Request changed before it was confirmed'+(late?' (LATE CHANGE)':''),diffText(diff));}
   else{var fromDiff=ordDiff(o.cur,nf,firm);if(!fromDiff.length){o.pending=null;o.status=o.restore?o.restore.status:'Confirmed';o.restore=null;ordLog(o,'Change request withdrawn (back to the confirmed version)','');save();closeModal();toast('Back to the confirmed order.');render();return;}
     if(!o.pending)o.restore={status:o.status,pending:null};o.pending={kind:'change',fields:nf,prev:o.cur,late:late||!!(o.pending&&o.pending.late),hoursBefore:Math.round(hb*10)/10,at:new Date().toISOString(),by:ordActor()};o.status='Changed - awaiting office';
     ordLog(o,'Change requested'+(late?' (LATE CHANGE – less than '+orderCutoffH()+' h before the start)':''),diffText(fromDiff));diff=fromDiff;}
   notify('admin',(late?'LATE CHANGE – ':'')+'Crew order change from '+firm.name+' ('+o.no+'): '+diffText(diff)+'. Confirm, decline or adjust in Crew orders.');
-  save();closeModal();toast(late?'Change sent (late change).':'Change sent. The office will confirm it.');render();};
+  save();closeModal();toast(late?'Change sent. The office will confirm it. This is a late change, so it may be charged per your agreement.':'Change sent. The office will confirm it.');render();};
 
 /* ---------- client: cancel ---------- */
-ACT.cocancel=function(el){var o=ordById(el.dataset.id);if(!o||o.firmId!==ME.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast('This order can no longer be cancelled here – please call the office.');return;}
+ACT.cocancel=function(el){var o=ordById(el.dataset.id);if(!o||o.firmId!==ME.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast(ORD_LOCKED_CANCEL);return;}
   var base=o.cur||ordView(o),late=hoursBefore(base)<orderCutoffH();
   modal(clientWord('<h2>Cancel this order?</h2><p><b>'+shortDay(base.date)+' '+ordTime(base)+'</b><br>'+base.workers+' × '+esc(orderRoleName(ME,base.role))+' · '+esc(siteName(base.site))+'</p><p class="small">The office confirms the cancellation.</p>'+(late?'<div class="alert warn small latewarn"><b>Late change:</b> this starts in less than '+orderCutoffH()+' hours. You can still cancel, but late changes may be charged per your agreement.</div>':'')+'<form data-form="crewOrderCancel"><input type="hidden" name="id" value="'+o.id+'"><p><button class="danger">Yes, cancel this order</button> <button type="button" class="sec" data-act="closeModal">No, keep it</button></p></form>',ME));};
-FORMS.crewOrderCancel=function(f,d){var o=ordById(d.id),firm=ME;if(!o||o.firmId!==firm.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast('This order can no longer be cancelled here – please call the office.');return;}
+FORMS.crewOrderCancel=function(f,d){var o=ordById(d.id),firm=ME;if(!o||o.firmId!==firm.id){toast('Not allowed.');return;}if(!ordCanChange(o)){toast(ORD_LOCKED_CANCEL);return;}
   var base=o.cur||ordView(o),hb=hoursBefore(base),late=hb<orderCutoffH();
   o.restore={status:o.status,pending:o.pending?JSON.parse(JSON.stringify(o.pending)):null};
   o.pending={kind:'cancel',fields:base,prev:o.cur,late:late,hoursBefore:Math.round(hb*10)/10,reason:String(d.reason||'').slice(0,300),at:new Date().toISOString(),by:ordActor()};o.status='Changed - awaiting office';
   ordLog(o,'Cancellation requested'+(late?' (LATE CHANGE – less than '+orderCutoffH()+' h before the start)':''),d.reason?'Reason: '+d.reason:'');
   notify('admin',(late?'LATE CHANGE – ':'')+'Crew order cancellation from '+firm.name+' ('+o.no+', '+base.site+' '+base.date+' '+base.start+'). Confirm or decline in Crew orders.');
-  save();closeModal();toast(late?'Cancellation sent (late change).':'Cancellation sent. The office will confirm it.');render();};
+  save();closeModal();toast(late?'Cancellation sent. The office will confirm it. This is a late change, so it may be charged per your agreement.':'Cancellation sent. The office will confirm it.');render();};
 
 function roleSelect(firm,cur){var l=orderRoleList(firm),ok=l.filter(function(r){return r.ok;});if(!cur&&ok.length===1)cur=ok[0].key;
   return '<div><label class="req">Job</label><select name="role" required>'+(ok.length===1&&cur?'':'<option value="">– choose –</option>')+l.map(function(r){return '<option value="'+esc(r.key)+'"'+(r.ok?'':' disabled')+(r.key===cur&&r.ok?' selected':'')+'>'+esc(r.label)+(r.ok?'':' – no agreed rate, ask the office')+'</option>';}).join('')+'</select>'+(l.some(function(r){return !r.ok;})?'<div class="hint norate">Jobs without an agreed rate can\'t be ordered – ask the office.</div>':'')+'</div>';}
@@ -149,16 +151,26 @@ function orderForm(firm){var sites=DB.sites.filter(function(s){return s.firmId==
   inp('until','Repeat until (optional)','',{type:'date',hint:'Up to '+ORDER_MAX_DAYS+' days. One order per picked day.'})+
   '<div><label>Repeat on</label><div class="daypick">'+WEEKDAYS.map(function(w){return '<label class="inline"><input type="checkbox" name="days[]" value="'+w[0]+'"'+(w[0]>=1&&w[0]<=5?' checked':'')+'> '+w[1]+'</label>';}).join('')+'</div></div></div>'+
   '<label>Note (optional)</label><textarea name="note" placeholder="e.g. meet at the packing shed"></textarea></details>'+
-  '<p><button type="submit" class="big">Send order</button></p><p class="small muted">Changes less than '+orderCutoffH()+' hours before the start may be charged per your agreement.</p></form></div>';}
-var ORDER_PLAIN={Requested:'Requested – waiting for the office',Confirmed:'Confirmed','Changed - awaiting office':'Changed – waiting for the office',Declined:'Declined',Cancelled:'Cancelled',Filled:'Filled'};
+  ordReplyBox('ordreplyform')+'<p><button type="submit" class="big">Send order</button></p><p class="small muted">Changes less than '+orderCutoffH()+' hours before the start may be charged per your agreement.</p></form></div>';}
+/* Owner, Oct 6 2026: reply promise for crew orders (farm/client views only) */
+var ORDER_REPLY_URGENT='If it\'s urgent, call or text <a href="tel:+19022004888" class="nw">902-200-4888</a> and someone will get back to you.';
+var ORDER_REPLY_HTML='Someone from our office will confirm your order by 9 PM the same day. '+ORDER_REPLY_URGENT;
+/* when: omitted = "the same day" (form, waiting orders); "today" / "tomorrow" on the order-sent confirmation (farm's own clock: before 9 PM = today) */
+function ordReplyBox(id,when){var h=when?'Someone from our office will confirm your order by 9 PM '+when+'. '+ORDER_REPLY_URGENT:ORDER_REPLY_HTML;return '<div class="ordreply"'+(id?' id="'+id+'"':'')+'><span aria-hidden="true">🕑</span> <span>'+h+'</span></div>';}
+function ordReplyWhen(d){d=d||new Date();return d.getHours()<21?'today':'tomorrow';}
+var ORDER_PLAIN={Requested:'Waiting for the office',Confirmed:'Confirmed','Changed - awaiting office':'Change waiting for the office',Declined:'Not accepted',Cancelled:'Cancelled',Filled:'Confirmed – all filled'};
+/* what the office decided, in plain words for the client */
+function ordDecisionText(d){var k=d.kind;if(d.dec==='Declined')return k==='new'?'The office could not accept this order.':k==='change'?'The office did not accept your change – the order stays as it was.':'The office did not accept your cancellation – the order is still on.';
+  if(d.dec==='Adjusted')return k==='new'?'The office changed this order:':'The office changed your request:';return k==='cancel'?'The office confirmed your cancellation.':k==='change'?'The office confirmed your change.':'The office confirmed this order.';}
 function ordCardClient(o,firm){var f=ordView(o),st=ordStatus(o),p=o.pending,sh=ordShift(o),last=o.decisions[o.decisions.length-1];
-  var lab=p&&p.kind==='cancel'?'Cancel – waiting for the office':ORDER_PLAIN[st];
-  var x='<div class="ordcard" data-id="'+o.id+'"><div class="oc-head"><b>'+shortDay(f.date)+' · '+ordTime(f)+'</b><span class="pill '+ORDER_ST[st]+' ordst">'+esc(lab)+'</span>'+(isLateChange(p)?'<span class="pill s-bad latetag">Late change</span>':'')+'</div>'+
-  '<div class="oc-line"><b>'+f.workers+' × '+esc(orderRoleName(firm,f.role))+'</b> · '+esc(siteName(f.site))+(o.cur&&sh?' · <span class="assigned">'+ordAssigned(o)+' of '+o.cur.workers+' workers assigned</span>':'')+'</div>'+
-  (f.note?'<div class="small muted">Note: '+esc(f.note)+'</div>':'');
+  var asg=o.cur&&sh?ordAssigned(o):0,part=st==='Confirmed'&&sh&&asg>0&&asg<o.cur.workers;
+  var lab=p&&p.kind==='cancel'?'Cancellation waiting for the office':part?'Confirmed – partly filled':ORDER_PLAIN[st];
+  var x='<div class="ordcard" data-id="'+o.id+'"><div class="oc-head"><b>'+shortDay(f.date)+' · '+ordTime(f)+'</b><span class="pill '+(part?'s-warn':ORDER_ST[st])+' ordst">'+esc(lab)+'</span>'+(isLateChange(p)?'<span class="pill s-bad latetag">Late change</span>':'')+'</div>'+
+  '<div class="oc-line"><b>'+f.workers+' × '+esc(orderRoleName(firm,f.role))+'</b> · '+esc(siteName(f.site))+(o.cur&&sh?' · <span class="assigned">'+asg+' of '+o.cur.workers+' workers assigned'+(asg<o.cur.workers?' so far':'')+'</span>':'')+'</div>'+
+  (f.note?'<div class="small muted">Note: '+esc(f.note)+'</div>':'')+(st==='Requested'&&!(p&&p.kind==='cancel')?ordReplyBox():'');
   if(p&&p.kind==='change')x+='<div class="pendbox"><b>Your change (waiting for the office):</b>'+diffHtml(ordDiff(o.cur,p.fields,firm))+'</div>';
   if(isLateChange(p))x+='<div class="small latenote">Late change: late changes may be charged per your agreement.</div>';
-  if(last&&(last.comment||last.dec!=='Confirmed'||(last.adjDiff&&last.adjDiff.length)))x+='<div class="small decision">Office '+esc(last.dec.toLowerCase())+(last.kind==='new'?' the order':last.kind==='change'?' your change':' your cancellation')+(last.adjDiff&&last.adjDiff.length?':'+diffHtml(last.adjDiff):'')+(last.comment?' “'+esc(last.comment)+'”':'')+'</div>';
+  if(last&&(last.comment||last.dec!=='Confirmed'||(last.adjDiff&&last.adjDiff.length)))x+='<div class="small decision">'+esc(ordDecisionText(last))+(last.adjDiff&&last.adjDiff.length?diffHtml(last.adjDiff):'')+(last.comment?' <span class="offnote">Note from the office: “'+esc(last.comment)+'”</span>':'')+'</div>';
   if(ordCanChange(o))x+='<div class="row ocbtns"><button class="sec" data-act="coedit" data-id="'+o.id+'">Change</button><button class="danger" data-act="cocancel" data-id="'+o.id+'">Cancel</button></div>';
   x+='<details class="small hist"><summary>History</summary><ul>'+o.history.slice().reverse().map(function(h){return '<li>'+fmtStamp(h.at)+' – '+esc(clientSafe(h.who))+': '+esc(h.action)+(h.detail?' – '+esc(h.detail):'')+'</li>';}).join('')+'</ul></details>';
   return x+'</div>';}
@@ -169,14 +181,14 @@ VIEWS['firm:orders']=function(){var firm=ME,b=orderBlock(firm);
   var x='<h1>Crew orders</h1>';
   if(b)x+='<div class="alert bad" id="orderblocked"><b>You can\'t order crews yet.</b> '+esc(b.why)+'<div><b>What to do:</b> '+esc(b.fix)+'</div></div>';
   else x+='<button class="big" id="orderbtn" data-act="coopen">'+(PAGE_STATE.coForm?'Close':'＋ Order a crew')+'</button>'+(PAGE_STATE.coForm?orderForm(firm):'');
-  x+='<h2 id="myorders">My crew orders</h2>'+(open.length?'<div id="orderlist">'+open.map(function(o){return ordCardClient(o,firm);}).join('')+'</div>':'<p class="muted" id="orderlist">No upcoming orders.</p>');
+  x+='<h2 id="myorders">My crew orders</h2>'+(open.length?'<div id="orderlist">'+open.map(function(o){return ordCardClient(o,firm);}).join('')+'</div>':'<p class="muted msg-empty" id="orderlist">No upcoming crew orders.'+(b?'':' Tap “＋ Order a crew” to send one.')+'</p>');
   if(closed.length)x+='<details class="pastorders"><summary>Past and cancelled orders ('+closed.length+')</summary>'+closed.map(function(o){return ordCardClient(o,firm);}).join('')+'</details>';
   x+='<p class="small muted">Worker names are never shown – only how many are assigned.</p>';
   return clientWord(x,firm);};
 NAV.firm.splice(1,0,['#/orders','Crew orders']);
 /* short card on the client home page */
 (function(){var oh=VIEWS['firm:home'];VIEWS['firm:home']=function(){var b=orderBlock(ME),mine=ordersOf(ME),pend=mine.filter(function(o){return o.pending;}).length;
-  var card='<div class="card" id="ordercard"><a class="btn big" href="#/orders">'+(b?'Crew orders (not available yet)':'＋ Order a crew')+'</a>'+(pend?' <span class="small">'+pend+' order(s) waiting for the office</span>':'')+'</div>';
+  var card='<div class="card" id="ordercard"><a class="btn big" href="#/orders">'+(b?'Crew orders (not available yet)':'＋ Order a crew')+'</a>'+(pend?' <span class="small">'+pend+' order'+(pend===1?'':'s')+' waiting for the office</span>':'')+'</div>';
   return clientWord(card,ME)+oh();};})();
 /* ---------- office: queue ---------- */
 NAV.admin.splice((function(){for(var i=0;i<NAV.admin.length;i++)if(NAV.admin[i][0]==='#/farmchanges')return i+1;return NAV.admin.length;})(),0,['#/creworders','Crew orders']);
@@ -207,7 +219,7 @@ VIEWS['admin:creworders']=function(){var st=PAGE_STATE.cof||{tab:'pending'};var 
   return '<h1>Crew orders</h1><p class="small muted">Orders from approved clients with a signed agreement. Every new order, change and cancellation waits here for you to confirm, decline or adjust (with a comment). The client\'s confirmed version only changes when you approve. Changes or cancels less than <b>'+orderCutoffH()+' h</b> before the start are flagged "Late change" (cut-off in <a href="#/settings">Settings</a>). A confirmed order can be turned into a normal shift so crews are assigned the usual way. Clients never see worker names.</p>'+
   '<div class="row cotabs">'+tabs.map(function(t){return '<button class="small '+(st.tab===t[0]?'':'sec')+'" data-act="cofilter" data-t="'+t[0]+'">'+t[1]+' ('+cnt(t[0])+')</button>';}).join('')+'</div>'+
   '<details class="codatebox"'+(st.from||st.to?' open':'')+'><summary class="small">Filter by date</summary><form data-form="codates" class="row card" style="margin-top:8px"><div><label>Order date from</label><input type="date" name="from" value="'+esc(st.from||'')+'"></div><div><label>to</label><input type="date" name="to" value="'+esc(st.to||'')+'"></div><div style="align-self:flex-end"><button class="small">Filter by date</button> <button class="small sec" data-act="coclear">Clear</button></div></form></details>'+
-  (function(){var l=coFilterList(st);return l.length?'<div id="coqueue">'+l.map(ordCardOffice).join('')+'</div>':'<p class="muted" id="coqueue">Nothing here.</p>';})()+'<p class="small muted">'+all.length+' order(s) in total.</p>';};
+  (function(){var l=coFilterList(st);return l.length?'<div id="coqueue">'+l.map(ordCardOffice).join('')+'</div>':'<p class="muted" id="coqueue">No crew orders match this filter.</p>';})()+'<p class="small muted">'+all.length+' order(s) in total.</p>';};
 ACT.cofilter=function(el){var st=PAGE_STATE.cof||{};st.tab=el.dataset.t;PAGE_STATE.cof=st;render();};
 FORMS.codates=function(f,d){if(d.from&&d.to&&d.from>d.to){toast('"From" must be before "to".');return;}var st=PAGE_STATE.cof||{tab:'pending'};st.from=d.from;st.to=d.to;PAGE_STATE.cof=st;render();};
 ACT.coclear=function(){var st=PAGE_STATE.cof||{tab:'pending'};st.from='';st.to='';PAGE_STATE.cof=st;render();};
@@ -225,7 +237,7 @@ ACT.codec=function(el){var o=ordById(el.dataset.id);if(!o||!o.pending)return;var
   o.decisions.push(rec);
   var what=p.kind==='new'?'new order':p.kind==='change'?'change':'cancellation';
   ordLog(o,'Office '+dec.toLowerCase()+' '+what+(isLateChange(p)?' (late change)':''),(rec.adjDiff&&rec.adjDiff.length?'Adjusted: '+diffText(rec.adjDiff)+'. ':'')+(before&&applied&&diff.length?'Confirmed version: '+diffText(diff)+'. ':'')+(comment?'Comment: '+comment:''));
-  notify(o.firmId,'Crew order '+o.no+': the office '+dec.toLowerCase()+' your '+what+(rec.adjDiff&&rec.adjDiff.length?' ('+diffText(rec.adjDiff)+')':'')+'.'+(comment?' Comment: '+comment:'')+(isLateChange(p)?' Recorded as a late change – late changes may be charged per your agreement.':''));
+  notify(o.firmId,'Crew order '+o.no+': the office '+(({Confirmed:'confirmed',Adjusted:'changed',Declined:'could not accept'})[dec]||dec.toLowerCase())+' your '+what+(rec.adjDiff&&rec.adjDiff.length?' ('+diffText(rec.adjDiff)+')':'')+'.'+(comment?' Note from the office: '+comment:'')+(isLateChange(p)?' Recorded as a late change – late changes may be charged per your agreement.':''));
   save();toast('Decision saved.');render();};
 function syncOrderShift(o){var s=ordShift(o);if(!s)return;var c=o.cur,old=s.date+' '+s.start+'–'+s.end+' ×'+s.needed;s.date=c.date;s.start=c.start;var e=ordEnd(c);if(e)s.end=e;s.needed=c.workers;s.role=shiftRoleOf(c.role);s.orderRole=c.role;
   var now=s.date+' '+s.start+'–'+s.end+' ×'+s.needed;if(old===now)return;ordLog(o,'Booking updated from the confirmed order',old+' → '+now);

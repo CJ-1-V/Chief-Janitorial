@@ -1,0 +1,17 @@
+/* Friendly messages (2026-10-06) */
+.netbanner{position:fixed;left:0;right:0;top:0;z-index:3000;background:#7a4b00;color:#fff;padding:10px 14px;font-size:15px;line-height:1.35;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.netbanner b{color:#fff}
+#screenerr{margin:16px 0}
+.msg-empty{color:#555;background:#f6f7f5;border:1px dashed #cfd6cc;border-radius:10px;padding:14px 16px;margin:10px 0}
+.alert.cantclock{font-size:15px}
+.alert.cantclock .why{display:block;margin-top:4px}
+@media (max-width:640px){.netbanner{font-size:14px;padding:9px 10px}}
+/* crew table: Save never wraps one letter per line */
+#crewtable .crewsave{white-space:nowrap;min-width:64px}
+#crewtable td:last-child{min-width:72px}
+/* phone: the sticky Clock in button must not cover the last site tiles */
+@media (max-width:640px){.sticky-cta:has(#clockinBtn:disabled){position:static;background:none}}
+/* crew orders: office reply promise + phone (owner, Oct 6 2026) */
+.ordreply{display:flex;gap:8px;align-items:flex-start;background:#eef6ff;border:1px solid #b9d6f2;color:#1c3d5a;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:15px;line-height:1.4}
+.ordreply a{font-weight:700;white-space:nowrap;color:#1c3d5a}
+.ordcard .ordreply{font-size:14px;padding:8px 10px;margin:8px 0 4px}

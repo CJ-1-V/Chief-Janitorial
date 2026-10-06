@@ -1,0 +1,91 @@
+/* Bouncing-square loader + motion polish (Oct 6, 2026; test copy + live). Style copied from the original unscramble.ca
+   page loader (old theme assets/css/style.css ".preloader": 50px square, .5s linear infinite bounce that
+   rolls 90deg per hop and squashes at the bottom, with a soft shadow that widens), recoloured to UnScramble
+   indigo #332E57 / gold #D9A03C. Works with js/v2-bounce-motion.js. Turn off: see /workspace/us-motion/NOTES.md.
+   Only transform/opacity are animated (no layout jank). prefers-reduced-motion: no bounce, no motion. */
+
+/* ---- 1. Full-screen loader. Drawn with pseudo-elements so it shows from the very first paint, before any
+   script runs. html::before = white cover, body::before = shadow, body::after = square. The JS adds
+   html.usb-done (fade out) then html.usb-gone. A CSS-only safety fade at 3.6-4 s means it can never stick. */
+html::before, body::before, body::after { content: ""; position: fixed; pointer-events: none;
+  animation: usb-autohide .4s ease 3.6s forwards; transition: opacity .4s ease, visibility 0s linear .4s; }
+html::before { inset: 0; background: #fff; z-index: 2147483000; pointer-events: auto; }
+body::before, body::after { font-size: 50px; width: 1em; left: calc(50% - .5em); z-index: 2147483001; }
+body::after { height: 1em; top: calc(50% - .75em); background: #332e57; border-radius: .06em;
+  animation: usb-bounce .5s linear infinite, usb-autohide .4s ease 3.6s forwards; }
+body::before { height: .1em; top: calc(50% - .75em + 1.18em); background: #000; opacity: .1; border-radius: 50%;
+  animation: usb-shadow .5s linear infinite, usb-autohide .4s ease 3.6s forwards; }
+html.usb-done::before, html.usb-done body::before, html.usb-done body::after { opacity: 0; visibility: hidden; pointer-events: none; }
+html.usb-done::before { animation: none; }
+html.usb-gone::before, html.usb-gone body::before, html.usb-gone body::after,
+html.usb-off::before, html.usb-off body::before, html.usb-off body::after { content: none; display: none; }
+
+/* Keyframes copied from unscramble.ca (px converted to em on a 50px square: 9px=.18em, 18px=.36em,
+   3px=.06em, 40px=.8em), so the same bounce works at any size. */
+@keyframes usb-bounce {
+  17% { border-bottom-right-radius: .06em; }
+  25% { transform: translateY(.18em) rotate(22.5deg); }
+  50% { transform: translateY(.36em) scale(1, .9) rotate(45deg); border-bottom-right-radius: .8em; }
+  75% { transform: translateY(.18em) rotate(67.5deg); }
+  100% { transform: translateY(0) rotate(90deg); }
+}
+@keyframes usb-shadow { 50% { transform: scale(1.2, 1); } }
+@keyframes usb-autohide { to { opacity: 0; visibility: hidden; } }
+
+/* ---- 2. Small inline bouncing square (busy indicator). <span class="usb-sq"><i></i></span>
+   Uses currentColor so it shows on gold, white and indigo buttons. */
+.usb-sq { display: inline-block; position: relative; width: 1em; height: 1.45em; font-size: 11px;
+  vertical-align: middle; margin: -.3em .55em 0 .1em; flex: none; }
+.usb-sq > i { position: absolute; left: 0; top: .05em; width: 1em; height: 1em; background: currentColor;
+  border-radius: .06em; animation: usb-bounce .5s linear infinite; }
+.usb-sq::after { content: ""; position: absolute; left: 0; top: 1.23em; width: 1em; height: .14em;
+  background: currentColor; opacity: .18; border-radius: 50%; animation: usb-shadow .5s linear infinite; }
+button.usb-busy, .btn.usb-busy { cursor: progress; }
+
+/* Floating "Saving…" chip for work that is not tied to one button (fetch, file reading, saves). */
+#usb-chip { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 2147482000;
+  display: flex; align-items: center; gap: 2px; background: #fff; color: #332e57; font-weight: 600; font-size: 13px; line-height: 1;
+  font-family: inherit; padding: 9px 14px 9px 12px; border-radius: 999px; border: 1px solid rgba(51, 46, 87, .12);
+  box-shadow: 0 8px 24px rgba(24, 20, 56, .16); pointer-events: none;
+  opacity: 0; transform: translateY(-8px); transition: opacity .2s ease, transform .25s cubic-bezier(.2, .8, .2, 1); }
+#usb-chip.on { opacity: 1; transform: none; }
+#usb-chip .usb-sq { color: #332e57; }
+#usb-chip .usb-sq::after { background: #d9a03c; opacity: .55; }
+
+/* ---- 3. Motion polish (only with html.motion, set by js/v2-motion.js; adds to css/motion.css; off with html.usb-off). */
+/* After the loader fades, the screen rises in (same rise as unscramble.ca: 16px, ease). */
+@keyframes usb-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+html.motion:not(.usb-off) #app.usb-reveal header.top, html.motion:not(.usb-off) #app.usb-reveal nav.tabs { animation: usb-fade .35s ease both !important; }
+html.motion:not(.usb-off) #app.usb-reveal #main > * { animation: usb-rise .5s cubic-bezier(.2, .8, .2, 1) both !important;
+  animation-delay: calc(.05s + var(--mi, 0) * .06s) !important; }
+@keyframes usb-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Smooth open/close of collapsible sections (details). Browsers without ::details-content just snap open. */
+@supports selector(::details-content) {
+  html.motion:not(.usb-off) details { interpolate-size: allow-keywords; }
+  html.motion:not(.usb-off) details::details-content { block-size: 0; opacity: 0; overflow: clip; overflow-clip-margin: 6px;
+    transition: block-size .28s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, content-visibility .28s allow-discrete; }
+  html.motion:not(.usb-off) details[open]::details-content { block-size: auto; opacity: 1; }
+}
+html.motion:not(.usb-off) details > summary::marker { transition: color .2s ease; }
+
+/* Press feedback: a small squeeze when tapped/clicked (on top of the hover lift in css/motion.css). */
+html.motion:not(.usb-off) button, html.motion:not(.usb-off) .btn, html.motion:not(.usb-off) summary.btnlike { transition: transform .16s cubic-bezier(.2, .8, .2, 1), box-shadow .18s ease, background-color .18s ease; }
+html.motion:not(.usb-off) button:not(:disabled):active, html.motion:not(.usb-off) .btn:active, html.motion:not(.usb-off) summary.btnlike:active { transform: translateY(0) scale(.96); transition-duration: .06s; }
+html.motion:not(.usb-off) nav.tabs a { transition: color .18s ease, border-color .25s ease; }
+
+/* Toasts slide up from the bottom and fade out just before they are removed (app removes them at 3.2 s).
+   Keeps the app's centring (translateX(-50%)). */
+@keyframes usb-toast-in { from { opacity: 0; transform: translate(-50%, 18px) scale(.97); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes usb-toast-out { to { opacity: 0; transform: translate(-50%, 10px); } }
+html.motion:not(.usb-off) .toast { animation: usb-toast-in .34s cubic-bezier(.2, .8, .2, 1) both, usb-toast-out .3s ease 2.85s forwards; }
+
+/* Pop-up backdrop fades in (the box itself already pops in via css/motion.css). */
+html.motion:not(.usb-off) .modal-bg { animation: usb-fade .2s ease both; }
+
+/* ---- 4. Reduced motion: no loader, no bounce (busy square stays, standing still), no movement. */
+@media (prefers-reduced-motion: reduce) {
+  html::before, body::before, body::after { content: none; display: none; }
+  .usb-sq > i, .usb-sq::after { animation: none; }
+  #usb-chip { transition: opacity .01s; transform: none; }
+}

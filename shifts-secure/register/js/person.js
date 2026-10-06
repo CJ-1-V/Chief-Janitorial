@@ -4,9 +4,14 @@ NAV.worker=[['#/home','My checklist'],['#/register','My details'],['#/docs','Doc
 NAV.employee=[['#/home','My checklist'],['#/register','Registration & payroll'],['#/docs','Documents'],['#/safety','Safety training'],['#/availability','Availability'],['#/hours','My hours'],['#/alerts','Alerts'],['#/terms','Terms'],['#/profile','Profile']];
 NAV.tester=[['#/home','Start'],['#/demo','Try registration screens'],['#/shifts','Practice shifts'],['#/hours','Test hours'],['#/invoices','Test invoices'],['#/myfeedback','My feedback'],['#/terms','Terms'],['#/profile','Profile']];
 function hrs(a,b){if(!a||!b)return 0;var x=a.split(':'),y=b.split(':');return Math.max(0,((+y[0])*60+(+y[1])-(+x[0])*60-(+x[1]))/60);}
-function checklistHtml(u){var R=requirements(u),todo=R.filter(function(r){return !r.ok&&r.st.s!=='Optional';});
-  return (todo.length?'<div class="alert warn"><b>'+todo.length+' item(s) to finish</b> before you can '+(u.type==='employee'?'clock in':u.type==='worker'?'clock in or be placed on a crew':'supply workers')+'.</div>':'<div class="alert ok"><b>All set.</b> Everything required is complete and valid.</div>')+
-  '<div class="card"><ul class="check">'+R.map(function(r){return '<li>'+pill(r.st)+'<div><b>'+esc(r.label)+'</b>'+(!r.ok&&r.msg?'<div class="small">'+esc(r.msg)+' '+(r.fix&&r.fix!=='#/home'?'<a href="'+r.fix+'">Fix it →</a>':'')+'</div>':'')+(r.st.ex?'<div class="small muted">Expiry / due: '+esc(r.st.ex)+'</div>':'')+'</div></li>';}).join('')+'</ul></div>';}
+function empWait(r){return /^Your employer must/.test(r.msg||'');}
+function checklistHtml(u){var R=requirements(u),todo=R.filter(function(r){return !r.ok&&r.st.s!=='Optional';}),wait=todo.filter(empWait),mineN=todo.length-wait.length,pl=function(n){return n+' item'+(n===1?'':'s');};
+  var head;if(u.type==='worker'||u.type==='employee'){var ready=typeof readyForClock==='function'&&readyForClock(u);
+    head=!todo.length?(ready?'<div class="alert ok"><b>All set ✓</b> Everything is complete.</div>':'<div class="alert ok"><b>Your part is done ✓</b> Everything you need to do is complete.</div>')
+      :'<div class="alert warn" id="todocount">'+(mineN?'<b>'+pl(mineN)+' for you to finish</b>'+(ready?' – please do them soon.':'.'):'<b>Nothing for you to do right now.</b>')+(wait.length?' '+pl(wait.length)+' waiting for your employer.':'')+'</div>';}
+  else head=todo.length?'<div class="alert warn"><b>'+todo.length+' item(s) to finish</b> before you can supply workers.</div>':'<div class="alert ok"><b>All set.</b> Everything required is complete and valid.</div>';
+  return head+
+  '<div class="card"><ul class="check">'+R.map(function(r){return '<li>'+pill(r.st)+'<div><b>'+esc(r.label)+'</b>'+(!r.ok&&r.msg?'<div class="small">'+(empWait(r)?'Waiting for your employer – nothing for you to do.':esc(r.msg)+' '+(r.fix&&r.fix!=='#/home'?'<a href="'+r.fix+'">Start →</a>':''))+'</div>':'')+(r.st.ex?'<div class="small muted">Expiry / due: '+esc(r.st.ex)+'</div>':'')+'</div></li>';}).join('')+'</ul></div>';}
 
 VIEWS['worker:home']=VIEWS['employee:home']=function(){var u=ME;
   var x='<h1>Hello, '+esc((u.profile&&u.profile.preferredName)||u.name.split(' ')[0])+'</h1><p>Your employer: <b>'+esc(employerName(u))+'</b>'+(u.type==='worker'?' <span class="small muted">(your employer is your subcontractor – not UnScramble and not the farm)</span>':'')+'</p>';
@@ -17,7 +22,7 @@ VIEWS['worker:home']=VIEWS['employee:home']=function(){var u=ME;
 
 /* ---------- Registration (worker / employee) ---------- */
 VIEWS['worker:register']=function(){var u=ME,p=u.profile||{};
-  return '<h1>My details</h1><div class="card"><form data-form="regWorker"><div class="grid2">'+inp('name','Legal name (as on ID)',u.name,{req:true})+sel('lang','Preferred language',LANGS,p.lang,{req:true,blank:true})+inp('email','Email',u.email,{type:'email',hint:'Email or username is used to sign in.'})+inp('phone','Phone (optional)',u.phone,{type:'tel'})+'</div>'+
+  return '<h1>My details</h1><div class="card"><form data-form="regWorker"><div class="grid2">'+inp('name','Legal name (as on ID)',u.name,{req:true})+sel('lang','Preferred language',LANGS,p.lang,{req:true,blank:true})+inp('email','Email',u.email,{type:'email',hint:'You can sign in with your email, phone or username.'})+inp('phone','Phone (optional)',u.phone,{type:'tel'})+'</div>'+
   '<fieldset><legend>Emergency contact</legend><div class="grid2">'+inp('emName','Name',p.emName,{req:true})+inp('emRel','Relationship',p.emRel,{req:true})+inp('emContact','Phone or email',p.emContact,{req:true})+'</div></fieldset>'+
   rolesField(u)+'<div class="alert info small">UnScramble does not ask for or store your SIN. Your employer ('+esc(employerName(u))+') keeps it.</div><button>Save</button></form></div>';};
 function rolesField(u){return '<fieldset><legend>Special jobs (optional)</legend>'+chk('roles[]','Driver (needs a valid licence of the right class)',hasRole(u,'driver'),{value:'driver'})+chk('roles[]','Forklift operator (needs certification)',hasRole(u,'forklift'),{value:'forklift'})+chk('roles[]','Machinery operator (needs certification)',hasRole(u,'machinery'),{value:'machinery'})+'</fieldset>';}
@@ -85,7 +90,7 @@ function docsPage(u){var x='';
     if(hist.length)x+='<div class="small" style="margin:6px 0">'+hist.slice(0,3).map(function(h){return '<a href="#" data-act="viewdoc" data-id="'+h.id+'">'+esc(h.fileName)+'</a> <span class="muted">('+esc(h.status)+', uploaded '+fmtStamp(h.uploadedAt)+')</span>';}).join('<br>')+'</div>';
     x+='<details><summary class="small" style="cursor:pointer;color:var(--p2)">'+(d?'Upload a new one':'Upload')+'</summary><form data-form="upload"><input type="hidden" name="kind" value="'+k+'"><input type="hidden" name="uid" value="'+u.id+'"><div class="grid2">'+docMetaFields(k)+'<div><label class="req">File (photo or PDF, max 1.5 MB)</label><input type="file" name="file" accept="image/*,application/pdf" required></div></div><button>Upload</button></form></details></div>';});
   return x;}
-VIEWS['worker:docs']=VIEWS['employee:docs']=function(){return '<h1>My documents</h1><p class="small muted">The office reviews every upload before it counts as Valid. Stored only in this browser for the test.</p>'+docsPage(ME);};
+VIEWS['worker:docs']=VIEWS['employee:docs']=function(){var d=docsPage(ME);return '<h1>My documents</h1>'+(docKindsFor(ME).length?'<p class="small muted">The office checks every upload before it counts.</p>':'')+(d||'<div class="msg-empty" id="docsempty"><b>No documents needed for your job.</b> Nothing to do here. If your job changes, update it in My details.</div>');};
 FORMS.upload=function(f,d){var u=user(d.uid);if(!u||(u.id!==ME.id&&ME.type!=='admin')){toast('Not allowed.');return;}
   if(d.kind==='cgl'&&Number(d.coverage)<2000000){toast('Coverage must be at least $2,000,000 per occurrence.');return;}
   if(d.kind==='eligibility'&&d.docType==='permit'&&!d.expiry){toast('Work permits need an expiry date.');return;}
