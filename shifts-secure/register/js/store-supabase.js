@@ -180,6 +180,11 @@
     finally { LOADING = false; }
   }
   window.REG_REFRESH = refresh;
+  // signinload1 (Oct 6 2026): count reads that are still loading the account (sign-in, page load, refresh). The 2-second
+  // check below signs out when SIGNED_IN is set but ME is not (idle sign-out); during a sign-in / page load ME is not set
+  // YET, so a tick landing inside the read used to sign the person out again in the background.
+  var _loadSnapshot = loadSnapshot, SNAP_BUSY = 0;
+  loadSnapshot = async function () { SNAP_BUSY++; try { return await _loadSnapshot.apply(this, arguments); } finally { SNAP_BUSY--; } };
 
   /* ---------- saving: only what changed, in the background ---------- */
   save = function () { if (SUSPEND || !SIGNED_IN || !ME) return true; clearTimeout(TIMER); TIMER = setTimeout(flush, 300); return true; };
@@ -357,7 +362,6 @@
       '<form data-form="login">' + inp('login', 'Email, phone number or username', '', { req: true, extra: ' data-autofocus autocomplete="username"' }) + inp('password', 'Password', '', { type: 'password', req: true, extra: ' autocomplete="current-password"' }) +
       '<div class="row" style="margin-top:12px"><button type="submit">Sign in</button><a href="#/forgot" class="right small">Forgot password?</a></div></form>' +
       '<p class="small muted">Same login as Shift Tracker.</p>' +
-      '<p class="small muted">Applying to clean for Chief Janitorial? Use the <a href="../">CJ Shift Tracker</a> instead.</p>' +
       '<div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px"><span class="muted small">New here?</span><br><a class="btn" href="#/signup" style="margin-top:6px">Create an account</a></div></div></div>';
   };
   VIEWS.forgot = function () {
@@ -398,7 +402,7 @@
     await loadPublic(); if (msg) PAGE_STATE.loginMsg = msg; go('#/');
   }
   // the idle timer (security.js) clears ME after 30 minutes: also end the real session and wipe the data from memory
-  setInterval(function () { if (SIGNED_IN && !ME) { var m = PAGE_STATE.loginMsg; signOutLocal(m); } }, 2000);
+  setInterval(function () { if (SIGNED_IN && !ME && !SNAP_BUSY) { var m = PAGE_STATE.loginMsg; signOutLocal(m); } }, 2000);
   ACT.resetData = function () {};
   ACT.quick = function () {};
 

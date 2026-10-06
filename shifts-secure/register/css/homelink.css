@@ -1,0 +1,31 @@
+/* "Home" link back to unscramble.ca (signinload1 add-on, Oct 6, 2026). Works with js/v2-homelink.js.
+   Navy brand: on the navy header it is an outlined button like "Sign out"; in the Menu it is a navy-outlined button. */
+.ush { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600; line-height: 1; white-space: nowrap; }
+.ush .ush-ic { flex: none; display: block; }
+header.top .ush-hdr, .emp .topbar .ush-top { color: #fff; background: transparent; border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 8px; padding: 6px 11px; font-size: 13px; min-height: 30px; box-sizing: border-box; }
+header.top .ush-hdr:hover, .emp .topbar .ush-top:hover { background: rgba(255, 255, 255, .1); color: #fff; text-decoration: none; }
+.ush:focus-visible, .ush-logo:focus-visible { outline: 2px solid #d9a03c; outline-offset: 2px; }
+header.top .ush-who { margin-left: auto; display: flex; align-items: center; }
+/* Menu (phones): navy-outlined, full width, above Sign out */
+.ush-menu { display: flex; justify-content: center; width: 100%; box-sizing: border-box; margin-top: 12px; padding: 11px 14px;
+  border: 1px solid #332e57; border-radius: 8px; color: #332e57; background: #fff; font-size: 15px; }
+.ush-menu:hover { background: #efedf7; color: #332e57; text-decoration: none; }
+/* Logos on the sign-in page */
+.ush-logo { display: block; text-decoration: none; border-radius: 6px; }
+header.top .ush-logo-hdr { display: inline-block; flex: none; }
+.ush-logo-big { width: 70%; max-width: 260px; margin: 0 auto 10px; }   /* same size as .logo-big in css/app.css */
+.ush-logo-big .logo-big { width: 100%; max-width: none; margin: 0; }
+/* Phones (390px): short label, still a clear button with the house icon */
+@media (max-width: 640px) {
+  header.top .ush-hdr, .emp .topbar .ush-top { padding: 6px 9px; font-size: 12px; min-height: 30px; }
+}
+@media (max-width: 420px) {
+  header.top .who .ush-hdr .ush-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  header.top .who .ush-hdr { padding: 6px 8px; }
+  header.top .who .ush-hdr::after { content: "Home"; }
+  header.top .ush-who .ush-hdr .ush-t { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
+  header.top .ush-who .ush-hdr::after { content: none; }
+}
+/* Signed-out header (sign-in, forgot password): "Home – unscramble.ca"; on narrow phones just "Home" */
+@media (max-width: 360px) { header.top .ush-who .ush-x { display: none; } }

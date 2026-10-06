@@ -20,6 +20,23 @@ html.usb-done::before { animation: none; }
 html.usb-gone::before, html.usb-gone body::before, html.usb-gone body::after,
 html.usb-off::before, html.usb-off body::before, html.usb-off body::after { content: none; display: none; }
 
+/* ---- 1b. Same loader while signing in and while a saved sign-in is restored (signinload1, Oct 6 2026).
+   js/v2-bounce-motion.js adds html.usb-wait from the moment the sign-in form is sent (and on a page load) until the
+   signed-in screen (or the sign-in error message) is drawn. Same white cover + navy square as above, never dark.
+   Comes after section 1 so it wins over usb-done/usb-gone. The CSS 3.6 s auto-hide is paused while JS holds it
+   (JS always removes it: when the screen is drawn, on an error, or at its own 15 s safety stop).
+   html.usb-wait-in = soft fade-in (sign-in only); html.usb-wait-out = fade-out before the classes are removed. */
+@keyframes usb-wait-fade { from { opacity: 0; } }
+html.usb-wait::before, html.usb-wait body::before, html.usb-wait body::after { content: ""; display: block; visibility: visible; transition: none; }
+html.usb-wait::before { opacity: 1; background: #fff; pointer-events: auto; cursor: progress;
+  animation: usb-autohide .4s ease 3.6s forwards; animation-play-state: paused; }
+html.usb-wait body::after { opacity: 1; animation: usb-bounce .5s linear infinite, usb-autohide .4s ease 3.6s forwards; animation-play-state: running, paused; }
+html.usb-wait body::before { opacity: .1; animation: usb-shadow .5s linear infinite, usb-autohide .4s ease 3.6s forwards; animation-play-state: running, paused; }
+html.usb-wait.usb-wait-in::before { animation: usb-wait-fade .16s ease; }
+html.usb-wait.usb-wait-out::before, html.usb-wait.usb-wait-out body::before, html.usb-wait.usb-wait-out body::after {
+  opacity: 0; pointer-events: none; transition: opacity .24s ease; }
+html.usb-wait.usb-wait-out::before { animation: none; }
+
 /* Keyframes copied from unscramble.ca (px converted to em on a 50px square: 9px=.18em, 18px=.36em,
    3px=.06em, 40px=.8em), so the same bounce works at any size. */
 @keyframes usb-bounce {
@@ -41,6 +58,18 @@ html.usb-off::before, html.usb-off body::before, html.usb-off body::after { cont
 .usb-sq::after { content: ""; position: absolute; left: 0; top: 1.23em; width: 1em; height: .14em;
   background: currentColor; opacity: .18; border-radius: 50%; animation: usb-shadow .5s linear infinite; }
 button.usb-busy, .btn.usb-busy { cursor: progress; }
+
+/* The data layer's own note ("Signing in…", "Creating your account…", "Checking your answers…": #reg-busy in
+   js/store-supabase.js, class .toast, pinned with top:12px). .toast also has bottom:22px, so the note stretched into a
+   tall near-black panel from the top to the bottom of the screen (the "black screen" after pressing Sign in).
+   signinload1: a small light chip at the top with the bouncing square, like #usb-chip; it no longer fades out at 3 s. */
+#reg-busy.toast { bottom: auto; display: flex; align-items: center; gap: 8px; white-space: nowrap; max-width: calc(100vw - 24px);
+  background: #fff; color: #332e57; font-weight: 600; font-size: 13px; line-height: 1.2; padding: 9px 14px 9px 12px; border-radius: 999px;
+  border: 1px solid rgba(51, 46, 87, .12); box-shadow: 0 8px 24px rgba(24, 20, 56, .16); }
+#reg-busy.toast::before { content: ""; flex: none; font-size: 11px; width: 1em; height: 1em; margin: -.36em 0 0; background: #332e57;
+  border-radius: .06em; animation: usb-bounce .5s linear infinite; }
+@keyframes usb-busy-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.motion #reg-busy.toast, html.motion:not(.usb-off) #reg-busy.toast { animation: usb-busy-in .25s cubic-bezier(.2, .8, .2, 1) both; }
 
 /* Floating "Saving…" chip for work that is not tied to one button (fetch, file reading, saves). */
 #usb-chip { position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 2147482000;
@@ -83,9 +112,13 @@ html.motion:not(.usb-off) .toast { animation: usb-toast-in .34s cubic-bezier(.2,
 /* Pop-up backdrop fades in (the box itself already pops in via css/motion.css). */
 html.motion:not(.usb-off) .modal-bg { animation: usb-fade .2s ease both; }
 
-/* ---- 4. Reduced motion: no loader, no bounce (busy square stays, standing still), no movement. */
+/* ---- 4. Reduced motion: no loader (also none while signing in: the sign-in page stays, with the light "Signing in…"
+   chip and a standing-still square), no bounce (busy square stays, standing still), no movement. */
 @media (prefers-reduced-motion: reduce) {
   html::before, body::before, body::after { content: none; display: none; }
+  html.usb-wait::before, html.usb-wait body::before, html.usb-wait body::after { content: none; display: none; }
+  #reg-busy.toast::before { animation: none; margin: 0; }
+  .motion #reg-busy.toast, html.motion:not(.usb-off) #reg-busy.toast { animation: none; }
   .usb-sq > i, .usb-sq::after { animation: none; }
   #usb-chip { transition: opacity .01s; transform: none; }
 }

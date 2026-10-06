@@ -5,7 +5,10 @@
      disabled with "Saving…"-style text), and a small "Saving…" chip for fetch/XHR calls, file reading, and saves.
    - No other file is changed: hooks wrap afterRender, fetch, XMLHttpRequest and FileReader, and listen to events.
    Off switch: add ?motion=off to the address, or localStorage 'us-motion-off' = '1', or remove the 2 lines in index.html.
-   prefers-reduced-motion: no loader, busy square stands still. */
+   prefers-reduced-motion: no loader, busy square stands still.
+   signinload1 (Oct 6, 2026): the same full-screen loader also shows from the moment the sign-in form is sent until the
+   signed-in screen is drawn (a wrong login hides it and the usual message shows), and on a page load it stays up until
+   the first real screen is drawn (saved sign-in restored) instead of being cut off at 4 s. See section 1b. */
 (function(){
   var W=window,D=document,H=D.documentElement;
   var off=false;try{off=/[?&#]motion=off\b/.test(location.search+location.hash)||localStorage.getItem('us-motion-off')==='1';}catch(e){}
@@ -18,7 +21,7 @@
   /* ---------- 1. Full-screen loader ---------- */
   function gone(){H.classList.add('usb-gone');}
   function hideLoader(){
-    if(hidden)return;hidden=true;
+    if(hidden)return;hidden=true;dropBoot();
     if(off||reduced()){H.classList.add('usb-done');gone();return;}
     H.classList.add('usb-done');reveal();setTimeout(gone,FADE+80);
   }
@@ -39,13 +42,68 @@
   }
   if(off){H.classList.add('usb-off');hidden=true;}
   else if(reduced()){hidden=true;H.classList.add('usb-done');gone();}
-  setTimeout(hideLoader,Math.max(0,MAX_SHOW-now())); /* safety: never stuck */
+  setTimeout(function(){if(!(waiting&&waiting.why==='boot'))hideLoader();},Math.max(0,MAX_SHOW-now())); /* safety: never stuck (the boot hold in 1b has its own) */
+
+  /* ---------- 1b. Same loader while signing in / while a saved sign-in is restored (signinload1) ----------
+     Before: after pressing Sign in, the data layer's "Signing in…" note (#reg-busy: a .toast pinned to the top AND the
+     bottom) stretched into a tall near-black panel until the account had loaded (about 1 s); css/bounce-motion.css now
+     keeps that note a small light chip. Here: html.usb-wait (white cover + navy square, css section 1b) shows from the
+     moment the sign-in form is sent until the signed-in screen is drawn; if sign-in fails (wrong login, no connection,
+     no registration account) it hides and the usual message shows. Shown at least 0.45 s so it never blinks.
+     On a page load (saved sign-in being restored, or the sign-in page) it stays up until the first real screen is
+     drawn, instead of the 3.6-4 s cut-off that could show the plain "Loading…" card. Safety stop 15 s.
+     Off switch / prefers-reduced-motion: nothing here (as with the first-load loader). */
+  var WAIT_MIN=450,WAIT_MAX=15000,WAIT_FADE=240,waiting=null;
+  function signedIn(){try{return typeof ME!=='undefined'&&!!ME;}catch(e){return false;}}
+  function showWait(why){
+    if(off||reduced()||waiting)return;
+    var w=waiting={why:why,at:now(),focus:null};
+    H.classList.remove('usb-wait-out');H.classList.add('usb-wait');
+    if(why!=='boot'){
+      H.classList.add('usb-wait-in');setTimeout(function(){H.classList.remove('usb-wait-in');},220);
+      try{var a=D.activeElement;if(a&&a!==D.body&&a.blur){w.focus=a;a.blur();}}catch(e){} /* closes the phone keyboard so the loader is in view */
+    }
+    try{H.setAttribute('aria-busy','true');}catch(e){}
+    w.safety=setTimeout(function(){if(w.why==='boot')hideLoader();else endWait(w,true);},WAIT_MAX);
+  }
+  function endWait(w,quick,refocus){
+    if(!w||w!==waiting||w.ending||w.why==='boot')return;w.ending=true;
+    setTimeout(function(){
+      if(waiting!==w)return;waiting=null;clearTimeout(w.safety);
+      try{H.removeAttribute('aria-busy');}catch(e){}
+      if(refocus&&w.focus&&w.focus.isConnected){try{w.focus.focus({preventScroll:true});}catch(e){}}
+      H.classList.add('usb-wait-out');
+      setTimeout(function(){if(!waiting)H.classList.remove('usb-wait','usb-wait-in','usb-wait-out');},WAIT_FADE+30);
+      if(chip)paintChip();
+    },quick?0:Math.max(0,WAIT_MIN-(now()-w.at)));
+  }
+  function dropBoot(){
+    var w=waiting;if(!w||w.why!=='boot')return;waiting=null;clearTimeout(w.safety);
+    H.classList.remove('usb-wait','usb-wait-in','usb-wait-out');try{H.removeAttribute('aria-busy');}catch(e){}
+    if(chip)paintChip();
+  }
+  /* page load: hold the loader until the first real screen (only if the CSS loader is still up, i.e. before 3.4 s) */
+  if(!hidden&&now()<3400)showWait('boot');
+  /* sign-in: wrap the final sign-in handler (store-supabase.js -> v2-pwreset.js in the live app; security.js in the test copy) */
+  if(!off&&W.FORMS&&typeof FORMS.login==='function'){
+    var oLogin=FORMS.login;
+    FORMS.login=function(f,d){
+      showWait('signin');var w=waiting,r;
+      function settle(){if(w&&waiting===w&&!signedIn())endWait(w,false,true);} /* not signed in: hide, the message shows */
+      try{r=oLogin.apply(this,arguments);}catch(e){settle();throw e;}
+      if(r&&typeof r.then==='function')r.then(settle,settle);else setTimeout(settle,0);
+      return r;
+    };
+  }
+  /* coming back with the browser's Back button to a page kept in memory: never show a leftover loader */
+  W.addEventListener('pageshow',function(e){if(e.persisted&&waiting){if(waiting.why==='boot')hideLoader();else endWait(waiting,true);}});
 
   if(typeof W.afterRender==='function'){
     var oa=W.afterRender;
     afterRender=function(root){
       oa(root);
-      try{if(root&&root.id==='app'){renders++;if(!firstRender){firstRender=now();if(!hidden)scheduleHide();}}}catch(e){}
+      try{if(root&&root.id==='app'){renders++;if(!firstRender){firstRender=now();if(!hidden)scheduleHide();}
+        if(waiting&&waiting.why==='signin'&&signedIn())endWait(waiting);}}catch(e){}
     };
   }
   if(off){W.USMotion={off:true,hideLoader:function(){}};return;}
@@ -60,7 +118,7 @@
   }
   function paintChip(){
     var c=chipEl();
-    if(active.length){c.querySelector('.usb-txt').textContent=active[active.length-1].label;if(!c.classList.contains('on')){chipShownAt=now();void c.offsetWidth;c.classList.add('on');}}
+    if(active.length&&!waiting){c.querySelector('.usb-txt').textContent=active[active.length-1].label;if(!c.classList.contains('on')){chipShownAt=now();void c.offsetWidth;c.classList.add('on');}}
     else c.classList.remove('on');
   }
   /* busy('Saving…',{delay:ms before showing, min:ms shown at least}) -> call the returned function when done */
@@ -157,7 +215,7 @@
   function snap(){return {r:renders,h:location.hash,m:!!D.getElementById('modal')};}
   function changed(s,el){return renders>s.r||location.hash!==s.h||(!!D.getElementById('modal'))!==s.m||(el&&!el.isConnected);}
   D.addEventListener('submit',function(e){var f=e.target;if(f&&f.dataset&&f.dataset.form&&e.submitter)pend={s:snap(),el:f,label:labelFor(f.dataset.form)};},true);
-  W.addEventListener('submit',function(){var p=pend;pend=null;if(p&&changed(p.s,p.el))flash(p.label);});
+  W.addEventListener('submit',function(){var p=pend;pend=null;if(p&&changed(p.s,p.el)&&!(waiting&&waiting.why==='signin'))flash(p.label);});
   var pendA=null;
   D.addEventListener('click',function(e){
     var el=e.target&&e.target.closest&&e.target.closest('[data-act]');if(!el)return;
@@ -168,5 +226,6 @@
   /* hashchange renders run after the submit/click, so give them one tick */
   var _flash=flash;flash=function(l){setTimeout(function(){_flash(l);},0);};
 
-  W.USMotion={busy:busy,button:busyButton,track:track,hideLoader:hideLoader,state:function(){return {firstRender:firstRender,renders:renders,loaderHidden:hidden};}};
+  W.USMotion={busy:busy,button:busyButton,track:track,hideLoader:hideLoader,showWait:showWait,
+    state:function(){return {firstRender:firstRender,renders:renders,loaderHidden:hidden,waiting:waiting?waiting.why:''};}};
 })();
