@@ -69,18 +69,21 @@ function sect(title,inner,o){o=o||{};return '<details class="sect"'+(o.id?' id="
 (function(){var oa=afterRender;afterRender=function(root){oa(root);try{if(root&&ME){if(root.id==='app'&&ME.type==='firm'&&/^#\/(home)?$/.test((location.hash||'#/home').split('?')[0]))groupFirmHome(root);if(root.id==='app'&&ME.type==='admin'&&(location.hash||'').split('?')[0]==='#/settings')groupSettings(root);chipsToSelect(root);wrapHelp(root);}}catch(e){logError(e);}};})();
 
 /* ---------- client home: main action + period total on top, the rest in sections ---------- */
+/* Oct 6 2026 fix: remember which sections are open across re-renders (pressing "Show" re-renders the page and used to collapse "Hours and billing by day"). */
+var SECT_OPEN={};
+(function(){var of=FORMS.frange;FORMS.frange=function(f,d){SECT_OPEN['sect-hours']=true;return of(f,d);};var ow=ACT.fweek;ACT.fweek=function(el){SECT_OPEN['sect-hours']=true;return ow(el);};})();
 function groupFirmHome(root){var main=root.querySelector('main');if(!main||main.dataset.grouped)return;main.dataset.grouped='1';
   var kids=[].slice.call(main.children),h1=main.querySelector('h1'),order=main.querySelector('#ordercard'),tot=main.querySelector('.card.totals'),agr=main.querySelector('#firmagr'),inv=main.querySelector('#clientinvoices'),blocked=main.querySelector('#farmblocked');
   if(!h1)return;var signed=agr&&!agr.classList.contains('hl');
-  var g={hours:[],shifts:[],agr:[],inv:[],other:[]},cur='pre',shiftsH=[].filter.call(main.querySelectorAll('h2'),function(x){return /^Shifts at your/.test(x.textContent);})[0];
-  kids.forEach(function(el){if(el===h1){cur='hours';return;}if(el===order||el===tot||el===blocked)return;
+  var g={hours:[],past:[],shifts:[],agr:[],inv:[],other:[]},cur='pre',shiftsH=[].filter.call(main.querySelectorAll('h2'),function(x){return /^Shifts at your/.test(x.textContent);})[0];
+  kids.forEach(function(el){if(el===h1){cur='hours';return;}if(el.id==='pasthours'){g.past.push(el);return;}if(el===order||el===tot||el===blocked)return;
     if(el===agr){if(signed)g.agr.push(el);return;}if(el.id==='clienttypeline'){g.agr.push(el);return;}if(el===inv){g.inv.push(el);return;}
     if(el===shiftsH)cur='shifts';
     if(cur==='shifts')g.shifts.push(el);else if(cur==='hours')g.hours.push(el);else g.other.push(el);});
   var top=document.createElement('div');top.className='hometop';
   main.insertBefore(top,main.firstChild);top.appendChild(h1);if(blocked)top.appendChild(blocked);if(agr&&!signed)top.appendChild(agr);if(order)top.appendChild(order);if(tot)top.appendChild(tot);
-  var mk=function(title,els,id){if(!els.length)return;var d=document.createElement('details');d.className='sect';if(id)d.id=id;if(detailsOpen())d.open=true;d.innerHTML='<summary>'+title+'</summary>';var b=document.createElement('div');b.className='sect-body';d.appendChild(b);els.forEach(function(e){b.appendChild(e);});main.appendChild(d);};
-  mk(clientWord('Hours and billing by day',ME),g.hours,'sect-hours');mk(clientWord('Shifts at your sites (propose a time change)',ME),g.shifts,'sect-shifts');mk('Invoices and interest <a class="small" href="#/invoices">My invoices →</a>',g.inv,'sect-inv');mk('Agreement, rates and industry',g.agr,'sect-agr');g.other.forEach(function(e){main.appendChild(e);});}
+  var mk=function(title,els,id){if(!els.length)return;var d=document.createElement('details');d.className='sect';if(id)d.id=id;if(detailsOpen()||(id&&SECT_OPEN[id]))d.open=true;if(id)d.addEventListener('toggle',function(){SECT_OPEN[id]=d.open;});d.innerHTML='<summary>'+title+'</summary>';var b=document.createElement('div');b.className='sect-body';d.appendChild(b);els.forEach(function(e){b.appendChild(e);});main.appendChild(d);};
+  mk(clientWord('Hours and billing by day',ME),g.hours,'sect-hours');mk('Past hours – pick dates, see people per day',g.past,'sect-past');mk(clientWord('Shifts at your sites (propose a time change)',ME),g.shifts,'sect-shifts');mk('Invoices and interest <a class="small" href="#/invoices">My invoices →</a>',g.inv,'sect-inv');mk('Agreement, rates and industry',g.agr,'sect-agr');g.other.forEach(function(e){main.appendChild(e);});}
 
 /* ---------- office home: needs attention first, numbers as a dropdown, lists collapsible ---------- */
 VIEWS['admin:home']=function(){var pendDocs=DB.docs.filter(function(d){return d.status==='pending';}).length,bl=blockedList(),ex=expiringList();
