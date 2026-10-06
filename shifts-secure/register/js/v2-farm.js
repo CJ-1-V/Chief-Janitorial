@@ -4,7 +4,7 @@
 'use strict';
 var FIRM_AGR_NAME='Independent Contractor Service Agreement';
 var FIRM_AGR_LABEL='Version: Sep 2025 draft, pending owner confirmation';
-var FIRM_AGR_NOTE='NO-HIRE AND CONVERSION FEE (placeholder – owner approves final wording): 12-month no-hire – for 12 months after a worker last works for the farm or other client through UnScramble, the client will not hire or engage, directly or indirectly, any UnScramble worker, any subcontractor of UnScramble, or any of a subcontractor\'s workers. Conversion fee per worker: $____ (set by owner).';
+var FIRM_AGR_NOTE='NO-HIRE AND CONVERSION FEE: 12-month no-hire – for 12 months after a worker last works for the farm or other client through UnScramble, the client will not hire or engage, directly or indirectly, any UnScramble worker, any subcontractor of UnScramble, or any of a subcontractor\'s workers. Conversion fee per worker: $0 (amount set in Office > Settings).';
 function firmAgreementText(farmName){var F=farmName||'[Farm legal name]';return [
 'INDEPENDENT CONTRACTOR SERVICES AGREEMENT','('+FIRM_AGR_LABEL+'. Names are placeholders in this test app.)','',
 'BETWEEN: '+F+', a body corporate, duly incorporated in accordance with the laws of Prince Edward Island (the "Company");',

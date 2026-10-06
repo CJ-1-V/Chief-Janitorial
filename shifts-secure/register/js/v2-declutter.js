@@ -101,5 +101,4 @@ document.addEventListener('change',function(e){if(e.target&&e.target.id==='numse
 function groupSettings(root){var main=root.querySelector('main');if(!main||main.dataset.grouped)return;main.dataset.grouped='1';
   [].slice.call(main.querySelectorAll(':scope > .card, :scope > div > .card')).forEach(function(c){var h=c.querySelector(':scope > h2, :scope > h3');if(!h)return;var d=document.createElement('details');d.className='sect';if(detailsOpen())d.open=true;if(c.id){d.id='sect-'+c.id;}var s=document.createElement('summary');s.innerHTML=h.innerHTML;h.remove();c.parentNode.insertBefore(d,c);d.appendChild(s);d.appendChild(c);c.classList.add('sect-body');});}
 
-/* ---------- client agreement DRAFT banner: one short line ---------- */
-if(typeof icsaBanner==='function')icsaBanner=function(){return '<div class="alert warn draftline" id="icsadraft" role="note"><b>'+ICSA_DRAFT_BANNER+'.</b> Conversion fee 6(e): [to be set by owner].</div>';};
+/* ---------- client agreement: the draft line was removed (owner decision Oct 6 2026); fee 6(e) comes from Office > Settings ---------- */
