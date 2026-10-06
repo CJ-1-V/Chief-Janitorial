@@ -66,7 +66,7 @@ function render(){
       var v=VIEWS[ME.type+':'+h.slice(2)]||VIEWS[h.slice(2)]||VIEWS[ME.type+':home'];
       html=v(h);track('screen',h);save();
     }
-  }catch(e){html='<div class="alert bad">Something went wrong on this screen: '+esc(e.message)+'</div>';logError(e);}
+  }catch(e){html='<div class="alert bad" id="screenerr"><b>Sorry – this screen could not open.</b> Please go back and try again. If it keeps happening, contact the office.</div>';try{console.warn('[screen error – friendly message shown]',e);}catch(x){}logError(e);}
   app.innerHTML=layout(html);stackTables(app);afterRender(app);window.scrollTo(0,0);
   var f=document.querySelector('[data-autofocus]');if(f)f.focus();
   if(PAGE_STATE.after){var a=PAGE_STATE.after;PAGE_STATE.after=null;a();}
@@ -86,12 +86,12 @@ function confirmBox(key,msg){ /* two-tap confirm without blocking dialogs */
 
 /* ---------- Sign in ---------- */
 VIEWS.login=function(){
-  var tl=[['office','UnScramble office / admin'],['subco','Subcontractor (all valid)'],['subco2','Subcontractor (pending, insurance expired)'],['worker1','Subcontractor worker (valid, driver)'],['worker2','Subcontractor worker (permit expiring)'],['employee1','Employee (fully set up)'],['employee2','Employee (registration in progress)'],['employee3','Employee (ready for Wagepoint)'],['tester1','Testing for App Development'],['firmA','Client firm: Test Farm A'],['firmB','Client firm: Test Farm B']];
+  var tl=[['office','UnScramble office / admin'],['subco','Subcontractor (all valid)'],['subco2','Subcontractor (pending, insurance expired)'],['worker1','Subcontractor worker (valid, driver)'],['worker2','Subcontractor worker (permit expiring)'],['worker3','Subcontractor worker (new – items still to finish)'],['worker4','Subcontractor worker (employer papers not finished)'],['crewleadA','Crew lead (clocks the crew in and out)'],['employee1','Employee (fully set up)'],['employee2','Employee (registration in progress)'],['employee3','Employee (ready for Wagepoint)'],['tester1','Testing for App Development'],['firmA','Client firm: Test Farm A'],['firmB','Client firm: Test Farm B'],['clientFarm','Client: Sample Orchard Farm']];
   return '<div class="login-wrap"><img class="logo-big" src="assets/unscramble-logo.svg" alt="UnScramble"><div class="card"><h1>Sign in</h1>'+
-  '<form data-form="login">'+inp('login','Username or email','',{req:true,extra:' data-autofocus autocomplete="username"'})+inp('password','Password','',{type:'password',req:true,extra:' autocomplete="current-password"'})+
+  '<form data-form="login">'+inp('login','Username, email or phone','',{req:true,extra:' data-autofocus autocomplete="username"'})+inp('password','Password','',{type:'password',req:true,extra:' autocomplete="current-password"'})+
   '<div class="row" style="margin-top:12px"><button type="submit">Sign in</button><a href="#/forgot" class="right small">Forgot password?</a></div></form>'+
   '<div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px"><span class="muted small">New here?</span><br><a class="btn" href="#/signup" style="margin-top:6px">Create an account</a></div></div>'+
-  '<div class="card hl"><h3 style="margin-top:0">Test logins (password for all: <code>test1234</code>)</h3><div class="tw"><table>'+tl.map(function(t){return '<tr><td><a href="#" data-act="quick" data-u="'+t[0]+'"><code>'+t[0]+'</code></a></td><td>'+esc(t[1])+'</td></tr>';}).join('')+'</table></div><p class="small muted">Tap a username to fill it in. A phone number is never needed to sign in.</p>'+
+  '<div class="card hl"><h3 style="margin-top:0">Test logins (password for all: <code>test1234</code>)</h3><div class="tw"><table>'+tl.map(function(t){return '<tr><td><a href="#" data-act="quick" data-u="'+t[0]+'"><code>'+t[0]+'</code></a></td><td>'+esc(t[1])+'</td></tr>';}).join('')+'</table></div><p class="small muted">Tap a username to fill it in. You can also sign in with the email or phone number on an account.</p>'+
   '<button class="sec small" data-act="resetData">Reset test data</button></div></div>';
 };
 ACT.quick=function(el){var f=document.querySelector('[data-form=login]');f.login.value=el.dataset.u;f.password.value='test1234';};
@@ -120,22 +120,22 @@ VIEWS.signup=function(){
 };
 VIEWS.signupForm=function(h){var t=h.split('/')[2];if(!TYPES[t]||t==='admin'||t==='firm')return VIEWS.signup();
   var subs=users('sub').filter(function(s){return s.active;}).map(function(s){return [s.id,s.company.legalName||s.name];});
-  var x='<div class="login-wrap"><div class="card"><h1>Sign up: '+esc(TYPES[t])+'</h1>'+(t==='tester'?'<div class="alert warn"><b>Testing for App Development.</b> You only need a name, a username or email, and a password. No documents. Everything you do is test activity and is <b>never paid</b>.</div>':'')+'<form data-form="signup"><input type="hidden" name="type" value="'+t+'">';
+  var x='<div class="login-wrap"><div class="card"><h1>Sign up: '+esc(t==='worker'?'Farm worker':TYPES[t])+'</h1>'+(t==='tester'?'<div class="alert warn"><b>Testing for App Development.</b> You only need a name, a username or email, and a password. No documents. Everything you do is test activity and is <b>never paid</b>.</div>':'')+'<form data-form="signup"><input type="hidden" name="type" value="'+t+'">';
   x+=inp('name',t==='sub'?'Legal business name':(t==='tester'?'Your name':'Legal name (as on ID)'),'',{req:true});
-  x+=inp('username','Username'+(t==='tester'||t==='worker'?' (username or email needed)':''),'',{req:t==='sub'||t==='employee'?false:false,hint:'Must be unique. You can sign in with your username or email.'});
-  x+=inp('email',t==='sub'?'Business email':(t==='employee'?'Personal email':'Email'),'',{type:'email',req:t==='sub'||t==='employee',hint:t==='employee'?'Needed for Wagepoint (payroll portal).':t==='sub'?'Needed for invoices and alerts.':'Optional if you choose a username.'});
-  x+=inp('phone','Phone (optional)','',{type:'tel',hint:'Contact only – never used to sign in. SMS alerts only if you add one.'});
+  x+=inp('username','Username (a short name you will use to sign in)','',{req:false,hint:'Nobody else can have the same one.'+(t==='tester'||t==='worker'?' You need a username, an email or a phone number.':'')+' You can sign in with any of them.'});
+  x+=inp('email',t==='sub'?'Business email':(t==='employee'?'Personal email':'Email'),'',{type:'email',req:t==='sub'||t==='employee',hint:t==='employee'?'Needed for Wagepoint (payroll portal).':t==='sub'?'Needed for invoices and alerts.':'Optional if you give a username or a phone number.'});
+  x+=inp('phone','Phone (optional)','',{type:'tel',hint:'You can also sign in with this number.'});
   if(t==='worker')x+=sel('subId','Your employer (subcontractor)',subs,'',{req:true,blank:true});
-  x+=inp('pw','Password','',{type:'password',req:true,hint:'At least 10 characters, not a common password, not your name or username.'})+inp('pw2','Repeat password','',{type:'password',req:true});
+  x+=inp('pw','Password','',{type:'password',req:true,hint:'At least 10 characters, not a common word or pattern (like test1234 or a farm word with a year), and not your name or username.'})+inp('pw2','Repeat password','',{type:'password',req:true});
   if(t==='tester'){x+='<h3>Terms</h3><div class="terms-text">'+esc(DB.settings.terms.app_testing.text)+'</div><div class="small muted">Version '+esc(DB.settings.terms.app_testing.version)+'</div>'+chk('acceptTerms','<b>I accept the App Terms of Use and Testing Terms</b> (testing is for feedback only, is not work and is never paid).',false,{req:true});}
   x+='<fieldset><legend>Optional</legend>'+chk('consent',esc(CONSENT_TEXT),false)+'<div class="hint">Optional. Saying no never blocks anything.</div></fieldset>';
   x+='<button type="submit">Create account</button> <a href="#/signup" class="btn sec">Back</a></form></div></div>';return x;};
 FORMS.signup=function(f,d){
-  if(!d.username&&!d.email){toast('Please enter a username or an email.');return;}
-  if((d.type==='sub'||d.type==='employee')&&!d.email){toast('Email is required for this account type.');return;}
-  if(d.pw.length<6){toast('Password must be at least 6 characters.');return;}if(d.pw!==d.pw2){toast('Passwords do not match.');return;}
-  if(loginTaken(d.username,d.email)){toast('That username or email is already used.');return;}
-  if(d.type==='worker'&&!d.subId){toast('Choose your employer.');return;}
+  if(!d.username&&!d.email&&!loginDigits(d.phone)){toast('Please add an email, a 10-digit phone number or a username – you will use it to sign in.');return;}
+  if((d.type==='sub'||d.type==='employee')&&!d.email){toast('Please add your email – this account type needs one.');return;}
+  if(d.pw.length<6){toast('That password is too short.');return;}if(d.pw!==d.pw2){toast('The two passwords are not the same. Please type them again.');return;}
+  if(loginTaken(d.username,d.email)||(!d.username&&!d.email&&DB.users.some(function(x){var p=loginDigits(x.phone);return p&&p===loginDigits(d.phone);}))){toast('That login is already used. Try signing in, or use a different email, phone or username.');return;}
+  if(d.type==='worker'&&!d.subId){toast('Please choose your employer (the crew company that hired you).');return;}
   var u={id:uid('u'),type:d.type,name:d.name,username:d.username,email:d.email,phone:d.phone,passHash:hashPw(d.pw),active:true,suspended:false,createdAt:new Date().toISOString(),lastLogin:new Date().toISOString(),profile:{},roles:[],orientations:[],approved:d.type==='tester'};
   if(d.type==='sub'){var code=d.name.replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,3)||'SUB';while(users('sub').some(function(s){return s.code===code;}))code=code.slice(0,2)+String.fromCharCode(65+Math.floor(Math.random()*26));u.code=code;u.company={legalName:d.name,email:d.email,phone:d.phone,mainContact:{},emergency:{},periodStart:today()};}
   if(d.type==='worker'){u.subId=d.subId;u.profile.lang='';}
@@ -146,12 +146,12 @@ FORMS.signup=function(f,d){
   audit('Account created',u.name,TYPES[u.type]);track('signup','#/signup/'+d.type);
   notify('admin','New '+TYPES[u.type]+' sign-up: '+u.name+(u.subId?' (employer: '+employerName(u)+')':''));
   if(u.subId)notify(u.subId,'New worker registered under your company: '+u.name+'. Please confirm them in your Workers page.');
-  save();toast('Account created.');go(missingTerms(u).length?'#/terms':'#/home');
+  save();toast('Account created ✓');go(missingTerms(u).length?'#/terms':'#/home');
 };
 function recordAcceptance(u,key){var t=DB.settings.terms[key];DB.acceptances.push({id:uid('a'),userId:u.id,userName:u.name,key:key,name:TERMS_DEF[key].name,version:t.version,at:new Date().toISOString(),tz:tz(),device:deviceInfo(),employerId:u.subId||null,employerName:key==='schedule_c'?employerName(u):''});audit('Accepted terms',u.name,TERMS_DEF[key].name+' v'+t.version);}
 function recordConsent(u,choice){DB.consents.push({id:uid('c'),userId:u.id,choice:choice,version:DB.settings.consentVersion,at:new Date().toISOString(),tz:tz()});audit('Data-use consent '+(choice?'given':'declined/withdrawn'),u.name,'v'+DB.settings.consentVersion);}
 function consentOf(u){var c=DB.consents.filter(function(x){return x.userId===u.id;});return c[c.length-1]||null;}
-function termsText(key,u){var t=DB.settings.terms[key].text;return key==='schedule_c'?t.replace(/\{EMPLOYER\}/g,u?employerName(u):'your subcontractor'):t;}
+function termsText(key,u){var t=DB.settings.terms[key].text;return key==='schedule_c'?t.replace(/\{EMPLOYER\}\./g,'{EMPLOYER}\u0000').replace(/\{EMPLOYER\}/g,u?employerName(u):'your subcontractor').replace(/\.?\u0000/g,'.'):t;}
 
 /* ---------- Terms page ---------- */
 VIEWS.terms=function(){var u=ME,miss=missingTerms(u),x='<h1>Terms</h1>';
@@ -180,17 +180,17 @@ VIEWS.profile=function(){var u=ME,c=consentOf(u);
   if(u.type==='tester'){var pend=DB.convReq.some(function(r){return r.userId===u.id&&r.status==='Requested';});x+='<div class="card"><h3 style="margin-top:0">Will you do real paid work?</h3><p class="small">A testing account must be converted to a full Subcontractor or Employee account (and its documents completed) before any real paid work. Your login and details carry over.</p>'+(pend?'<p><span class="pill s-pend">Conversion requested – waiting for the office</span></p>':'<form data-form="convreq">'+sel('to','Convert to',[['employee','Employee of UnScramble'],['sub','Subcontractor']],'employee')+'<button class="sec">Ask the office to convert my account</button></form>')+'</div>';}
   if(u.convertedFrom)x+='<div class="alert info">This account was converted from a Testing for App Development account on '+esc(u.convertedAt)+'. Test records from before stay marked TEST and are never paid.</div>';
   return x;};
-FORMS.profile=function(f,d){var u=ME;if(!d.username&&!d.email){toast('Keep a username or an email.');return;}if((u.type==='employee'||u.type==='sub')&&!d.email){toast('Email is required for your account type.');return;}if(loginTaken(d.username,d.email,u.id)){toast('Username or email already used.');return;}
+FORMS.profile=function(f,d){var u=ME;if(!d.username&&!d.email){toast('Please keep a username or an email – you need one to sign in.');return;}if((u.type==='employee'||u.type==='sub')&&!d.email){toast('Please keep your email – your account type needs one.');return;}if(loginTaken(d.username,d.email,u.id)){toast('That username or email is already taken. Please try another.');return;}
   if(u.type==='employee'&&u.wagepoint&&u.wagepoint.added&&d.name&&d.name!==u.name)flagWagepoint(u,'name');
-  if(d.name)u.name=d.name;u.username=d.username;u.email=d.email;u.phone=d.phone;audit('Changed profile',u.name);save();toast('Saved.');render();};
-FORMS.pw=function(f,d){if(ME.passHash!==hashPw(d.old)){toast('Current password is wrong.');return;}if(d.pw.length<6){toast('At least 6 characters.');return;}ME.passHash=hashPw(d.pw);audit('Changed password',ME.name);save();toast('Password changed.');render();};
+  if(d.name)u.name=d.name;u.username=d.username;u.email=d.email;u.phone=d.phone;audit('Changed profile',u.name);save();toast('Saved ✓');render();};
+FORMS.pw=function(f,d){if(ME.passHash!==hashPw(d.old)){toast('Your current password is not right. Please try again.');return;}if(d.pw.length<6){toast('That new password is too short.');return;}ME.passHash=hashPw(d.pw);audit('Changed password',ME.name);save();toast('Password changed.');render();};
 FORMS.privreq=function(f,d){DB.privacyReq.unshift({id:uid('p'),userId:ME.id,name:ME.name,kind:d.kind,text:d.text,at:new Date().toISOString(),status:'Open'});notify('admin','Privacy request ('+d.kind+') from '+ME.name);save();toast('Request sent to the office.');render();};
 FORMS.convreq=function(f,d){DB.convReq.unshift({id:uid('cr'),userId:ME.id,to:d.to,at:new Date().toISOString(),status:'Requested'});notify('admin','Tester '+ME.name+' asks to convert to a full '+TYPES[d.to]+' account.');save();toast('Request sent.');render();};
 function flagWagepoint(u,what){u.wagepoint=u.wagepoint||{};if(!u.wagepoint.added)return;u.wagepoint.update=u.wagepoint.update||[];if(u.wagepoint.update.indexOf(what)<0)u.wagepoint.update.push(what);notify('admin','Update Wagepoint: '+u.name+' changed '+what+'.','wpu|'+u.id+'|'+what+'|'+Date.now());}
 
 /* ---------- Alerts (my notifications) ---------- */
 VIEWS.alerts=function(){var mine=DB.notes.filter(function(n){return n.to===ME.id;});mine.forEach(function(n){n.read=true;});save();
-  return '<h1>My alerts</h1><p class="small muted">In the real app these go by email and push (and SMS only if you added a phone). In this test they are only shown here.</p>'+(mine.length?'<div class="tw"><table><tr><th>When</th><th>Message</th><th>Channel</th></tr>'+mine.map(function(n){return '<tr><td class="small">'+fmtStamp(n.at)+'</td><td>'+esc(n.text)+'</td><td class="small">'+esc(n.channel)+'</td></tr>';}).join('')+'</table></div>':'<p class="muted">No alerts.</p>');};
+  return '<h1>My alerts</h1><p class="small muted">In the real app these go by email and push (and SMS only if you added a phone). In this test they are only shown here.</p>'+(mine.length?'<div class="tw"><table><tr><th>When</th><th>Message</th><th>Channel</th></tr>'+mine.map(function(n){return '<tr><td class="small">'+fmtStamp(n.at)+'</td><td>'+esc(n.text)+'</td><td class="small">'+esc(n.channel)+'</td></tr>';}).join('')+'</table></div>':'<p class="muted">No alerts right now.</p>');};
 
 /* ---------- Feedback (testers) ---------- */
 ACT.feedback=function(){modal('<h2>Send feedback</h2><div class="alert warn">Please do not include personal information (names, phone numbers, documents) in your comment or screenshot.</div><form data-form="feedback"><input type="hidden" name="screen" value="'+esc(location.hash||'#/home')+'"><label class="req">Rating</label><div class="row">'+[1,2,3,4,5].map(function(n){return '<label class="inline"><input type="radio" name="rating" value="'+n+'"'+(n===4?' checked':'')+' required> '+n+'★</label>';}).join(' ')+'</div><label class="req">Comment</label><textarea name="comment" required></textarea><label>Screenshot (optional)</label><input type="file" name="shot" accept="image/*"><div class="hint">Screen: '+esc(location.hash||'#/home')+'</div><p><button>Send feedback</button></p></form>');};
