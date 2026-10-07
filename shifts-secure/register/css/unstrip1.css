@@ -1,0 +1,6 @@
+/* unstrip-live1 – UnScramble company-switch link styles (link hidden until store-config twinUrl is set) */
+.co-switch{margin:0 0 14px;padding:10px 12px;border:1px solid #CFCBE0;border-radius:10px;background:#F7F5FC}
+.co-switch-seg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.co-switch-on{display:inline-block;padding:8px 12px;border-radius:8px;background:#332E57;color:#fff;font-weight:700;font-size:14px}
+.co-switch-off{display:inline-block;padding:8px 12px;border-radius:8px;border:1.5px solid #7cb342;color:#1f3b16;background:#EEF6E4;font-weight:600;font-size:14px;text-decoration:none}
+.co-switch-off:hover{background:#dcefc4}

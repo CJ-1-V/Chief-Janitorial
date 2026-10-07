@@ -1,6 +1,4 @@
-/* v2-clock.js – main screen after a complete + approved registration: a local recreation of the live Shift Tracker
-   clock in/out screen (site tiles, quarter-hour picker, crew count, clock-out note, "Break missed or interrupted").
-   Menu holds registration / documents / agreements etc. Checklist shows until registration is complete. One login. TEST ONLY. */
+/* v2-clock.js – UnScramble clock (writes DB.time → reg_time_entries). The only US clock; no Shift Tracker redirect. */
 'use strict';
 var QMS=900000;
 function hmOf(ms){var d=new Date(ms);return pad(d.getHours())+':'+pad(d.getMinutes());}
@@ -13,14 +11,16 @@ function quarterOpts(after,base){var now=base||Date.now(),q0=Math.round(now/QMS)
   var fl=Math.floor(now/QMS)*QMS;var pre=four.indexOf(fl)>=0?fl:four.indexOf(q0)>=0?q0:four.reduce(function(best,t){return Math.abs(t-now)<Math.abs(best-now)?t:best;},four[0]);return {four:four,pre:pre};}
 function qName(t){return ({0:'full hour',15:'quarter past',30:'half past',45:'quarter to'})[new Date(t).getMinutes()]||'';}
 function quarterPicker(id,label,after,base){var q=quarterOpts(after,base);return '<div class="qpick-box"><div class="label">'+esc(label)+' <span class="req-star">*</span></div><div class="qpick" id="'+id+'" role="radiogroup" aria-label="'+esc(label)+'">'+q.four.map(function(t){return '<button type="button" role="radio" class="qopt'+(t===q.pre?' sel':'')+'" aria-checked="'+(t===q.pre)+'" data-act="qopt" data-t="'+t+'"><b>'+hmOf(t)+'</b></button>';}).join('')+'</div><div class="muted small">Times are rounded to the quarter hour. Your real clock time is saved too.</div></div>';}
-ACT.qopt=function(el){[].forEach.call(el.parentNode.querySelectorAll('.qopt'),function(x){x.classList.toggle('sel',x===el);x.setAttribute('aria-checked',String(x===el));});};
+ACT.qopt=function(el){[].forEach.call(el.parentNode.querySelectorAll('.qopt'),function(x){x.classList.toggle('sel',x===el);x.setAttribute('aria-checked',String(x===el));});if(el.parentNode.id==='qIn')clockInLabel();};
+/* sticky clock-in button shows the chosen site and start time, e.g. "Clock in at HTP250 · 07:00" */
+function clockInLabel(){var b=document.getElementById('clockinBtn');if(!b)return;var t=qVal('qIn');if(PAGE_STATE.site){b.disabled=false;b.textContent='Clock in at '+PAGE_STATE.site+(t?' · '+hmOf(t):'');}else{b.disabled=true;b.textContent='Pick a site to clock in'+(t?' · '+hmOf(t):'');}}
 function qVal(id){var x=document.querySelector('#'+id+' .qopt.sel');return x?+x.dataset.t:null;}
 function fmtDur(h){var m=Math.max(0,Math.round(h*60));return Math.floor(m/60)+'h '+pad(m%60)+'m';}
 function openEntry(u){return DB.time.filter(function(t){return t.userId===u.id&&t.clock&&!t.out&&!t.test;})[0]||null;}
 function readyForClock(u){return u.accountApproved!==false&&blockers(u,today()).length===0;}
-function clockSites(){return DB.sites.filter(function(s){return s.firmId;});}
+function clockSites(){return (typeof companySites==='function'?companySites({withFirm:true}):DB.sites.filter(function(s){return s.firmId;}));}
 function siteTile(s){return '<button type="button" class="site-tile" data-act="picksite" data-code="'+esc(s.code)+'">'+esc(s.code)+'<small class="tile-co">'+esc(s.name)+'</small></button>';}
-ACT.picksite=function(el){PAGE_STATE.site=el.dataset.code;[].forEach.call(document.querySelectorAll('.site-tile'),function(x){x.classList.toggle('sel',x.dataset.code===PAGE_STATE.site);});var b=document.getElementById('clockinBtn');if(b){b.disabled=false;b.textContent='Clock in at '+PAGE_STATE.site;}};
+ACT.picksite=function(el){PAGE_STATE.site=el.dataset.code;[].forEach.call(document.querySelectorAll('.site-tile'),function(x){x.classList.toggle('sel',x.dataset.code===PAGE_STATE.site);});clockInLabel();};
 var PRIVACY_TXT='📍 <b>Privacy:</b> your phone location is checked <b>once, when you tap Clock in</b>, to confirm you are at the site (simulated in this test). It is not tracked during your shift or after you clock out.';
 function passBoxFor(u){return u.type==='worker'?(tempActive(u)?tempBox(u):tempBox(subOf(u))):'';}
 function clockView(){var u=ME,open=openEntry(u),now=Date.now(),nm=esc(((u.profile&&u.profile.preferredName)||u.name).split(' ')[0]);
@@ -29,16 +29,17 @@ function clockView(){var u=ME,open=openEntry(u),now=Date.now(),nm=esc(((u.profil
     (el>14?'<div class="alert warn small">You have been clocked in for over 14 hours. Did you forget to clock out?</div>':'')+(open.note?'<div class="small">📝 '+esc(open.note)+'</div>':'')+
     '<div class="crew-box"><div class="crew-q">How many workers were at '+esc(open.site)+' this shift? <span class="req-star">*</span></div><div class="muted small">Count everyone working there with you, including yourself (1–50).</div><div class="stepper"><button type="button" class="step" data-act="crewstep" data-d="-1" aria-label="One less">−</button><input id="crew" type="number" inputmode="numeric" min="1" max="50" placeholder="?" aria-label="Workers on site"><button type="button" class="step" data-act="crewstep" data-d="1" aria-label="One more">+</button></div></div>'+
     quarterPicker('qOut','What time did you finish?',open.inMs||msOfHM(open.in))+
-    '<label class="inline breakbox"><input type="checkbox" id="breakMissed"> <span><b>I did not get my 30-minute break</b><br><small class="muted">Tick this if your break was missed or cut short. You will be paid for it, and the office is told.</small></span></label>'+
+    '<label class="inline breakbox"><input type="checkbox" id="breakMissed"> <span><b>I did not get my break</b><br><small class="muted">Tick this if your break was missed or cut short. You will be paid for it, and the office is told.</small></span></label>'+
     '<label class="field outnote"><span>Clock-out note (optional)</span><textarea id="outNote" maxlength="120" rows="2" placeholder="e.g. finished early, supplies low, gate left open"></textarea><small class="muted">Saved when you clock out. You can\'t change it afterwards.</small></label>'+
     '<button class="btn danger huge" data-act="clockout2" id="clockoutBtn" disabled>Enter workers on site to clock out</button></div>';}
   var mine=DB.time.filter(function(t){return t.userId===u.id&&t.site;}).sort(function(a,b){return a.date<b.date?1:-1;});var recent=[];mine.forEach(function(t){if(recent.indexOf(t.site)<0&&recent.length<3)recent.push(t.site);});
   var sites=clockSites(),bySite=function(c){return sites.filter(function(s){return s.code===c;})[0];};PAGE_STATE.site=null;
   return '<h1 class="h1">Hi, '+nm+'</h1>'+passBoxFor(u)+'<div class="card clock-card"><div class="row-between"><div class="status-pill">○ Off shift</div><div class="muted">'+esc(shortDay(today()))+'</div></div><div class="bigclock" data-live-clock>'+hmOf(now)+'</div>'+
+  quarterPicker('qIn','What time did you start?')+
   '<div class="label">Which site are you at? <span class="req-star">*</span></div>'+(recent.filter(bySite).length?'<div class="sub">Your recent sites</div><div class="tiles recent">'+recent.filter(bySite).map(function(c){return siteTile(bySite(c));}).join('')+'</div>':'')+
   '<input class="site-search" id="siteSearch" autocapitalize="characters" autocomplete="off" aria-label="Search site code" placeholder="Type a site code (e.g. TFA-01)…"><div class="tiles all" id="allTiles">'+sites.map(siteTile).join('')+'</div><div class="muted small">Site not listed? Ask your driver or contact the office.</div>'+
   '<div class="label">Location check</div><div class="privacy small">'+PRIVACY_TXT+'</div><label class="field"><span>Notes (optional)</span><textarea id="notes" maxlength="120" rows="2" placeholder="e.g. ride partner"></textarea></label>'+
-  quarterPicker('qIn','What time did you start?')+'<div class="sticky-cta"><button class="btn primary huge" id="clockinBtn" data-act="clockin2" disabled>Pick a site to clock in</button></div></div>';}
+  '<div class="sticky-cta"><button class="btn primary huge" id="clockinBtn" data-act="clockin2" disabled>Pick a site to clock in</button></div></div>';}
 document.addEventListener('input',function(e){if(e.target.id==='siteSearch'){var v=e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');[].forEach.call(document.querySelectorAll('#allTiles .site-tile'),function(t){t.style.display=!v||t.dataset.code.indexOf(v)>=0?'':'none';});}if(e.target.id==='crew')crewChanged();});
 function crewChanged(){var i=document.getElementById('crew'),b=document.getElementById('clockoutBtn');if(!i||!b)return;var ok=/^\d+$/.test(i.value)&&+i.value>=1&&+i.value<=50;b.disabled=!ok;b.textContent=ok?'Clock out':'Enter workers on site to clock out';}
 ACT.crewstep=function(el){var i=document.getElementById('crew');var c=parseInt(i.value,10);i.value=isNaN(c)?1:Math.min(50,Math.max(1,c+(+el.dataset.d)));crewChanged();};
@@ -93,9 +94,9 @@ var _layoutV1=layout;
 layout=function(content){var u=ME;if(!u||(u.type!=='worker'&&u.type!=='employee')||gateNav(u))return _layoutV1(content);
   var h=location.hash.split('?')[0]||'#/home',act=h==='#/shifts'?'shifts':(h==='#/home'||h==='#/')?'clock':'menu';var ini=u.name.split(' ').map(function(x){return x[0];}).join('').slice(0,2).toUpperCase();
   return '<div class="testbar"><span>TEST VERSION – local only.</span> Fake data, stored only in this browser. Nothing is sent anywhere.'+(DB.settings.simDate?' &nbsp;<span>Simulated date: '+DB.settings.simDate+'</span>':'')+'</div>'+
-  '<div class="emp"><header class="topbar"><a href="#/home" class="emp-brand"><img src="assets/unscramble-logo.svg" alt="UnScramble" class="emp-logo"><span class="emp-app">Shift Tracker</span></a><div class="topbar-r">'+(u.type==='worker'?(tempBadge(u)||tempBadge(subOf(u))):'')+'<a class="avatar" href="#/menu" title="'+esc(u.name)+' – menu" aria-label="Menu">'+esc(ini)+'</a></div></header>'+
+  '<div class="emp"><header class="topbar"><a href="#/home" class="emp-brand"><img src="assets/unscramble-logo.svg" alt="UnScramble" class="emp-logo"><span class="emp-app">UnScramble</span></a><div class="topbar-r">'+(u.type==='worker'?(tempBadge(u)||tempBadge(subOf(u))):'')+'<a class="avatar" href="#/menu" title="'+esc(u.name)+' – menu" aria-label="Menu">'+esc(ini)+'</a></div></header>'+
   '<main class="emp-main" id="main">'+content+'</main><nav class="tabbar" aria-label="Main"><a href="#/home" class="'+(act==='clock'?'on':'')+'"><span class="ti" aria-hidden="true">⏱</span>Clock</a><a href="#/shifts" class="'+(act==='shifts'?'on':'')+'"><span class="ti" aria-hidden="true">☰</span>My shifts</a><a href="#/menu" class="'+(act==='menu'?'on':'')+'"><span class="ti" aria-hidden="true">≡</span>Menu</a></nav>'+
-  '<footer class="emp-foot">UnScramble – The HR Company Inc. · TEST VERSION · Not connected to the live Shift Tracker</footer></div>';};
+  '<footer class="emp-foot">UnScramble – The HR Company Inc.</footer></div>';};
 
 /* office sees missed-break flags on the person screen */
 (function(){var op=ACT.person;if(!op)return;ACT.person=function(el){op(el);var u=user(el.dataset.id),m=document.querySelector('#modal .modal');if(!u||!m)return;var f=DB.time.filter(function(t){return t.userId===u.id&&t.breakMissed;});if(f.length)m.insertAdjacentHTML('beforeend','<h3>Break missed or interrupted (flagged)</h3><ul class="small">'+f.map(function(t){return '<li>'+esc(t.date)+' '+esc(t.site)+' '+esc(t.in)+'–'+esc(t.out)+plus1(t.in,t.out)+' – not deducted (paid and billable)</li>';}).join('')+'</ul>');};})();

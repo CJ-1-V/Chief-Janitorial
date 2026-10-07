@@ -19,17 +19,17 @@ var BILL_BREAK_OVER=5; /* hours: the break comes off only when the worker-day to
 function minWaivers(){return (DB&&DB.settings&&DB.settings.minWaivers)||{};}
 function minWaiver(firmId,date){return minWaivers()[firmId+'|'+date]||null;}
 function billDay(hours,missed,waived){var c=CB(),min=Number(c.minHours)||0,b=hours;
-  if(hours>BILL_BREAK_OVER+1e-9&&!missed)b=hours-(Number(c.breakMin)||0)/60;
+  b=hours-breakHoursFor(hours,missed,c.breakMin);
   if(!waived&&min>0&&b<min)b=min;return Math.max(0,b);}
-(function(){var ofr=firmRows;firmRows=function(firm,from,to){var rows=ofr(firm,from,to),c=CB(),brk=(Number(c.breakMin)||0)/60,g={};
+(function(){var ofr=firmRows;firmRows=function(firm,from,to){var rows=ofr(firm,from,to),c=CB(),g={};
   rows.forEach(function(r){var k=r.uid+'|'+r.date;(g[k]=g[k]||[]).push(r);});
   Object.keys(g).forEach(function(k){var l=g[k],sum=l.reduce(function(a,r){return a+r.hours;},0),missed=l.some(function(r){return r.breakMissed;}),w=!!minWaiver(firm.id,l[0].date),day=billDay(sum,missed,w);
     l.forEach(function(r){r.bill=r.hours;r.brkDed=0;r.minTopUp=0;r.waived=w;r.dayHours=sum;r.dayBill=day;r.dayShifts=l.length;});
-    var ded=sum>BILL_BREAK_OVER+1e-9&&!missed?brk:0,left=ded; /* the break comes off the longest shift(s) */
+    var ded=breakHoursFor(sum,missed,c.breakMin),left=ded; /* the break comes off the longest shift(s) */
     l.slice().sort(function(a,b){return b.hours-a.hours;}).forEach(function(r){if(left<=0)return;var t=Math.min(left,r.bill);r.brkDed=Math.round(t*10000)/10000;r.bill-=t;left-=t;});
     var top=day-(sum-ded);if(top>1e-9){var last=l[l.length-1];last.minTopUp=Math.round(top*10000)/10000;last.bill+=top;}});
   return rows;};})();
-(function(){var op=firmPage;firmPage=function(firm){var c=CB();return op(firm).replace(/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more\./,'Billable hours, per worker per day at this farm: all of that worker\'s shifts that day are added up; if the total is over '+BILL_BREAK_OVER+' hours, a '+c.breakMin+'-minute unpaid break is taken off once (not when the worker reported a missed break); then a minimum of '+c.minHours+' billable hours per worker per day applies (Independent Contractor Service Agreement, s. 3).')+clientInvoicesHtml(firm,false);};})();
+(function(){var op=firmPage;firmPage=function(firm){var c=CB();return op(firm).replace(/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more\./,'Billable hours, per worker per day at this farm: all of that worker\'s shifts that day are added up; the unpaid break is taken off once ('+breakRuleText(c.breakMin)+'; not when the worker reported a missed break); then a minimum of '+c.minHours+' billable hours per worker per day applies (Independent Contractor Service Agreement, s. 3).')+clientInvoicesHtml(firm,false);};})();
 
 /* ---------- monthly client invoices: net 30, 2% per month on overdue ---------- */
 function clientInvs(firm){return (DB.clientInvoices||[]).filter(function(i){return !firm||i.firmId===firm.id;});}
@@ -55,7 +55,7 @@ function abstractAgeError(d){if(d.kind!=='driver_abstract')return '';var max=CB(
 
 /* ---------- Settings ---------- */
 (function(){var os=VIEWS['admin:settings'];VIEWS['admin:settings']=function(){var c=CB();var card='<div class="card" id="clientbill"><h3 style="margin-top:0">Client billing and document rules</h3><form data-form="clientbill"><div class="grid2">'+
-  inp('minHours','Daily minimum billable hours per worker',c.minHours,{type:'number'})+inp('breakMin','Unpaid break deducted on shifts of 5 h or more (minutes)',c.breakMin,{type:'number'})+inp('netDays','Client invoice payment terms (days)',c.netDays,{type:'number'})+inp('interestPct','Interest on overdue client invoices (% per month)',c.interestPct,{type:'number'})+inp('abstractMaxDays','Driver\'s abstract must be dated within (days)',c.abstractMaxDays,{type:'number'})+'</div><button class="small">Save</button></form></div>';
+  inp('minHours','Daily minimum billable hours per worker',c.minHours,{type:'number'})+inp('breakMin','Unpaid break over 5 h (minutes; 60 min at 8 h or more)',c.breakMin,{type:'number'})+inp('netDays','Client invoice payment terms (days)',c.netDays,{type:'number'})+inp('interestPct','Interest on overdue client invoices (% per month)',c.interestPct,{type:'number'})+inp('abstractMaxDays','Driver\'s abstract must be dated within (days)',c.abstractMaxDays,{type:'number'})+'</div><button class="small">Save</button></form></div>';
   return x0(os(),card);};function x0(x,card){return x.replace('<div class="card" id="clienttypeset">',card+'<div class="card" id="clienttypeset">');}})();
 FORMS.clientbill=function(f,d){var n={};var bad=['minHours','breakMin','netDays','interestPct','abstractMaxDays'].some(function(k){var v=Number(d[k]);if(!(v>=0)||d[k]==='')return true;n[k]=v;return false;});if(bad){toast('Enter numbers of 0 or more.');return;}
   DB.settings.clientBilling=n;BREAK_MIN=n.breakMin;audit('Changed client billing / document rules','',JSON.stringify(n));save();toast('Saved.');render();};

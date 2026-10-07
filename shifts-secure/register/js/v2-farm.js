@@ -26,7 +26,7 @@ FIRM_AGR_NOTE,'',
 'Annual fee: $[___] per year (or waived by [UnScramble representative]).',
 'This Project Assignment is covered by the Independent Contractor Services Agreement in effect between the Company and the Contractor; where inconsistent, the Project Assignment governs only for the services it describes.'].join('\n');}
 function firmAgr(){return DB.settings.firmAgreement;}
-function firmSig(firm){var s=(DB.firmSigs||[]).filter(function(x){return x.firmId===firm.id;});return s[s.length-1]||null;}
+function firmSig(firm){if(!firm||!firm.id)return null;var s=(DB.firmSigs||[]).filter(function(x){return x.firmId===firm.id;});return s[s.length-1]||null;}
 function firmSignedCurrent(firm){var s=firmSig(firm);return !!(s&&s.version===firmAgr().version);}
 function firmSignedEver(firm){return !!firmSig(firm);}
 function firmOfSite(code){var s=DB.sites.filter(function(x){return x.code===code;})[0];return s&&s.firmId?user(s.firmId):null;}

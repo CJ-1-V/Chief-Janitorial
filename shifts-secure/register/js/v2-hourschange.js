@@ -87,7 +87,7 @@ ACT.firmedit=function(el){var r=(PAGE_STATE.frRows||{})[el.dataset.key];if(!r)re
     '<div class="hc-l">Worked</div><div class="hc-o">'+r.hours.toFixed(2)+' h</div><div class="hc-v" id="hcnewh">'+r.hours.toFixed(2)+' h</div>'+
     '<div class="hc-l">Billable'+(others.n?'<br><span class="hc-sub">whole day, '+(others.n+1)+' shifts</span>':'')+'</div><div class="hc-o">'+ob2.toFixed(2)+' h</div><div class="hc-v" id="hcnewb">'+ob2.toFixed(2)+' h</div>'+
   '</div><div class="hc-diff" id="hcdiff" aria-live="polite">Change the time or the break above.</div>'+
-  '<div class="hc-note">Billable = this worker\'s hours at your farm that day (all shifts added up), minus '+CB().breakMin+' min once if the day is over '+BILL_BREAK_OVER+' h and a break was taken.'+(hcMin()?(others.waived?' Minimum waived for this day.':' Minimum '+hcMin()+' billable hours per worker per day.'):'')+'</div>'+
+  '<div class="hc-note">Billable = this worker\'s hours at your farm that day (all shifts added up), minus the unpaid break once if a break was taken ('+breakRuleText(CB().breakMin)+').'+(hcMin()?(others.waived?' Minimum waived for this day.':' Minimum '+hcMin()+' billable hours per worker per day.'):'')+'</div>'+
   '<label class="req" for="hcreason">Reason (short)</label><textarea name="comment" id="hcreason" required minlength="3" maxlength="200" rows="2" placeholder="e.g. Worker went home at 2 pm because of rain"></textarea>'+
   '<div class="hc-note"><b>Until the office answers, the original hours stay on your bill.</b></div>'+
   '<div class="hc-btns"><button type="submit" id="hcsend">Send to office</button><button type="button" class="sec" data-act="closeModal">Cancel</button></div></form>');
