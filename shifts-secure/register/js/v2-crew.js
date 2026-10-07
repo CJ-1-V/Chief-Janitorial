@@ -50,6 +50,11 @@ FORMS.crewadj=function(f,d){var sh=crewGuard(d.sid);if(!sh)return;var w=user(d.w
   audit('Crew lead adjusted time',w.name,sh.site+' '+sh.date+': '+before+' → '+t.in+'–'+(t.out||'')+plus1(t.in,t.out)+(t.breakMissed?' (no break)':''));save();toast('Saved for '+w.name+'.');render();};
 NAV.worker=NAV.worker.concat([['#/crew','Clock my crew']]);
 (function(){var om=menuView;menuView=function(){var x=om();if(!ME.crewLead)return x;return x.replace('<div class="menu-list">','<div class="menu-list"><a class="menu-item" href="#/crew"><span class="mi" aria-hidden="true">👥</span><span class="mt"><b>Clock my crew</b><small>Crew lead</small></span><span class="chev" aria-hidden="true">›</span></a>');};})();
+/* combo1 crew-menu fix (2026-10-06): v2-clock.js stores VIEWS['worker:menu']/VIEWS['employee:menu'] = the ORIGINAL menuView, so the wrapper above
+   never ran and crew leads had no "Clock my crew" tile on their Menu (same cause as the safetyfix1 Safety training tile). Add the tile on the menu VIEWS
+   themselves; same markup, crew leads only, never twice. #/crew is already in NAV.worker (above). */
+(function(){function addCrew(x){x=String(x);if(!ME||!ME.crewLead||x.indexOf('href="#/crew"')>=0)return x;return x.replace('<div class="menu-list">','<div class="menu-list"><a class="menu-item" href="#/crew"><span class="mi" aria-hidden="true">👥</span><span class="mt"><b>Clock my crew</b><small>Crew lead</small></span><span class="chev" aria-hidden="true">›</span></a>');}
+  ['worker','employee'].forEach(function(t){var ov=VIEWS[t+':menu'];if(typeof ov==='function')VIEWS[t+':menu']=function(h){return addCrew(ov(h));};});})();
 (function(){var oc=clockView;clockView=function(){var x=oc();if(!ME.crewLead||!leadShifts(ME).length)return x;return '<a class="btn btn-gold" href="#/crew" id="crewbanner" style="display:block;margin-bottom:10px">👥 Clock my crew</a>'+x;};})();
 
 /* office: flagged entries */
