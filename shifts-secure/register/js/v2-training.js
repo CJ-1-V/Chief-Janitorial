@@ -76,6 +76,13 @@ function trainingPage(){var u=ME,items=trainItemsFor(u);
 ['worker','employee'].forEach(function(t){NAV[t]=NAV[t].map(function(n){return n[0]==='#/safety'?['#/training','Training & quizzes']:n;});});
 if(NAV.tester&&!NAV.tester.some(function(n){return n[0]==='#/training';}))NAV.tester.push(['#/training','Training & quizzes (TEST)']);
 (function(){var om=menuView;menuView=function(){var u=ME,todo=trainItemsFor(u).filter(function(k){return !trainState(u,k).ok;}).length;return om().replace('href="#/safety"','href="#/training"').replace('<b>Safety training</b>','<b>Training &amp; quizzes</b><small>'+(todo?todo+' item(s) to do':'All passed')+'</small>');};})();
+/* safetyfix1 (2026-10-06): the employee/worker Menu still showed "Safety training" -> #/safety, which bounced to #/home (the Clock screen).
+   Why: v2-clock.js stores VIEWS['worker:menu']/VIEWS['employee:menu'] = the ORIGINAL menuView, so the wrapper above never ran,
+   and #/safety is no longer in NAV (renamed to #/training), so the router's nav check sent it to #/home.
+   Fix: (1) apply the same Menu relabel to the menu VIEWS themselves; (2) treat any old #/safety link/bookmark as #/training. */
+(function(){function relabel(x){var u=ME,todo=trainItemsFor(u).filter(function(k){return !trainState(u,k).ok;}).length;return String(x).replace('href="#/safety"','href="#/training"').replace('<b>Safety training</b>','<b>Training &amp; quizzes</b><small>'+(todo?todo+' item(s) to do':'All passed')+'</small>');}
+  ['worker','employee'].forEach(function(t){var ov=VIEWS[t+':menu'];if(typeof ov==='function')VIEWS[t+':menu']=function(h){return relabel(ov(h));};});
+  var og=gateRoute;gateRoute=function(h){h=og(h);return (h==='#/safety'&&ME&&['worker','employee','tester'].indexOf(ME.type)>=0)?'#/training':h;};})();
 document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('[data-module]');if(a)PAGE_STATE.openModule=a.dataset.module;});
 
 /* ---------- reminders: 14 days ahead and on the day ---------- */
