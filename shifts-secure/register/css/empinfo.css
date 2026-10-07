@@ -1,0 +1,100 @@
+/* empinfo1 – employee-side infographics (js/v2-empinfo.js): Total hours worked card + week bars, clock strip, training ring,
+   checklist step bar, subcontractor crew cards. Indigo #332E57 + gold #D9A03C like the rest of the app. Phone-first (390 px).
+   Motion: short grow / fade only when the device does not ask for reduced motion. */
+.ei-card { --ei-ind: #332E57; --ei-gold: #D9A03C; --ei-lt: #ece9f6; --ei-th: 92px; --ei-base: 18px; background: #fff; color: #222; }
+.ei-card .ei-h { margin: 0; font-size: 16px; line-height: 1.25; color: var(--ei-ind); }
+.ei-card .ei-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ei-tag { display: inline-block; background: #fdf6e8; color: #7a5410; border: 1px solid #ecd3a0; border-radius: 999px; font-size: 11px; font-weight: 700;
+  padding: 1px 8px; white-space: nowrap; letter-spacing: .2px; vertical-align: middle; }
+/* ---- Total hours worked ---- */
+#main .ei-hours.card, .ei-hours.card { border-top: 4px solid var(--ei-gold); }
+.ei-big { display: flex; align-items: baseline; gap: 6px; margin: 6px 0 0; color: var(--ei-ind); }
+.ei-big b { font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+.ei-big span { font-size: 16px; font-weight: 700; color: #5b567a; }
+.ei-cap { color: #5b567a; margin: 2px 0 10px; }
+.ei-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+.ei-tile { background: var(--ei-lt); border-radius: 10px; padding: 8px 8px 7px; min-width: 0; display: flex; flex-direction: column; }
+.ei-tile .ei-tl { font-size: 11px; font-weight: 700; color: var(--ei-ind); text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ei-tile b { font-size: 20px; line-height: 1.2; color: var(--ei-ind); font-variant-numeric: tabular-nums; }
+.ei-tile small { font-size: 11px; color: #5b567a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ei-note { margin: 10px 0 0; line-height: 1.4; }
+.ei-wait { color: #7a5410; }
+/* ---- week bars ---- */
+.ei-week { border: 1px solid #e6e3f0; border-radius: 10px; padding: 8px 8px 6px; }
+.ei-wkhd { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.ei-wkt { flex: 1; min-width: 0; text-align: center; display: flex; flex-direction: column; line-height: 1.25; }
+.ei-wkt b { font-size: 13px; color: var(--ei-ind); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ei-wkt span { font-size: 12px; color: #5b567a; font-variant-numeric: tabular-nums; }
+.ei-card button.ei-nav { flex: 0 0 auto; width: 36px; height: 36px; min-height: 36px; min-width: 36px; padding: 0; margin: 0; border-radius: 9px; border: 1px solid #d9d5ea;
+  background: #fff; color: var(--ei-ind); font-size: 22px; line-height: 1; font-weight: 700; cursor: pointer; box-shadow: none; }
+.ei-card button.ei-nav:disabled { opacity: .35; cursor: default; }
+.ei-bars { position: relative; display: flex; align-items: flex-end; gap: 6px; padding: 0 2px; }
+.ei-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.ei-v { height: 16px; font-size: 11px; font-weight: 700; color: var(--ei-ind); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ei-track { position: relative; width: 100%; max-width: 34px; height: var(--ei-th); background: #f4f2fa; border-radius: 6px 6px 3px 3px; overflow: hidden; }
+.ei-track i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ei-ind); border-radius: 6px 6px 2px 2px; transform-origin: bottom; }
+.ei-today .ei-track i { background: var(--ei-gold); }
+.ei-today .ei-d { color: #7a5410; font-weight: 800; }
+.ei-fut .ei-track { background: repeating-linear-gradient(135deg, #f4f2fa 0 5px, #fbfaff 5px 10px); }
+.ei-d { height: var(--ei-base); line-height: var(--ei-base); font-size: 11px; color: #5b567a; font-weight: 600; }
+.ei-8 { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #c9a35a; font-size: 9px; color: #9a7329; text-align: right; line-height: 1; padding-right: 1px; pointer-events: none; z-index: 1; }
+.ei-none { text-align: center; margin: 4px 0 0; }
+/* ---- clock strip ---- */
+a.ei-strip.card { display: flex; align-items: center; gap: 10px; padding: 10px 12px; margin: 0 0 12px; text-decoration: none; color: inherit; border-left: 4px solid var(--ei-gold); }
+a.ei-strip.card:hover, a.ei-strip.card:focus { text-decoration: none; color: inherit; background: #fffdf8; }
+.ei-sl { flex: 1; min-width: 0; }
+.ei-st { display: block; font-size: 12px; font-weight: 700; color: var(--ei-ind); text-transform: uppercase; letter-spacing: .3px; margin: 0 0 2px; }
+.ei-sn { display: flex; gap: 12px; }
+.ei-sn span { display: flex; flex-direction: column; min-width: 0; }
+.ei-sn b { font-size: 18px; line-height: 1.15; color: var(--ei-ind); font-variant-numeric: tabular-nums; }
+.ei-sn small { font-size: 11px; color: #5b567a; white-space: nowrap; }
+.ei-on { color: #1f6b3a; margin-top: 3px; }
+.ei-mini { --ei-th: 34px; --ei-base: 13px; gap: 3px; flex: 0 0 auto; width: 84px; padding: 0; }
+.ei-mini .ei-track { max-width: 9px; border-radius: 3px; }
+.ei-mini .ei-track i { border-radius: 3px 3px 1px 1px; }
+.ei-mini .ei-d { font-size: 9px; }
+.ei-go { font-size: 24px; color: #8a85a8; line-height: 1; }
+/* ---- rings (training, crew) ---- */
+.ei-rw { display: flex; align-items: center; gap: 14px; }
+.ei-ring { flex: 0 0 auto; width: 104px; height: 104px; display: block; }
+.ei-ringbg { fill: none; stroke: #f0eef7; stroke-width: 11; }
+.ei-seg { fill: none; stroke-width: 11; stroke-linecap: butt; }
+.ei-seg.ei-ok { stroke: #332E57; } .ei-seg.ei-warn { stroke: #D9A03C; } .ei-seg.ei-bad { stroke: #c0392b; } .ei-seg.ei-mut { stroke: #c9c6d6; } .ei-seg.ei-temp { stroke: #8e6bbf; }
+.ei-rbig { font-size: 22px; font-weight: 800; fill: #332E57; }
+.ei-rsm { font-size: 10px; font-weight: 600; fill: #5b567a; }
+.ei-rt { flex: 1; min-width: 0; }
+.ei-rp { margin: 2px 0 4px; }
+.ei-leg { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+.ei-leg li { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.ei-k { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: #332E57; }
+.ei-k.ei-warn { background: #D9A03C; } .ei-k.ei-bad { background: #c0392b; } .ei-k.ei-wait { background: #e9d8b4; border: 1px solid #D9A03C; } .ei-k.ei-mut { background: #c9c6d6; } .ei-k.ei-temp { background: #8e6bbf; }
+.ei-due { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+.ei-due li { padding: 6px 8px 6px 10px; margin: 0 0 4px; border-radius: 8px; background: #fbe9e7; border-left: 4px solid #c0392b; overflow-wrap: anywhere; }
+.ei-due li.ei-warn { background: #fdf6e8; border-left-color: #D9A03C; }
+.ei-due li.ei-mut { background: #f4f2fa; border-left-color: #a29fb5; }
+.ei-due li.ei-temp { background: #f3eefa; border-left-color: #8e6bbf; }
+.ei-due .linklike { margin: 0; font-size: 14px; font-weight: 600; color: #332E57; text-align: left; }
+.ei-okp { margin: 8px 0 0; color: #1f6b3a; }
+.ei-crew > a.small { display: inline-block; margin-top: 8px; }
+.ei-flash { box-shadow: 0 0 0 3px #D9A03C !important; transition: box-shadow .3s; }
+/* ---- checklist step bar ---- */
+.ei-pc { font-size: 20px; color: var(--ei-ind); font-variant-numeric: tabular-nums; }
+.ei-steps { display: flex; gap: 3px; margin: 8px 0 2px; }
+.ei-steps i { flex: 1 1 0; min-width: 4px; height: 12px; border-radius: 3px; background: #332E57; transform-origin: left; }
+.ei-steps i.ei-warn { background: #D9A03C; } .ei-steps i.ei-bad { background: #ead8d5; box-shadow: inset 0 0 0 1px #c0392b; } .ei-steps i.ei-wait { background: #f3e6c8; box-shadow: inset 0 0 0 1px #D9A03C; }
+.ei-steps i:first-child { border-radius: 6px 3px 3px 6px; } .ei-steps i:last-child { border-radius: 3px 6px 6px 3px; }
+/* ---- subcontractor dashboard: side by side on wide screens ---- */
+.ei-subgrid { display: grid; grid-template-columns: 1fr; gap: 0 14px; }
+@media (min-width: 900px) { .ei-subgrid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
+@media (max-width: 360px) { .ei-big b { font-size: 38px; } .ei-tile b { font-size: 17px; } .ei-ring { width: 88px; height: 88px; } .ei-mini { width: 70px; } }
+/* ---- motion (only when allowed) ---- */
+@media (prefers-reduced-motion: no-preference) {
+  .ei-track i { animation: eiGrow .55s cubic-bezier(.2,.8,.2,1) both; }
+  .ei-steps i { animation: eiGrowX .45s ease-out both; }
+  .ei-ring g { animation: eiSpin .7s cubic-bezier(.2,.8,.2,1) both; transform-box: view-box; transform-origin: 50% 50%; }
+  .ei-big b { animation: eiUp .4s ease-out both; }
+  @keyframes eiGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+  @keyframes eiGrowX { from { transform: scaleX(0); opacity: .3; } to { transform: scaleX(1); opacity: 1; } }
+  @keyframes eiSpin { from { opacity: 0; transform: rotate(-90deg) rotate(-40deg); } to { opacity: 1; transform: rotate(-90deg); } }
+  @keyframes eiUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+}
