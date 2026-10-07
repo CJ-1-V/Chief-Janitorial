@@ -1,0 +1,19 @@
+/* trainwelcome1 – welcome / training card on the first screen (js/v2-trainwelcome.js). Navy #332E57 + gold #D9A03C like the rest of the app. */
+.trw { position: relative; padding: 14px 40px 14px 14px; margin: 0 0 12px; background: #fff; }
+.trw .trw-h { margin: 0 0 4px; font-size: 18px; color: #332E57; }
+.trw .trw-p { margin: 0 0 10px; font-size: 14px; line-height: 1.4; }
+.trw .trw-x { position: absolute; top: 6px; right: 6px; width: 32px; height: 32px; min-height: 32px; padding: 0; border: 0; border-radius: 8px;
+  background: transparent; color: #332E57; font-size: 22px; line-height: 1; cursor: pointer; }
+.trw .trw-x:hover { background: #efedf7; }
+.trw-badge { display: inline-block; background: #D9A03C; color: #332E57; font-weight: 700; font-size: 12px; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.trw-new { display: inline-block; background: #332E57; color: #fff; font-weight: 700; font-size: 11px; border-radius: 4px; padding: 1px 6px; }
+.trw .trw-todo { margin: 0 0 10px; }
+.trw .trw-todo ul { margin: 6px 0 0 18px; padding: 0; font-size: 14px; }
+.trw .trw-todo li { margin: 3px 0; }
+.trw .trw-ok { margin: 0 0 10px; color: #1f6b3a; font-weight: 600; font-size: 14px; }
+.trw .trw-go { display: inline-block; text-decoration: none; }
+.trw-mini { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; padding: 9px 12px; border: 1px solid #D9A03C; border-radius: 8px;
+  background: #fdf6e8; color: #332E57; text-decoration: none; font-weight: 600; font-size: 14px; }
+.trw-mini:hover { background: #fbeed3; color: #332E57; text-decoration: none; }
+#main .trw.card { border-left: 4px solid #D9A03C; }   /* gold edge also inside the phone layout (its .card rules are more specific) */
+@media (max-width: 420px) { .trw .trw-go { display: block; text-align: center; } }
