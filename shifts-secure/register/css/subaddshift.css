@@ -1,0 +1,27 @@
+/* subaddshift1 – subcontractor "Add shift" (js/v2-subaddshift.js). Navy #332E57 + gold #D9A03C like subopen1. Phone-first (390 px). */
+.sa-card { border-top: 4px solid #D9A03C; }
+.sa-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sa-h { margin: 0 0 8px; font-size: 18px; color: #332E57; }
+.sa-hd .sa-h { margin: 0; }
+.sa-tag { flex: 0 0 auto; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: #fdf1d8; color: #7a5410; white-space: nowrap; }
+.sa-rules { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #f4f2fa; border-left: 4px solid #332E57; font-size: 14px; line-height: 1.4; color: #2a2648; }
+.sa-txt { font-size: 14px; line-height: 1.4; margin: 0 0 8px; color: #2a2648; }
+#saForm .grid2 > div { min-width: 0; }
+#saForm select, #saForm input { width: 100%; max-width: 100%; box-sizing: border-box; }
+.sa-hint { margin: 10px 0 4px; min-height: 18px; color: #332E57; }
+.sa-send { width: 100%; margin-top: 8px; font-weight: 700; }
+.sa-items { list-style: none; margin: 8px 0 0; padding: 0; }
+.sa-items li { padding: 9px 0; border-top: 1px solid #ece9f6; }
+.sa-items li:first-child { border-top: 0; }
+.sa-l1 { font-size: 15px; color: #222; overflow-wrap: anywhere; }
+.sa-l2 { font-size: 13px; color: #5b567a; margin: 2px 0 4px; }
+.sa-l3 { font-size: 13px; }
+.sa-dash .sa-dbtn { gap: 8px; flex-wrap: wrap; }
+.sa-dash .sa-dbtn button { flex: 1 1 140px; }
+.sa-otag { background: #ece9f6; color: #332E57; font-weight: 700; }
+tr.sa-q td:first-child { border-left: 4px solid #D9A03C; }
+#saOfficeSub { margin: 8px 0; }
+#saOfficeSub button { margin-left: 6px; }
+.sa-pcell { display: block; min-width: 0; }
+.sa-otagbox { margin: 0 0 4px; line-height: 1.5; }
+.sa-pwho { font-weight: 600; }
