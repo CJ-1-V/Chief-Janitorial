@@ -1,0 +1,17 @@
+{
+  "id": "/shifts-secure/register/",
+  "name": "UnScramble",
+  "short_name": "UnScramble",
+  "description": "UnScramble – clock in, shifts, training, crews and hours.",
+  "start_url": "/shifts-secure/register/",
+  "scope": "/shifts-secure/register/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#332E57",
+  "icons": [
+    {"src": "assets/unscramble-app-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "assets/unscramble-app-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}
+  ]
+}
