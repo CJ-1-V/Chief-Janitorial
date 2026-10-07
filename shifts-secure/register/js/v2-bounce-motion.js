@@ -69,7 +69,7 @@
   function endWait(w,quick,refocus){
     if(!w||w!==waiting||w.ending||w.why==='boot')return;w.ending=true;
     setTimeout(function(){
-      if(waiting!==w)return;waiting=null;clearTimeout(w.safety);
+      if(waiting!==w)return;waiting=null;clearTimeout(w.safety);try{clearChips();}catch(e){}
       try{H.removeAttribute('aria-busy');}catch(e){}
       if(refocus&&w.focus&&w.focus.isConnected){try{w.focus.focus({preventScroll:true});}catch(e){}}
       H.classList.add('usb-wait-out');
@@ -116,6 +116,7 @@
       chip.innerHTML=SQ+'<span class="usb-txt"></span>';D.body.appendChild(chip);}
     return chip;
   }
+  function clearChips(){active.forEach(function(tok){tok.done=true;clearTimeout(tok.t);});active=[];try{var el=document.getElementById('reg-busy');if(el)el.remove();}catch(e){}paintChip();}
   function paintChip(){
     var c=chipEl();
     if(active.length&&!waiting){c.querySelector('.usb-txt').textContent=active[active.length-1].label;if(!c.classList.contains('on')){chipShownAt=now();void c.offsetWidth;c.classList.add('on');}}
@@ -226,6 +227,6 @@
   /* hashchange renders run after the submit/click, so give them one tick */
   var _flash=flash;flash=function(l){setTimeout(function(){_flash(l);},0);};
 
-  W.USMotion={busy:busy,button:busyButton,track:track,hideLoader:hideLoader,showWait:showWait,
+  W.USMotion={busy:busy,button:busyButton,track:track,hideLoader:hideLoader,showWait:showWait,clearChips:clearChips,
     state:function(){return {firstRender:firstRender,renders:renders,loaderHidden:hidden,waiting:waiting?waiting.why:''};}};
 })();

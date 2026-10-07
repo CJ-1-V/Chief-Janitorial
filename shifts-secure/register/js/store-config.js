@@ -1,7 +1,7 @@
 /* Data layer switch (public settings only – the publishable key is meant to be in the browser; all access is enforced
  * by row-level security in the database). NEVER put a service key, DB password or client name here.
  *   mode 'mock'     = the original test behaviour: fake data in this browser (localStorage). Used by the 373-check test suite.
- *   mode 'supabase' = the real database (Shift Tracker project) with the Shift Tracker login.
+ *   mode 'supabase' = the real database (shared Supabase project, same login as Shift Tracker).
  * Override for testing (only on this computer / file://): ?store=mock or ?store=supabase (remembered for this tab). */
 window.REG_STORE = {
   mode: 'supabase',
@@ -13,7 +13,13 @@ window.REG_STORE = {
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com
   authStorageKey: 'st-secure-auth',                     // SAME key as Shift Tracker, so one sign-in works for both (same website)
-  clockUrl: '../#/emp/clock',                           // Shift Tracker clock screen (registration app lives at /shifts-secure/register/)
+  clockUrl: '#/home',                                   // UnScramble in-app clock (writes reg_time_entries); Shift Tracker hand-off removed (unstrip-live1)
+  companyId: 'us',                                      // UnScramble company filter (sites 201–299)
+  productName: 'UnScramble',
+  /* Company switch on the sign-in page ('Switch to Chief Janitorial'). Hidden while twinUrl is '' or not an https:// URL.
+     To turn it on once the CJ app is live, change the next line to:  twinUrl: 'https://www.chiefjanitorial.com/shifts-secure/cj/', */
+  twinUrl: '',
+  twinLabel: 'Chief Janitorial',
   bucket: 'reg-docs'
 };
 (function () {

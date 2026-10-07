@@ -20,20 +20,20 @@ if(window.REG_STORE&&window.REG_STORE.mode==='supabase'&&!window.REG_STORE.manua
 var MT_REASONS=[['forgot','Forgot to clock in/out'],['phone','Phone / app problem'],['paper','Paper timesheet'],['correction','Correction'],['other','Other (explain in the note)']];
 var MT_ROLES=['owner','admin','payroll','billing']; /* test app: Owner / Payroll administrator; live staff roles: owner, admin, billing (= payroll) */
 var MT_WARN_H=12;
-function mtCan(u){u=u||ME;return !!u&&u.type==='admin'&&(MT_ROLES.indexOf(u.officeRole)>=0||MT_ROLES.indexOf(officeRoleOf(u))>=0||(u.officeRoles||[]).some(function(r){return MT_ROLES.indexOf(r)>=0;}));}
+function mtCan(u){u=u||ME;return !!u&&u.type==='admin'&&(MT_ROLES.indexOf(u.officeRole)>=0||(typeof officeRoleOf==='function'&&MT_ROLES.indexOf(officeRoleOf(u))>=0)||(u.officeRoles||[]).some(function(r){return MT_ROLES.indexOf(r)>=0;}));}
 function mtReason(k){var r=MT_REASONS.filter(function(x){return x[0]===k;})[0];return r?r[1].replace(/ \(explain in the note\)/,''):(k||'');}
 function mtEntry(id){return DB.time.filter(function(t){return t.id===id;})[0]||null;}
 function mtTag(){return '<span class="pill s-manual">Manual</span>';}
 /* office-only label: site code + client name (real name if the client record has one). Never used on worker screens. */
 function mtClientName(code){var f=siteFirm(code);if(!f)return '';var real=f.realName||f.clientRealName||(f.firm&&(f.firm.realName||f.firm.clientRealName))||'';return real||f.name||'';}
 function mtOfficeSite(code){var n=mtClientName(code);return code+(n?' – '+n:'');}
-function mtSites(){return DB.sites.filter(function(s){return s.firmId&&s.code!=='TEST-PRACTICE'&&s.active!==false;});}
+function mtSites(){return (typeof companySites==='function'?companySites({withFirm:true,skipPractice:true,activeOnly:true}):DB.sites.filter(function(s){return s.firmId&&s.code!=='TEST-PRACTICE'&&s.active!==false;}));}
 function mtPeople(){return DB.users.filter(function(u){return (u.type==='employee'||u.type==='worker')&&u.accountApproved!==false;}).sort(function(a,b){return a.name<b.name?-1:1;});}
 function mtWho(u){return u.type==='employee'?'UnScramble employee':employerName(u);}
 /* 96 quarter-hour choices – the only times you can pick */
 function mtTimeSel(name,label,val,o){o=o||{};var x='';for(var m=0;m<1440;m+=15){var v=pad(Math.floor(m/60))+':'+pad(m%60);x+='<option value="'+v+'"'+(v===val?' selected':'')+'>'+v+'</option>';}
   return '<div><label class="req">'+esc(label)+'</label><select name="'+name+'" class="mt-time" required'+(o.form?' form="'+o.form+'"':'')+'>'+x+'</select></div>';}
-function mtBreakSel(val){return '<div><label class="req">Unpaid break</label><select name="brk" required><option value="taken"'+(val!=='none'?' selected':'')+'>'+BREAK_MIN+'-minute break taken (deducted on shifts of 5 h or more)</option><option value="none"'+(val==='none'?' selected':'')+'>No break taken (nothing deducted)</option></select></div>';}
+function mtBreakSel(val){return '<div><label class="req">Unpaid break</label><select name="brk" required><option value="taken"'+(val!=='none'?' selected':'')+'>Break taken ('+breakRuleText()+')</option><option value="none"'+(val==='none'?' selected':'')+'>No break taken (nothing deducted)</option></select></div>';}
 function mtReasonSel(val,label){return '<div><label class="req">'+esc(label||'Reason')+'</label><select name="reason" required><option value="">– choose –</option>'+MT_REASONS.map(function(r){return '<option value="'+r[0]+'"'+(r[0]===val?' selected':'')+'>'+esc(r[1])+'</option>';}).join('')+'</select></div>';}
 function mtSpan(a,b){return esc(a)+'–'+esc(b)+plus1H(a,b);}
 function mtPaid(t){var w=hrs(t['in'],t.out);return w-unpaidBreak(w,t);}
@@ -186,11 +186,19 @@ ROLE_ONLY.mtlead=['worker'];
 
 /* ---------- payroll: record exports, Manual tag, CSV column, preview ---------- */
 (function(){var op=ACT.paycsv;ACT.paycsv=function(){var cur=payPeriodOf(PAGE_STATE.payDate||today()),a0=DB.audit[0];var r=op();if(!PAGE_STATE.mtPreview&&DB.audit[0]&&DB.audit[0]!==a0&&/Downloaded payroll hours CSV/.test(DB.audit[0].action)){(DB.payExports=DB.payExports||[]).push({start:cur.start,end:cur.end,at:new Date().toISOString(),by:ME.name});DB.time.forEach(function(t){if(t.afterExport===cur.start)delete t.afterExport;});save();render();}return r;};})();
-function mtPayLines(){var cur=payPeriodOf(PAGE_STATE.payDate||today()),P=payrollRows(cur.start,cur.end),out=[];P.forEach(function(r){r.lines.forEach(function(l){out.push(l.t);});});return {cur:cur,P:P,lines:out};}
+function mtPayLines(){
+  var cur=payPeriodOf(PAGE_STATE.payDate||today()),P=payrollRows(cur.start,cur.end)||[],out=[];
+  /* payrollRows returns {u,n,hours,overnight,entries} – not {lines:[{t}]} (P0 crash Oct 6) */
+  P.forEach(function(r){
+    var lines=r.lines||(r.entries||[]).map(function(t){return {t:t};});
+    lines.forEach(function(l){var tt=l&&(l.t||l);if(tt)out.push(tt);});
+  });
+  return {cur:cur,P:P,lines:out};
+}
 (function(){var od=ACT.paycsvdetail;ACT.paycsvdetail=function(){var L=mtPayLines(),dl=downloadText;downloadText=function(name,text,mime){var rows=text.split('\n');rows=rows.map(function(line,i){return line+','+(i===0?'Entry type':(L.lines[i-1]&&L.lines[i-1].manual?'Manual':'Clock'));});return dl(name,rows.join('\n'),mime);};try{return od();}finally{downloadText=dl;}};})();
 /* The Wagepoint hours CSV (import file) is left exactly as it was – manual entries are marked in the shift-details CSV ("Entry type") and in the preview. */
 (function(){var ov=VIEWS['admin:payroll'];VIEWS['admin:payroll']=function(){var x=ov(),L=mtPayLines();
-  L.P.forEach(function(r){r.lines.forEach(function(l){if(!l.t.manual)return;var s=esc(l.t.date+' '+l.t['in']+'–'+l.t.out);var start=x.indexOf('<tr data-u="'+r.u.id+'">');if(start<0)return;var at=x.indexOf(s,start);if(at<0)return;x=x.slice(0,at+s.length)+' <span class="pill s-manual">Manual</span>'+x.slice(at+s.length);});});
+  L.P.forEach(function(r){var lines=r.lines||(r.entries||[]).map(function(t){return {t:t};});lines.forEach(function(l){var tt=l&&(l.t||l);if(!tt||!tt.manual)return;var s=esc(tt.date+' '+tt['in']+'–'+tt.out);var start=x.indexOf('<tr data-u="'+r.u.id+'">');if(start<0)return;var at=x.indexOf(s,start);if(at<0)return;x=x.slice(0,at+s.length)+' <span class="pill s-manual">Manual</span>'+x.slice(at+s.length);});});
   var ex=(DB.payExports||[]).filter(function(e){return e.start===L.cur.start;}).slice(-1)[0],late=DB.time.filter(function(t){return t.afterExport===L.cur.start;}).length;
   var note=(ex?'<div class="alert '+(late?'warn':'info')+' small" id="payexported">This pay period was exported for Wagepoint on '+esc(fmtStamp(ex.at))+' by '+esc(ex.by)+'.'+(late?' <b>'+late+' manual '+(late===1?'entry was':'entries were')+' added or changed after that</b> – download again and correct Wagepoint.':'')+'</div>':'');
   return x.replace('<div class="row"><button class="small" data-act="paycsv"',note+'<div class="row"><button class="small sec" data-act="paycsvpreview" id="paypreviewbtn">Preview export</button><button class="small" data-act="paycsv"');};})();

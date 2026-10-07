@@ -49,10 +49,10 @@ function layout(content){
   if(u){var gn=gateNav(u);if(gn)nav=gn;}
   var unread=u?DB.notes.filter(function(n){return (n.to===u.id||(u.type==='admin'&&n.to==='admin'))&&!n.read;}).length:0;
   return '<div class="testbar"><span>TEST VERSION – local only.</span> Fake data, stored only in this browser. Nothing is sent anywhere.'+(DB.settings.simDate?' &nbsp;<span>Simulated date: '+DB.settings.simDate+'</span>':'')+'</div>'+
-  '<header class="top"><img src="assets/unscramble-logo.svg" alt="UnScramble"><div><div style="font-weight:700">Registration &amp; Compliance</div><div class="small" style="opacity:.8">Shift Tracker – test build</div></div>'+
+  '<header class="top"><img src="assets/unscramble-logo.svg" alt="UnScramble"><div><div style="font-weight:700">UnScramble</div><div class="small" style="opacity:.8">Clock, farms &amp; compliance</div></div>'+
   (u?'<div class="who">'+esc(u.name)+' · <b>'+esc(TYPES[u.type])+'</b>'+(u.type==='tester'?' <span class="badge-test">TEST</span>':'')+(u.type==='sub'?tempBadge(u):u.type==='worker'?tempBadge(subOf(u)):'')+' <button class="small sec" data-act="logout">Sign out</button></div>':'')+'</header>'+
   (u?'<nav class="tabs">'+nav.map(function(n){var c=n[0]==='#/alerts'&&unread?'<span class="cnt">'+unread+'</span>':'';return '<a href="'+n[0]+'" class="'+(h===n[0]?'on':'')+'">'+esc(n[1])+c+'</a>';}).join('')+'</nav>':'')+
-  '<main id="main">'+content+'</main><footer>UnScramble – The HR Company Inc. · TEST VERSION, local only · Not connected to the live Shift Tracker</footer>'+
+  '<main id="main">'+content+'</main><footer>UnScramble – The HR Company Inc.</footer>'+
   (u&&u.type==='tester'?'<button class="fb-btn" data-act="feedback">★ Send feedback</button>':'');
 }
 function render(){
@@ -87,7 +87,8 @@ function confirmBox(key,msg){ /* two-tap confirm without blocking dialogs */
 /* ---------- Sign in ---------- */
 VIEWS.login=function(){
   var tl=[['office','UnScramble office / admin'],['subco','Subcontractor (all valid)'],['subco2','Subcontractor (pending, insurance expired)'],['worker1','Subcontractor worker (valid, driver)'],['worker2','Subcontractor worker (permit expiring)'],['worker3','Subcontractor worker (new – items still to finish)'],['worker4','Subcontractor worker (employer papers not finished)'],['crewleadA','Crew lead (clocks the crew in and out)'],['employee1','Employee (fully set up)'],['employee2','Employee (registration in progress)'],['employee3','Employee (ready for Wagepoint)'],['tester1','Testing for App Development'],['firmA','Client firm: Test Farm A'],['firmB','Client firm: Test Farm B'],['clientFarm','Client: Sample Orchard Farm']];
-  return '<div class="login-wrap"><img class="logo-big" src="assets/unscramble-logo.svg" alt="UnScramble"><div class="card"><h1>Sign in</h1>'+
+  var switchHtml=(typeof companySwitchHtml==='function')?companySwitchHtml('us'):'';
+  return '<div class="login-wrap"><img class="logo-big" src="assets/unscramble-logo.svg" alt="UnScramble"><div class="card"><h1>Sign in to UnScramble</h1>'+switchHtml+
   '<form data-form="login">'+inp('login','Username, email or phone','',{req:true,extra:' data-autofocus autocomplete="username"'})+inp('password','Password','',{type:'password',req:true,extra:' autocomplete="current-password"'})+
   '<div class="row" style="margin-top:12px"><button type="submit">Sign in</button><a href="#/forgot" class="right small">Forgot password?</a></div></form>'+
   '<div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px"><span class="muted small">New here?</span><br><a class="btn" href="#/signup" style="margin-top:6px">Create an account</a></div></div>'+

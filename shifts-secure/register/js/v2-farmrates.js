@@ -8,15 +8,16 @@
    6) Farms never see subcontractor pay rates or worker pay. The farm's amount owed / HST uses the farm's signed rates. */
 'use strict';
 var FARM_RATE_ROLES=[['labour','General labour (field / grading / packing)'],['painting','Painting'],['forklift','Forklift operator (incl. bin piler)'],['driver','Truck driver']];
-var FARM_OT_NOTE='Overtime rate (optional) applies to billable hours over 48 in a week per worker (PEI standard week – placeholder, owner to confirm).';
+var FARM_OT_NOTE='Overtime rate (optional) applies to billable hours over 48 in a week per worker.';
 TYPES.firm=TYPES.firm||'Farm / business (client)';
-function farmRateList(firm){return (DB.farmRates||[]).filter(function(r){return r.firmId===firm.id;}).sort(function(a,b){return a.version-b.version;});}
-function farmRatesCur(firm){var l=farmRateList(firm);return l[l.length-1]||null;}
-function farmSigsOf(firm){return (DB.firmSigs||[]).filter(function(s){return s.firmId===firm.id;});}
+function cjSkipFarmRates(){try{return !!(window.REG_STORE&&window.REG_STORE.companyId==='cj');}catch(e){return false;}}
+function farmRateList(firm){if(!firm||!firm.id)return [];return (DB.farmRates||[]).filter(function(r){return r&&r.firmId===firm.id;}).sort(function(a,b){return (a.version||0)-(b.version||0);});}
+function farmRatesCur(firm){if(!firm||!firm.id)return null;var l=farmRateList(firm);return l[l.length-1]||null;}
+function farmSigsOf(firm){if(!firm||!firm.id)return [];return (DB.firmSigs||[]).filter(function(s){return s&&s.firmId===firm.id;});}
 function farmRateAccepted(firm,v){return farmSigsOf(firm).filter(function(s){return s.rateVersion===v;})[0]||null;}
-function farmRatesReady(firm){var c=farmRatesCur(firm);return !!(c&&farmRateAccepted(firm,c.version));}
-function farmBookable(firm){return firm.accountApproved!==false&&firm.active!==false&&!!farmRatesCur(firm)&&firmSignedEver(firm)&&farmRatesReady(firm);}
-function farmStatus(firm){var c=farmRatesCur(firm);
+function farmRatesReady(firm){if(!firm||!firm.id)return false;if(cjSkipFarmRates())return true;var c=farmRatesCur(firm);return !!(c&&farmRateAccepted(firm,c.version));}
+function farmBookable(firm){if(!firm||!firm.id)return false;if(cjSkipFarmRates())return firm.accountApproved!==false&&firm.active!==false;return firm.accountApproved!==false&&firm.active!==false&&!!farmRatesCur(firm)&&firmSignedEver(firm)&&farmRatesReady(firm);}
+function farmStatus(firm){if(!firm||!firm.id)return {t:'Unknown client',c:'s-mut',why:''};if(cjSkipFarmRates())return {t:'Cleaning client (fixed invoices – no farm Rate Schedule)',c:'s-ok',why:''};var c=farmRatesCur(firm);
   if(firm.accountApproved===false)return {t:'Pending office review',c:'s-pend',why:'The office has not approved this farm account or set its rates yet.'};
   if(!c)return {t:'Approved – waiting for office to set rates',c:'s-bad',why:'The office has not entered this farm\'s labour rates yet.'};
   if(!firmSignedEver(firm)||!farmSigsOf(firm).some(function(s){return s.rateVersion;}))return {t:'Rates set (v'+c.version+') – waiting for farm to sign',c:'s-bad',why:'The farm has not signed the agreement and Rate Schedule yet.'};
@@ -70,17 +71,17 @@ FORMS.farmrates=function(f,d){var firm=user(d.id);if(!firm||firm.type!=='firm'){
     return '<tr data-firm="'+esc(f.username||f.id)+'"><td><b>'+esc(f.name)+'</b><div class="small muted">'+esc((f.firm||{}).contact||'')+'</div></td><td><span class="pill '+st.c+'">'+esc(st.t)+'</span>'+(flag?'<div class="small" style="color:#a33">'+flag+' booked shift(s) flagged – rates not re-accepted</div>':'')+'</td><td class="small">'+(c?FARM_RATE_ROLES.filter(function(r){return c.rates[r[0]];}).map(function(r){return esc(r[1].split(' (')[0])+' '+money(c.rates[r[0]]);}).join('<br>')+(c.other?'<br>'+esc(c.other.name)+' '+money(c.other.rate):'')+'<br>OT '+(c.overtime?money(c.overtime):'–')+' · HST '+(c.hst?'on':'off')+'<br><span class="muted">v'+c.version+' eff. '+esc(c.effective)+'</span>':'–')+'</td><td class="small">'+(sigs.length?sigs.map(function(s){return 'Rates v'+s.rateVersion+' + agreement v'+esc(s.version)+' – '+esc(s.signerName)+', '+fmtStamp(s.at)+' <button class="small sec" data-act="firmagrdl" data-id="'+s.id+'">Copy</button>';}).join('<br>'):'–')+'</td><td>'+(f.accountApproved===false?'<button class="small" data-act="approvenew" data-id="'+f.id+'">Approve account</button> ':'')+'<button class="small" data-act="farmratesmodal" data-id="'+f.id+'">'+(c?'Change rates':'Set rates')+'</button></td></tr>';}).join('')+'</table></div></div>';
   return x+of();};})();
 function farmBookedFlag(firm){if(farmRatesReady(firm)||!farmRatesCur(firm))return 0;var codes=firmCodes(firm);return DB.shifts.filter(function(s){return !s.test&&s.date>=today()&&codes.indexOf(s.site)>=0&&(s.booked||[]).length;}).length;}
-(function(){var of=adminFlags;adminFlags=function(){var f=of();users('firm').forEach(function(fm){if(fm.active===false)return;var st=farmStatus(fm);if(st.c!=='s-ok')f.push({t:'Farm: '+fm.name,c:st.t+(farmBookedFlag(fm)?' – '+farmBookedFlag(fm)+' booked shift(s) flagged':''),h:'#/firms'});});return f;};})();
+(function(){var of=adminFlags;adminFlags=function(){var f=of();if(cjSkipFarmRates())return f;users('firm').forEach(function(fm){if(!fm||!fm.id||fm.active===false)return;var st=farmStatus(fm);if(st.c!=='s-ok')f.push({t:'Farm: '+fm.name,c:st.t+(farmBookedFlag(fm)?' – '+farmBookedFlag(fm)+' booked shift(s) flagged':''),h:'#/firms'});});return f;};})();
 
 /* ---------- 4) booking / assigning blocked until rates set AND signed. After a rate change, workers already booked stay booked (flagged to the office); new bookings are blocked. ---------- */
-(function(){var ob=blockers;blockers=function(u,date,shift){var b=ob(u,date,shift);if(shift&&!shift.test){var f=firmOfSite(shift.site);
+(function(){var ob=blockers;blockers=function(u,date,shift){var b=ob(u,date,shift);if(cjSkipFarmRates())return b;if(shift&&!shift.test){var f=firmOfSite(shift.site);if(!f||!f.id)return b;
   var already=(shift.booked||[]).indexOf(u.id)>=0&&farmRatesCur(f)&&farmSigsOf(f).some(function(x){return x.rateVersion;});
   if(f&&firmSignedEver(f)&&!farmBookable(f)&&!already)b.push({m:'Shifts at '+f.name+' are blocked: '+farmStatus(f).t+'.',fix:''});
   else if(f&&!firmSignedEver(f)&&!farmRatesCur(f))b.push({m:'Shifts at '+f.name+' are blocked: rates not set by the office yet.',fix:''});}return b;};})();
-(function(){var on=FORMS.newshift;FORMS.newshift=function(f,d){var fm=firmOfSite(d.site);if(fm&&!farmBookable(fm))toast('Note: '+fm.name+' – '+farmStatus(fm).t+'. Nobody can be booked on this shift until that is fixed.');return on(f,d);};})();
+(function(){var on=FORMS.newshift;FORMS.newshift=function(f,d){if(cjSkipFarmRates())return on(f,d);var fm=firmOfSite(d.site);if(fm&&fm.id&&!farmBookable(fm))toast('Note: '+fm.name+' – '+farmStatus(fm).t+'. Nobody can be booked on this shift until that is fixed.');return on(f,d);};})();
 
 /* ---------- 3) farm signs agreement + Rate Schedule together ---------- */
-firmAgrCard=function(firm,forOffice){var a=firmAgr(),s=firmSig(firm),c=farmRatesCur(firm),st=farmStatus(firm);
+firmAgrCard=function(firm,forOffice){if(!firm||!firm.id)return '';if(cjSkipFarmRates())return '<div class="card" id="firmagr"><b>Cleaning client</b> <span class="pill s-ok">No farm Rate Schedule</span><p class="small muted">Chief Janitorial uses fixed cleaning invoices / site visits – not a farm labour Rate Schedule.</p></div>';var a=firmAgr(),s=firmSig(firm),c=farmRatesCur(firm),st=farmStatus(firm);
   var hist=farmSigsOf(firm).slice().reverse().map(function(x){return '<li>'+fmtStamp(x.at)+' '+esc(x.tz)+' – agreement v'+esc(x.version)+(x.rateVersion?' + Rate Schedule v'+x.rateVersion:'')+' – '+esc(x.signerName)+' ('+esc(x.title)+') <button class="small sec" data-act="firmagrprint" data-id="'+x.id+'">Print / PDF</button> <button class="small sec" data-act="firmagrdl" data-id="'+x.id+'">Download</button></li>';}).join('');
   if(!c)return '<div class="card hl" id="firmagr"><h2 style="margin-top:0">Shifts blocked – waiting for your rates</h2><div class="alert bad"><b>No shifts can be booked yet.</b> UnScramble has not set the labour rates for your farm. When it does, you will sign the '+esc(FIRM_AGR_NAME)+' and your Rate Schedule here.</div></div>';
   var curAgr=firmSignedCurrent(firm),curRates=farmRatesReady(firm);
@@ -96,7 +97,7 @@ firmAgrCard=function(firm,forOffice){var a=firmAgr(),s=firmSig(firm),c=farmRates
   return h.replace('<div class="sig">','<h2 style="color:#332E57;font-size:16px">Rate Schedule v'+s.rateSnapshot.version+' (Appendix "A" – schedule of labour charges)</h2>'+rateRowsHtml(s.rateSnapshot).replace('class="no-stack ratesched"','border="1" cellpadding="6" style="border-collapse:collapse"')+'<div class="sig">').replace('<br>Authorized','<br>Signed: agreement v'+esc(s.version)+' + Rate Schedule v'+s.rateSnapshot.version+'<br>Authorized');};})();
 
 /* ---------- 6) farm billing uses the farm's signed rates (new rates only after acceptance) ---------- */
-function farmRateOn(firm,date){var best=null;farmRateList(firm).forEach(function(r){var a=farmRateAccepted(firm,r.version);if(!a)return;var ad=isoLocal(new Date(a.at)),start=r.effective>ad?r.effective:ad;if(start<=date)best=r;});
+function farmRateOn(firm,date){if(!firm||!firm.id)return null;var best=null;farmRateList(firm).forEach(function(r){var a=farmRateAccepted(firm,r.version);if(!a)return;var ad=isoLocal(new Date(a.at)),start=r.effective>ad?r.effective:ad;if(start<=date)best=r;});
   if(!best){var acc=farmRateList(firm).filter(function(r){return farmRateAccepted(firm,r.version);});best=acc[0]||null;}return best;}
 function farmRoleOfRow(x){var u=user(x.uid);var j=u&&(u.jobRole||'');return j==='driver'?'driver':j==='forklift'?'forklift':'labour';}
 (function(){var orr=firmReport;firmReport=function(firm,from,to){var R=orr(firm,from,to);var wk={};var list=R.shiftRows.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:0;});
@@ -105,13 +106,13 @@ function farmRoleOfRow(x){var u=user(x.uid);var j=u&&(u.jobRole||'');return j===
     x.rate=rate;x.amount=Math.round(((x.bill-otH)*rate+otH*ot)*100)/100;byDay[x.date]=(byDay[x.date]||0)+x.amount;});
   var tot=0;R.rows.forEach(function(r){r.amount=Math.round((byDay[r.date]||0)*100)/100;tot+=r.amount;});var cur=farmRateOn(firm,to);var hst=cur?cur.hst!==false:true;
   R.tot.amount=Math.round(tot*100)/100;R.tot.hst=hst?Math.round(R.tot.amount*15)/100:0;R.tot.total=Math.round((R.tot.amount+R.tot.hst)*100)/100;R.hstOn=hst;R.rateSched=cur;return R;};})();
-(function(){var op=firmPage;firmPage=function(firm){var x=op(firm),R=PAGE_STATE.frData.R,rate=firm.firm.billRate;
+(function(){var op=firmPage;firmPage=function(firm){if(!firm||!firm.id)return '<h1>Client</h1><p class="muted">Account not loaded.</p>';if(cjSkipFarmRates())return op(firm);var x=op(firm),R=(PAGE_STATE.frData&&PAGE_STATE.frData.R)||{tot:{},shiftRows:[],rows:[]},rate=(firm.firm&&firm.firm.billRate)||0;
   x=x.split('Amount (@ '+money(rate)+'/h)').join('Amount (your signed rates)');
   x=x.replace(/<div class="trow"><span>Billable hours × bill rate<br><span class="small muted">[^<]*<\/span><\/span>/,'<div class="trow"><span>Billable hours × your signed rates<br><span class="small muted">'+R.tot.bill.toFixed(2)+' h · Rate Schedule v'+(R.rateSched?R.rateSched.version:'–')+'</span></span>');
   if(!R.hstOn)x=x.replace('<span>HST 15%</span>','<span>HST (not charged for this farm)</span>');
   var c=farmRatesCur(firm);if(c&&!farmBookable(firm))x='<div class="alert bad" id="farmblocked"><b>Shifts at your farm are blocked:</b> '+esc(farmStatus(firm).t)+'.</div>'+x;
   return x;};})();
-(function(){var oh=VIEWS['firm:home'];VIEWS['firm:home']=function(){if(!farmRatesCur(ME)){return firmAgrCard(ME,false)+'<h1>'+esc(ME.name)+'</h1><p class="small muted">Your hours and billing will show here once your rates are signed and shifts start.</p>';}return oh();};})();
+(function(){var oh=VIEWS['firm:home'];VIEWS['firm:home']=function(){if(cjSkipFarmRates())return oh();if(!ME||!ME.id)return '<h1>Client</h1><p class="muted">Account not loaded.</p>';if(!farmRatesCur(ME)){return firmAgrCard(ME,false)+'<h1>'+esc(ME.name)+'</h1><p class="small muted">Your hours and billing will show here once your rates are signed and shifts start.</p>';}return oh();};})();
 ADMIN_ONLY_ACT.push('farmratesmodal');ADMIN_ONLY_FORM.push('farmrates');
 
 /* ---------- seed + migration: sample farms get Rate Schedule v1, accepted with their existing signature ---------- */

@@ -162,6 +162,15 @@
       var q = await sb.from('reg_quiz_questions').select('bank,qid,q,opts,ans,why,sort').eq('active', true).order('sort');
       if (!q.error && q.data) { var by = {}; q.data.forEach(function (x) { (by[x.bank] = by[x.bank] || []).push({ id: x.qid, q: x.q, opts: x.opts, ans: x.ans, why: x.why }); }); Object.keys(by).forEach(function (b) { QUIZ_BANK[b] = by[b]; }); }
     }
+    /* unstrip-live1: a Shift Tracker shift that was moved into reg_time_entries (data.stShiftId) is shown once – drop the read-only
+       'st-<id>' copy that reg_st_shifts() still adds to the snapshot, so hours are never counted twice. */
+    try {
+      var movedSt = {}; (db.time || []).forEach(function (t) { if (t && t.stShiftId) movedSt['st-' + t.stShiftId] = 1; });
+      if (Object.keys(movedSt).length) db.time = db.time.filter(function (t) { return !(t && movedSt[t.id]); });
+    } catch (e) { console.warn('st dedupe', e); }
+    if (typeof scopeDbToCompany === 'function') {
+      try { scopeDbToCompany(db); } catch (e) { console.warn('company scope', e); }
+    }
     installDB(db);
     ME = user(s.me);
     if (ME) {
@@ -356,12 +365,13 @@
   VIEWS.login = function () {
     var m = PAGE_STATE.loginMsg; PAGE_STATE.loginMsg = null;
     var nr = PAGE_STATE.notReg; PAGE_STATE.notReg = false;
+    var switchHtml = (typeof companySwitchHtml === 'function') ? companySwitchHtml('us') : '';
     return (m ? '<div class="login-wrap" style="margin-bottom:0"><div class="alert warn">' + esc(m) + '</div></div>' : '') +
-      '<div class="login-wrap"><img class="logo-big" src="assets/unscramble-logo.svg" alt="UnScramble"><div class="card"><h1>Sign in</h1>' +
-      (nr ? '<div class="alert info small">This login has no registration account yet. To clock in, use <a href="' + esc(C.clockUrl) + '">Shift Tracker</a>. To register, create an account below or ask the office.</div>' : '') +
+      '<div class="login-wrap"><img class="logo-big" src="assets/unscramble-logo.svg" alt="UnScramble"><div class="card"><h1>Sign in to UnScramble</h1>' +
+      switchHtml +
+      (nr ? '<div class="alert info small">This login has no UnScramble account yet. Create an account below or ask the office.</div>' : '') +
       '<form data-form="login">' + inp('login', 'Email, phone number or username', '', { req: true, extra: ' data-autofocus autocomplete="username"' }) + inp('password', 'Password', '', { type: 'password', req: true, extra: ' autocomplete="current-password"' }) +
       '<div class="row" style="margin-top:12px"><button type="submit">Sign in</button><a href="#/forgot" class="right small">Forgot password?</a></div></form>' +
-      '<p class="small muted">Same login as Shift Tracker.</p>' +
       '<div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px"><span class="muted small">New here?</span><br><a class="btn" href="#/signup" style="margin-top:6px">Create an account</a></div></div></div>';
   };
   VIEWS.forgot = function () {
@@ -440,7 +450,7 @@
     if (kind === 'worker' && !d.subId) { toast('Choose your employer.'); return; }
     busy(true, 'Creating your account…');
     try {
-      var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: 'us', reg_kind: kind, reg_sub: d.subId || null,
+      var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
         full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null } } });
       if (r.error) { toast(friendly(r.error)); return; }
       if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
@@ -483,7 +493,7 @@
         var L = signupLogin(d); if (!L) { throw new Error('Enter an email, a 10-digit phone or a username for the new account.'); }
         busy(true, 'Creating the account…');
         var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
-        var r = await tmp.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: 'us', reg_kind: kind, reg_sub: kind === 'worker' ? ME.id : null,
+        var r = await tmp.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: kind === 'worker' ? ME.id : null,
           full_name: created.name, username: created.username || null, contact_email: created.email || null, phone: digits(created.phone).slice(-10) || null } } });
         if (r.error || !r.data.user) throw (r.error || new Error('Could not create the account.'));
         try { await tmp.auth.signOut(); } catch (e) {}
@@ -526,7 +536,7 @@
       var kind = { employee: 'employee', worker: 'worker', crewlead: 'worker', sub: 'sub', firm: 'firm' }[p.role];
       // throw-away client: the office stays signed in. "Confirm email" is OFF in this project, so Supabase sends nothing.
       var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
-      var r = await tmp.auth.signUp({ email: email, password: throwawayPw(), options: { data: { company: 'us', reg_kind: kind,
+      var r = await tmp.auth.signUp({ email: email, password: throwawayPw(), options: { data: { company: (C.companyId || 'us'), reg_kind: kind,
         reg_sub: kind === 'worker' ? p.subId : null, full_name: p.name, username: p.username, contact_email: email,
         phone: digits(p.phone).slice(-10) || null, added_by_office: me.id } } });
       if (r.error || !r.data.user) return { error: friendly(r.error || 'Could not create the account.') };
@@ -645,25 +655,15 @@
     PAGE_STATE.quiz = null; PAGE_STATE.quizResult = a.id; save(); go('#/quizresult');
   };
 
-  /* ---------- Shift Tracker hand-off ---------- */
+  /* ---------- UnScramble clock (no Shift Tracker hand-off) ----------
+   * Approved workers/employees stay in this app. v2-clock.js already owns
+   * worker:home / employee:home and writes DB.time → reg_time_entries.
+   * Do NOT redirect to Shift Tracker. */
   function clockReady(u) { return u && (u.type === 'worker' || u.type === 'employee') && u.accountApproved !== false && !gateNav(u); }
   function homeOrClock(fromLogin) {
-    var h = (location.hash || '#/').split('?')[0];
-    if (clockReady(ME) && (fromLogin || h === '#/' || h === '#/home') && !/[?&]stay=1/.test(location.search)) {
-      try { if (!localStorage.getItem('st-company')) localStorage.setItem('st-company', 'us'); } catch (e) {}   // Shift Tracker company picker
-      location.replace(C.clockUrl); return; }
-    if (fromLogin) go('#/home');          // a page reload keeps the screen the person was on
+    if (fromLogin) go('#/home');
   }
-  function clockCard() {
-    return '<div class="card hl" id="st-handoff"><h2 style="margin-top:0">Clock in and out in Shift Tracker</h2><p>Your clock, shifts and hours are in Shift Tracker (same login). This page is for your registration, documents and training.</p><a class="btn" href="' + esc(C.clockUrl) + '" data-stclock="1">Open the clock →</a></div>';
-  }
-  ['worker', 'employee'].forEach(function (t) {
-    var orig = VIEWS[t + ':home'];
-    VIEWS[t + ':home'] = function (h) {
-      var chk = VIEWS[t + ':checklist'];
-      return clockCard() + (chk ? chk(h) : '');
-    };
-  });
+  function clockCard() { return ''; }
 
   /* ---------- no client legal names (owner decision, Oct 4 2026) ----------
    * A signature record keeps only the client id, site codes, the signer's role, versions and time. The signed PDF is
@@ -726,19 +726,17 @@
   }
   if (VIEWS.signupForm) { var _suf = VIEWS.signupForm; VIEWS.signupForm = function (h) { return noLegalNames(_suf.apply(this, arguments)); }; }
 
-  /* ---------- live look: no test banners; a link back to the clock ---------- */
+  /* ---------- live look: UnScramble chrome; no ST clock link ---------- */
   var _layout = layout;
   layout = function (content) {
     var html = _layout(content);
     html = html.replace(/<div class="testbar">[\s\S]*?<\/div>/, '');
-    html = html.replace(/(<footer[^>]*>)([\s\S]*?)(<\/footer>)/g, function (m, a, b, z) { return a + 'UnScramble – The HR Company Inc. · Registration &amp; Compliance' + z; });
-    html = html.replace(/Shift Tracker – test build/g, 'Shift Tracker');
+    html = html.replace(/(<div style="font-weight:700">)Registration &amp; Compliance(<\/div>)/, '$1UnScramble$2');
+    html = html.replace(/Shift Tracker – test build/g, 'Clock, farms &amp; compliance');
+    html = html.replace(/(<footer[^>]*>)([\s\S]*?)(<\/footer>)/g, function (m, a, b, z) { return a + 'UnScramble – The HR Company Inc.' + z; });
     html = noLegalNames(html);
-    if (ME && (ME.type === 'worker' || ME.type === 'employee')) html = html.replace(/(<main[^>]*>)/, '$1<p class="small" style="margin:0 0 8px"><a href="' + esc(C.clockUrl) + '">← Shift Tracker clock</a></p>');
     return html;
   };
-
-  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[href]'); if (a && a.getAttribute('href') === C.clockUrl) { try { if (!localStorage.getItem('st-company')) localStorage.setItem('st-company', 'us'); } catch (x) {} } }, true);
 
   /* ---------- start ---------- */
   async function boot() {

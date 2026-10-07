@@ -17,7 +17,8 @@ function seedData(){
   var admin=U({type:'admin',name:'Office Tester',username:'office',email:'office@example.com',approved:true});
   var fA=U({type:'firm',name:'Test Farm A',username:'firmA',email:'firma@example.com',approved:true,firm:{billRate:24.50,contact:'Farm A office (fake)'}});
   var fB=U({type:'firm',name:'Test Farm B',username:'firmB',email:'',approved:true,firm:{billRate:26.00,contact:'Farm B office (fake)'}});
-  db.sites.push({code:'TFA-01',name:'North Field',firmId:fA.id},{code:'TFA-02',name:'Packing Shed',firmId:fA.id},{code:'TFB-01',name:'Storage Barn',firmId:fB.id},{code:'TEST-PRACTICE',name:'Practice site (TEST – never billed)',firmId:null});
+  db.sites.push({code:'TFA-01',name:'North Field',firmId:fA.id,companyId:'us'},{code:'TFA-02',name:'Packing Shed',firmId:fA.id,companyId:'us'},{code:'TFB-01',name:'Storage Barn',firmId:fB.id,companyId:'us'},{code:'TEST-PRACTICE',name:'Practice site (TEST – never billed)',firmId:null,companyId:'us'});
+  fA.companyId='us';fB.companyId='us';fA.firm.clientType=fA.firm.clientType||'Farm';fB.firm.clientType=fB.firm.clientType||'Farm';
   var s1=U({type:'sub',name:'Bluewater Test Crew Inc.',username:'subco',email:'subco@example.com',approved:true,approvedAt:A(-400),code:'BTC',
     company:{legalName:'Bluewater Test Crew Inc.',operatingName:'Bluewater Crew (TEST)',address:'100 Sample Road, Testville, PE C1A 1A1',email:'subco@example.com',phone:'',bn:'123456789',rp:'123456789RP0001',hst:'123456789RT0001',wcbAccount:'WCB-TEST-0001',drivesWorkers:true,licenceNotReq:true,licenceNotReqConfirmed:true,bankInst:'001',bankTransit:'12345',bankAcct:enc('9876543210'),bankVerified:true,mainContact:{name:'Pat Sample',role:'Owner',email:'subco@example.com',phone:''},emergency:{name:'Pat Sample',phone:'902-555-0101'},supervisors:'Lee Example (crew lead)',periodStart:A(-75)}});
   acc(s1,'sub_agreement',40);acc(s1,'schedule_a',40);acc(s1,'privacy',40);

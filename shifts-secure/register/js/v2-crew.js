@@ -22,7 +22,7 @@ ACT.crewlead=function(el){var w=user(el.dataset.id);if(!w||w.type!=='worker'||(M
   return x+'<div class="card" id="crewleads"><h3 style="margin-top:0">Crew leads</h3><p class="small">A crew lead clocks your crew in and out on client shifts. Those hours are used to bill the farm or other client only – your own invoice to UnScramble stays one total amount with no hours.</p>'+ws.map(function(w){return '<div class="row"><span style="min-width:170px"><b>'+esc(w.name)+'</b></span><button class="small '+(w.crewLead?'':'sec')+'" data-act="crewlead" data-id="'+w.id+'">'+(w.crewLead?'Crew lead ✓ (remove)':'Make crew lead')+'</button></div>';}).join('')+'</div>';};})();
 
 /* crew lead screen */
-function leadShifts(u){return DB.shifts.filter(function(s){return s.kind==='crew'&&!s.test&&(s.booked||[]).indexOf(u.id)>=0&&s.date>=addDays(today(),-1)&&s.date<=today();}).sort(function(a,b){return a.date<b.date?1:-1;});}
+function leadShifts(u){var days=(typeof CREW_FIX_DAYS==='number'?CREW_FIX_DAYS:7);return DB.shifts.filter(function(s){return s.kind==='crew'&&!s.test&&(s.booked||[]).indexOf(u.id)>=0&&s.date>=addDays(today(),-days)&&s.date<=today();}).sort(function(a,b){return a.date<b.date?1:-1;});}
 function crewOf(u,sh){return (sh.booked||[]).map(user).filter(function(w){return w&&w.type==='worker'&&w.subId===u.subId;});}
 function crewEntry(w,sh){return DB.time.filter(function(t){return t.userId===w.id&&t.shiftId===sh.id&&!t.test;})[0]||null;}
 function hmMs(date,hm){var p=parseD(date);p.setHours(+hm.slice(0,2),+hm.slice(3,5),0,0);return p.getTime();}
