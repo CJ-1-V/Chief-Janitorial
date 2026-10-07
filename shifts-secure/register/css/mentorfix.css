@@ -1,0 +1,9 @@
+/* mentorfix1 */
+.mf-qbox .qpick{grid-template-columns:repeat(2,1fr);align-items:start}
+.mf-early{grid-column:1/-1;margin-top:4px}
+.mf-early summary{cursor:pointer;font-size:.92em;padding:6px 0;color:var(--muted,#555)}
+.mf-early-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0}
+.mf-early .qopt.qearly{border-style:dashed}
+.mf-early label{display:block;margin-top:6px}
+.mf-why{width:100%;box-sizing:border-box}
+.mf-badge{white-space:nowrap;margin-left:4px}
