@@ -1,0 +1,32 @@
+/* contactlock1 – phone/email lock + force-add (UnScramble indigo/gold) */
+.cl-locked,
+input.cl-locked[readonly] {
+  background: #f4f3f8;
+  color: #332E57;
+  border-color: #c8c4d8;
+  cursor: not-allowed;
+}
+.cl-locknote {
+  color: #5a5670;
+  margin-top: 4px;
+}
+.cl-force {
+  border-left: 4px solid #D9A03C;
+}
+.cl-reqcard h3 {
+  color: #332E57;
+}
+.cl-pend {
+  margin-top: 8px;
+}
+.cl-office {
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #f7f6fb;
+  border: 1px solid #e2dfec;
+  border-radius: 8px;
+}
+.cl-office h3 {
+  margin-top: 0;
+  color: #332E57;
+}
