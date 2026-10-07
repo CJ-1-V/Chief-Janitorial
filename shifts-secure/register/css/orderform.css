@@ -1,0 +1,71 @@
+/* orderform.css – UnScramble orderform1 (Oct 6 2026): farm "Order a crew" – recurring option, crew boxes with quantity, live crew summary,
+   site address + Google Maps preview. Theme: indigo #332E57 (--p) / gold #D9A03C (--g). Mobile first. */
+.of-f .of-site{margin-bottom:6px}
+.of-f .of-opt{font-weight:400;color:#666;font-size:12px}
+.of-f .of-dates{margin-top:2px}
+.of-f .of-rec{margin-top:10px}
+.of-f .of-rec>label{margin-top:0}
+.of-f .of-schedline{margin:8px 0 2px;font-size:14px}
+/* how many workers */
+.of-crew{margin:14px 0 6px;padding:12px;border:1px solid #dcdfea;border-radius:12px;background:#f8f7fc}
+.of-crew>label{margin-top:0;font-size:15px;color:var(--p,#332E57)}
+.of-nrow{display:flex;align-items:stretch;gap:8px;max-width:260px}
+.of-nrow .of-n{flex:1;text-align:center;font-size:20px;font-weight:700;min-height:48px;padding:6px}
+.of-step{min-width:44px;min-height:44px;padding:0 10px;border-radius:10px;border:1.5px solid var(--p,#332E57);background:#fff;color:var(--p,#332E57);font-size:22px;font-weight:700;line-height:1;cursor:pointer;box-shadow:none}
+.of-step.of-big{min-width:48px;min-height:48px}
+.of-step:disabled{opacity:.35;cursor:not-allowed;border-color:#aaa;color:#888}
+.of-step:not(:disabled):active{background:var(--pl,#ece9f6)}
+.of-help{margin:10px 0 6px;color:#444}
+/* crew boxes */
+.of-rows{display:flex;flex-direction:column;gap:8px}
+.of-row{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--p,#332E57);border-radius:10px;padding:8px;animation:ofIn .18s ease-out}
+.of-row.of-empty{border:1.5px dashed #b9b4d6;background:#fff}
+.of-num{width:26px;height:26px;border-radius:50%;background:var(--p,#332E57);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.of-row.of-empty .of-num{background:#cfcbe4;color:#332E57}
+.of-row .of-job{min-height:44px;margin:0;min-width:0}
+.of-qty{display:flex;align-items:center;gap:4px}
+.of-qty .of-step{min-width:38px;min-height:40px;font-size:20px}
+.of-qty .of-q{width:52px;text-align:center;font-weight:700;font-size:17px;min-height:40px;padding:4px;margin:0}
+.of-row.of-empty .of-q{color:#999;background:#f4f4f7}
+@keyframes ofIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.of-row{animation:none}}
+/* live crew summary */
+.of-sum{margin-top:12px;border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.4}
+.of-sum-empty{background:#fff;border:1px dashed #cfd3dc;color:#555}
+.of-sum-warn{background:var(--warnl,#fdf3dc);border:1px solid #e9c46a;color:#5a3d00}
+.of-sum-ok{background:#332E57;color:#fff;border:1px solid #332E57;box-shadow:inset 4px 0 0 var(--g,#D9A03C)}
+.of-sum-ok b{color:var(--g,#D9A03C)}
+.of-open{margin-top:4px;font-weight:700}
+.of-shake{animation:ofShake .35s}
+@keyframes ofShake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* address + map (Select location on Google Maps is the primary action) */
+.of-addr{margin:12px 0 4px;padding:12px;border:1px solid #dcdfea;border-radius:12px;background:#f8f7fc}
+.of-addr>label{margin-top:0;color:var(--p,#332E57)}
+.of-addrbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-top:10px}
+.of-addrbtns .of-pickmap{flex:1 1 100%;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 14px;border-radius:10px;background:var(--p,#332E57);color:#fff;font-weight:700;text-decoration:none;border:0;box-shadow:inset 4px 0 0 var(--g,#D9A03C);text-align:center}
+.of-addrbtns .of-pickmap:active{filter:brightness(1.08)}
+.of-addrbtns .of-geo{flex:1 1 auto;min-height:44px;padding:10px 12px}
+.of-maplink{font-weight:600;color:var(--p2,#4a4380);align-self:center;padding:6px 0}
+.of-pickhint{margin-top:6px;line-height:1.35}
+.of-geomsg{margin-top:4px;color:#444}
+.of-geomsg:empty{display:none}
+/* Cancel all open orders */
+.of-cancelall{margin:12px 0 8px;padding:12px;border:1.5px solid #c0392b;border-radius:12px;background:#fdf2f0}
+.of-cancelall-btn{width:100%;min-height:48px;font-weight:700}
+.of-cancelall .small{margin-top:8px}
+.of-map{margin-top:8px;border-radius:10px;overflow:hidden;border:1px solid #dcdfea;background:#eef0f4}
+.of-map[hidden]{display:none}
+.of-map iframe{display:block;width:100%;height:200px;border:0}
+@media (min-width:700px){.of-map iframe{height:260px}}
+#ordsend:disabled{opacity:.55;cursor:not-allowed}
+/* order cards (farm + office) */
+.of-detail{margin:6px 0 4px;display:flex;flex-direction:column;gap:3px;font-size:14px}
+.of-dl>span{display:inline-block;min-width:92px;color:#666;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+.of-mapd{margin-top:4px}
+.of-mapd summary{cursor:pointer;color:var(--p2,#4a4380);font-weight:600;font-size:13px}
+.of-mapd .of-map iframe{height:220px}
+.ordcard.office .of-crew{margin-top:10px}
+.of-booknote{margin:6px 0;color:#5a3d00}
+.of-row{grid-template-columns:24px minmax(0,1fr) auto}
+@media (max-width:440px){.of-row{gap:6px;padding:7px}.of-qty .of-step{min-width:36px}.of-qty .of-q{width:44px}.of-row .of-job{font-size:14px;padding-left:6px;padding-right:4px}.of-dl>span{display:block;min-width:0}}
+@media (max-width:339px){.of-row{grid-template-columns:24px 1fr;grid-template-areas:"n j" "q q"}.of-row .of-num{grid-area:n}.of-row .of-job{grid-area:j}.of-row .of-qty{grid-area:q;justify-content:flex-end}}
