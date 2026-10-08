@@ -1,0 +1,34 @@
+/* hrreview1 – HR Bot limited-English review fixes (Oct 2026). Employee / worker / crew-lead screens only. */
+/* 6) Clock in button: stays in its place (not floating over the site list) until a site is picked – phone and desktop */
+.sticky-cta:has(#clockinBtn:disabled){position:static;background:none}
+.tiles .site-tile{scroll-margin-bottom:150px}
+/* 6) crew table: Save never wraps one letter per line; on wider screens the narrow app column uses the same stacked rows as phones */
+#crewtable button,#crewtable .crewsave{white-space:nowrap;overflow-wrap:normal;word-break:keep-all;min-width:64px}
+@media (min-width:641px){
+ #crewtable.stack,#crewtable.stack tbody,#crewtable.stack tr,#crewtable.stack td,#crewtable.stack th{display:block;width:100%;box-sizing:border-box}
+ #crewtable.stack tr.hdr{display:none}
+ #crewtable.stack tr{background:#fff;border:1px solid var(--bd,#e3e1ee);border-radius:10px;margin:0 0 10px;padding:6px 0}
+ #crewtable.stack td{border:0;padding:4px 12px;display:grid;grid-template-columns:38% 1fr;gap:8px;align-items:center;text-align:left}
+ #crewtable.stack td[data-label=""]{grid-template-columns:1fr}
+ #crewtable.stack td::before{content:attr(data-label);font-weight:600;color:var(--p,#332E57);font-size:12.5px}
+ #crewtable.stack td[data-label=""]::before{display:none}
+ .tw:has(#crewtable.stack){border:0;overflow:visible}
+}
+/* 1) tap-to-call link in the "can't clock in" box */
+.alert.cantclock .hr-call{font-weight:700;white-space:nowrap}
+/* 2) password tip */
+.hr-pwex{margin:4px 0 10px;padding:8px 10px;border-radius:8px;background:#f4f2fb;border:1px solid #e3e0f2;line-height:1.45}
+.hr-pwex code{font-size:14px;font-weight:700;background:#fff;padding:1px 6px;border-radius:6px;white-space:nowrap}
+/* 5) crew: shift not started yet / scheduled times */
+.hr-crewnote{background:#fff8e6;border:1px solid #f0d58c;color:#5b4300;border-radius:8px;padding:10px 12px;margin:0 0 10px}
+.hr-crewearly>summary{cursor:pointer;font-size:14px;margin:4px 0 8px;color:var(--p,#332E57)}
+.qopt .hr-qtag{display:block;font-size:11px;font-weight:600;opacity:.75;line-height:1.1}
+/* manual hours: hour + minutes */
+.hr-hm{display:flex;gap:6px}.hr-hm select{flex:1 1 0;min-width:0}
+/* training module as short bullets */
+.hr-module{margin:6px 0 4px;padding-left:20px}.hr-module li{margin:3px 0}
+/* one "I agree" button */
+#hr-agree ul{margin:4px 0 10px;padding-left:20px}
+/* crew table, stacked rows: worker name, "(you)" and status stay together under the "Worker" label */
+#crewtable.stack td:first-child{display:block}
+#crewtable.stack td:first-child::before{display:block;margin-bottom:2px}

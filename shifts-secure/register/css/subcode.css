@@ -1,0 +1,10 @@
+/* subcode1 – employer join code (sign-up) + subcontractor code card */
+.sc-box{margin:4px 0 12px}
+.sc-row{display:flex;gap:8px;align-items:stretch}
+.sc-row .sc-code{flex:1 1 auto;min-width:0;font-size:20px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-family:ui-monospace,Menlo,Consolas,monospace}
+.sc-row button{white-space:nowrap;min-width:84px}
+.sc-ok{margin-top:8px;padding:10px 12px;border-radius:8px;background:#e8f6ee;border:1px solid #b6e2c6;color:#145c32}
+.sc-ok b{font-size:16px}
+.sc-bad{margin-top:8px;padding:10px 12px;border-radius:8px;background:#fdecea;border:1px solid #f5c2bd;color:#8a1f13}
+.sc-card .sc-codebig{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:28px;font-weight:800;letter-spacing:.14em;color:var(--p,#332E57);background:#f4f2fb;border:2px dashed #cfc9ea;border-radius:10px;padding:10px 14px;text-align:center;margin:6px 0 10px}
+.sc-acts{flex-wrap:wrap;gap:6px;margin-bottom:6px}
