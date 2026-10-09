@@ -9,6 +9,7 @@ window.REG_STORE = {
   welcomeEmail: true,                                 // 016j/016k: Send welcome email ON (Edge Function reg-send-welcome, Google SMTP from admin@unscramble.ca)
   forgotPassword: true,                              // 016l: self-service forgot password by email (set true AFTER migration 016l + Edge Function reg-forgot-password)
   resetEmail: true,                                  // 016l: office 'Email the temporary password' (set true AFTER migration 016l + Edge Function reg-send-temp-pw)
+  voidSync: true,                                    // 016s: removed hours keep reasons + self-service remove / remove requests (set true only AFTER migration 016s)
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com
