@@ -1,0 +1,6 @@
+/* synccheck1 – only removed rows are crossed out (an <s> is crossed out by default in every browser) */
+tr:not(.vs-rmrow) td.vs-t s{text-decoration:none;color:inherit}
+.sc-farmnote{margin-top:6px;padding:6px 8px;border-radius:8px;background:#fff6dd;color:#5b4500}
+.sc-sched{white-space:normal}
+#scexport select{min-width:150px}
+#scinvflags li{margin:4px 0}
