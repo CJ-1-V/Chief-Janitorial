@@ -1,0 +1,24 @@
+/* voidsync1 – removed hours crossed out everywhere */
+.vs-rmrow s{color:#8a8797;text-decoration:line-through}
+.vs-rmrow td.vs-t{color:#8a8797}
+.vs-rmrow td{background:#faf8fb}
+.ef-row.vs-rmrow{opacity:.92;background:#faf8fb}
+.ef-row.vs-rmrow .ef-l1 b{color:#6b6880}
+.vs-rmpill{white-space:nowrap}
+.vs-why{color:#4f4b63;font-style:italic}
+.vs-l{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.vs-rmbtn{color:#b42318!important;font-weight:600}
+.vs-farmrm{margin-top:14px}
+.vs-farmrm h3{margin:0 0 6px;font-size:1rem}
+.vs-reqs table td{vertical-align:top}
+#vshtable td{vertical-align:top}
+.vs-invflag td{background:#fff8e6}
+.vs-sec .ef-h2{color:#6b6880}
+.vs-nwbox{margin-top:14px;padding:12px;border:1px dashed #c9c4d8;border-radius:10px;background:#faf9fd}
+.vs-nwbox p{margin:0 0 8px}
+.vs-or{text-align:center;font-size:.8rem;color:#8a8797;text-transform:uppercase;letter-spacing:.08em;margin:-4px 0 6px}
+.vs-nwlist{margin:8px 0 12px;padding:10px 12px;border-radius:10px;background:#f6f4fb}
+.vs-nwlist h3{margin:0 0 6px;font-size:1rem}
+.vs-nwlist ul{margin:0;padding-left:18px}
+.vs-nwlist li{margin:4px 0}
+.vs-nwrow td{background:#fbfaff}
