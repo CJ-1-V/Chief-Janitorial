@@ -1,0 +1,16 @@
+/* pwshow1 – "see password" eye button + one password tip */
+.pws-host{position:relative}
+input.pws-in{padding-right:48px !important}
+.pws-btn{position:absolute;z-index:2;height:44px;min-width:44px;margin:0 !important;padding:0 !important;display:inline-flex;align-items:center;justify-content:center;
+  background:transparent !important;border:0 !important;box-shadow:none !important;border-radius:10px;color:#332E57 !important;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transform:none !important;animation:none !important}
+@media (hover:hover){.pws-btn:hover{color:#D9A03C !important;background:rgba(51,46,87,.06) !important}}
+.pws-btn:focus{outline:none}
+.pws-btn:focus-visible{outline:2px solid #D9A03C;outline-offset:-4px}
+.pws-btn.pws-on{color:#D9A03C !important}
+.pws-btn svg{display:block;pointer-events:none}
+/* hide browser-native reveal button (Edge) so there is only one eye */
+input.pws-in::-ms-reveal,input.pws-in::-ms-clear{display:none}
+/* one tip: the hrreview Tip box stays; older duplicate hints hidden */
+.hint.pws-dup{display:none !important}
+.pwmeter.pws-meter.pws-idle{display:none !important}
