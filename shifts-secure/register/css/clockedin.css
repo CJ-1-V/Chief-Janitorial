@@ -1,0 +1,12 @@
+/* clockedin1 – who is clocked in right now (Overview tile click) */
+#oiTNow.ci-tap{cursor:pointer}
+#oiTNow.ci-tap:hover,#oiTNow.ci-tap:focus{outline:2px solid #D9A03C;outline-offset:2px}
+#oiTNow.ci-tap .oi-tl::after{content:' →';color:#D9A03C}
+.ci-sheet h2{margin:0 0 4px;color:#332E57}
+.ci-note{color:#5e5a7a;font-size:.9rem;margin:0 0 12px}
+.ci-empty{padding:18px;text-align:center;background:#f6f5fb;border-radius:10px;color:#332E57;font-weight:600}
+.ci-list{list-style:none;margin:0;padding:0;max-height:65vh;overflow:auto}
+.ci-row{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:6px 14px;padding:10px 4px;border-bottom:1px solid #e6e4ef;align-items:start}
+.ci-row small{display:block;color:#6b6880;font-size:.8rem}
+.ci-lead{grid-column:1/-1;font-size:.85rem;color:#6f67b3}
+@media (max-width:600px){.ci-row{grid-template-columns:1fr 1fr}.ci-who{grid-column:1/-1}}
