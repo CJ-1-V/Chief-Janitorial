@@ -1,0 +1,6 @@
+/* unstrip1 – UnScramble ST-removal test chrome + company switch */
+.co-switch{margin:0 0 14px;padding:10px 12px;border:1px solid #CFCBE0;border-radius:10px;background:#F7F5FC}
+.co-switch-seg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.co-switch-on{display:inline-block;padding:8px 12px;border-radius:8px;background:#332E57;color:#fff;font-weight:700;font-size:14px}
+.co-switch-off{display:inline-block;padding:8px 12px;border-radius:8px;border:1.5px solid #332E57;color:#332E57;background:#F7F5FC;font-weight:600;font-size:14px;text-decoration:none}
+.co-switch-off:hover{background:#ece9f6}

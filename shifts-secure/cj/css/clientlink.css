@@ -1,0 +1,16 @@
+/* Clients & logins (Oct 4, 2026) */
+.clbtns{gap:6px;flex-wrap:wrap}
+.clbtns button{margin:0}
+.clsearchrow{gap:10px;align-items:center;margin-bottom:8px}
+.clsearchrow input[type=search]{flex:1 1 260px;min-width:0}
+.clsitegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px;max-height:220px;overflow:auto;padding:4px 0}
+.clsites{border:1px solid rgba(51,46,87,.15);border-radius:8px;padding:8px 10px;margin:10px 0}
+.clform{display:grid;gap:10px}
+.clpicker{width:100%;min-height:150px}
+.clinvbox{background:#f4f2f8;border:1px solid rgba(51,46,87,.18);border-radius:10px;padding:14px;margin:10px 0}
+.clinvcode{font:700 30px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:3px;color:#332e57;margin:4px 0 8px;word-break:break-all}
+.clinvurl{font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;margin:4px 0 8px}
+.cllinked{border-left:4px solid #1d6b3a}
+.cllinked .row{gap:8px;align-items:center;flex-wrap:wrap}
+#clienttable td{vertical-align:top}
+@media(max-width:640px){.clinvcode{font-size:24px;letter-spacing:2px}.clbtns button{flex:1 1 auto}}

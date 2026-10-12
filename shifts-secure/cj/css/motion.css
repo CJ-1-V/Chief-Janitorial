@@ -1,0 +1,52 @@
+/* Oct 4, 2026 (live): motion in the style of unscramble.ca. Content "rises" in (fade + 16px slide), numbers count up,
+   buttons and cards lift slightly on hover. Motion only runs when js/v2-motion.js adds .motion to <html>,
+   so everything is fully visible without JavaScript, and nothing runs for prefers-reduced-motion: reduce.
+   Nothing blocks clicks: opacity animations never disable buttons, so clocking in is never slowed down.
+   Live register app version: same effects as the approved version; the banner rule is left out. */
+@keyframes m-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes m-rise-sm { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes m-drop { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes m-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m-logo { from { opacity: 0; transform: scale(.82) rotate(-6deg); } to { opacity: 1; transform: none; } }
+@keyframes m-sweep { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes m-pop { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* First load: header drops in, logo settles, a gold line sweeps under the header, then the screen rises in.
+   Longest item ends at about 1.0 s. */
+.motion #app.m-intro header.top { animation: m-drop .45s ease both; position: relative; }
+.motion #app.m-intro header.top img { animation: m-logo .55s cubic-bezier(.2,.8,.2,1) .05s both; }
+.motion #app.m-intro header.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
+  background: #d9a03c; transform-origin: left center; animation: m-sweep .6s ease .15s both; pointer-events: none; }
+.motion #app.m-intro nav.tabs { animation: m-fade .4s ease .12s both; }
+.motion #app.m-intro #main > * { animation: m-rise .5s ease both; animation-delay: calc(.14s + var(--mi, 0) * .06s); }
+
+/* Moving between screens: a quick rise, staggered a little (ends by about 0.5 s). */
+.motion #app.m-screen #main > * { animation: m-rise .32s ease both; animation-delay: calc(var(--mi, 0) * .035s); }
+
+/* Clock-in / employee screens stay snappy: a short fade, no stagger. */
+.motion #app.m-quick #main > * { animation: m-rise-sm .2s ease both !important; animation-delay: 0s !important; }
+.motion #app.m-quick.m-intro header.top img { animation-duration: .35s; }
+
+/* Pop-ups and toasts */
+.motion .modal > * { animation: m-pop .22s ease both; }
+.motion .toast { animation: m-rise-sm .25s ease both; }
+
+/* Hover lifts, as on unscramble.ca */
+.motion button, .motion .btn, .motion .btn-gold, .motion .btn-indigo { transition: transform .18s ease, box-shadow .18s ease; }
+.motion button:not(:disabled):hover, .motion .btn:hover { transform: translateY(-2px); }
+.motion button:not(:disabled):active { transform: translateY(0); }
+.motion a.card, .motion .menu-item, .motion .tiles > * { transition: transform .2s ease, box-shadow .2s ease; }
+.motion a.card:hover, .motion .menu-item:hover, .motion .tiles > *:hover { transform: translateY(-3px); box-shadow: 0 10px 22px rgba(51, 46, 87, .08); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .motion *, .motion *::before, .motion *::after { animation: none !important; transition: none !important; }
+}
+
+/* Count-up (like the unscramble.ca stats): drawn as an overlay, so the real number stays in the page
+   for screen readers, copy/paste and checks. */
+@property --cu { syntax: "<integer>"; initial-value: 0; inherits: false; }
+@keyframes m-count { from { --cu: 0; } to { --cu: var(--cu-to); } }
+.motion .m-cu { position: relative; color: transparent !important; }
+.motion .m-cu::after { content: counter(cu); counter-reset: cu var(--cu); position: absolute; inset: 0; text-align: inherit;
+  color: var(--cu-color, #332e57); animation: m-count .7s cubic-bezier(.2,.8,.2,1) both; pointer-events: none; }

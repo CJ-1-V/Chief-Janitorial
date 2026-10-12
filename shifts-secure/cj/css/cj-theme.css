@@ -1,0 +1,107 @@
+/* Chief Janitorial twin theme – matches chiefjanitorial.com (Oct 6 2026 redesign)
+   Primary #5956e9 (--blue-dark), headings #191919, body #808285, soft bg #fafafb, DM Sans.
+   Replaces the old green farm/ST accents (#1f3b16 / #7cb342) entirely. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+:root{
+  --p:#5956e9;
+  --p2:#6d6aed;
+  --pl:#eeedfc;
+  --g:#5956e9;
+  --gl:#eeedfc;
+  --ok:#1f8a4c;
+  --okl:#e3f5ea;
+  --warn:#b7791f;
+  --warnl:#fdf3dc;
+  --bad:#c0392b;
+  --badl:#fbe5e2;
+  --mut:#808285;
+  --bd:#e8e8ec;
+  --bg:#fafafb;
+  --cj:#5956e9;
+  --cj-d:#4a47d4;
+  --heading:#191919;
+  --ink:#191919;
+  --gold:#5956e9; /* was UnScramble gold; map to CJ indigo so leftover --gold uses brand */
+}
+
+html,body{font-family:'DM Sans',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+body{color:var(--ink)}
+a{color:var(--p)}
+
+/* Chrome: clean white header, indigo accent bar (site-like) */
+header.top{
+  background:#fff;color:var(--heading);
+  border-bottom:1px solid var(--bd);
+  box-shadow:inset 0 -3px 0 var(--p);
+}
+header.top img{height:44px;max-width:200px;object-fit:contain}
+header.top .who{color:var(--mut)}
+header.top .who b{color:var(--p)}
+header.top .small{color:var(--mut)!important;opacity:1!important}
+
+nav.tabs{background:#fff;border-bottom:1px solid var(--bd)}
+nav.tabs a{color:var(--mut)}
+nav.tabs a.on{color:var(--p);border-bottom-color:var(--p);font-weight:600}
+
+h1,h2{color:var(--heading);font-weight:700}
+h3{color:var(--heading)}
+.muted,.small.muted,p.muted,.hint{color:var(--mut)}
+label{color:#555}
+
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 2px 8px rgba(25,25,25,.04)}
+.card.hl{border-left-color:var(--p)}
+
+button,.btn{background:var(--p);color:#fff;border-radius:8px}
+button:hover,.btn:hover{background:var(--cj-d);color:#fff}
+button.sec,.btn.sec{background:#fff;color:var(--p);border:1.5px solid var(--p)}
+button.sec:hover,.btn.sec:hover{background:var(--pl)}
+button.gold{background:var(--p);color:#fff}
+button:focus-visible,.btn:focus-visible{outline:3px solid var(--p);outline-offset:2px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--p);border-color:var(--p)}
+
+/* Company switch – CJ active (indigo), UnScramble twin (navy) */
+.co-switch{border-color:#d8d6f5;background:#f7f6fe;border-radius:12px}
+.co-switch-on{background:var(--p);color:#fff}
+.co-switch-off{border-color:#332E57;color:#332E57;background:#F7F5FC}
+.co-switch-off:hover{background:#ece9f6}
+
+/* Sign-in */
+.login-wrap{max-width:440px;margin:28px auto;padding:0 12px}
+.login-wrap .logo-big{max-height:80px;width:auto;display:block;margin:0 auto 18px;object-fit:contain}
+.login-wrap .card{border-radius:14px;padding:22px 22px 18px}
+.login-wrap h1{font-size:22px;text-align:center;margin-top:0}
+.choice{border-radius:12px;border-color:var(--bd)}
+.choice:hover{border-color:var(--p);background:var(--pl)}
+
+footer{color:var(--mut);text-align:center;padding:18px 12px 28px;font-size:13px}
+.testbar{display:none} /* body.cj-app already hid this; keep */
+
+/* Clock / employee shell – indigo accents, not farm green */
+.emp{background:var(--bg);--us:var(--p);--gold:var(--p);--green-d:var(--p)}
+.emp .topbar{background:#fff;color:var(--heading);box-shadow:inset 0 -3px 0 var(--p),inset 4px 0 0 var(--p);border-bottom:1px solid var(--bd)}
+.emp .emp-brand .emp-app{color:var(--heading);font-weight:700}
+.emp .emp-logo{height:32px;object-fit:contain}
+.emp .site-tile.sel{border-color:var(--p);background:var(--pl);color:#2f2db8;box-shadow:0 0 0 2px #c5c3f8}
+.emp .emp-foot{color:var(--mut)}
+.emp .btn-clock,.emp button.primary{background:var(--p);color:#fff}
+
+/* Bounce loader → CJ indigo (overrides bounce-motion.css UnScramble navy) */
+body::after{background:#5956e9!important}
+#reg-busy.toast{color:#5956e9;border-color:rgba(89,86,233,.18)}
+#reg-busy.toast::before{background:#5956e9}
+#usb-chip{color:#5956e9;border-color:rgba(89,86,233,.18)}
+
+/* Home link on white header */
+.ush-hdr,.ush-who .ush{color:var(--p)}
+header.top .ush{color:var(--p)}
+
+/* Pills / status keep semantic colours; pending uses indigo tint */
+.pill.s-pend{background:var(--pl);color:#3d3bb8}
+
+/* Office menu bar */
+.obar .ogrp-btn.cur,.obar .ogrp-link.cur{color:var(--p)}
+.obar .ogrp-menu a.on{background:var(--pl);color:var(--p)}
+
+/* Sitecode status ok → softer green still fine; brand focus stays indigo */
+.sc-box.sc-ok{color:#1d7a3a}
