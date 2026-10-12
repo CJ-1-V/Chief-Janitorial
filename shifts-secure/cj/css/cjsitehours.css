@@ -1,0 +1,32 @@
+/* sitehours1 (Oct 8 2026) – site regular hours split, unusual days, special jobs, client messages. TEST only. */
+.shcard .shh2{margin:0;font-size:1.15rem}
+.shsite{border:1px solid #e3e5f0;border-radius:10px;padding:10px 12px;margin:8px 0;background:#fff}
+.shsite.done{border-color:#b9c3f5;background:#f5f6ff}
+.shsite-h{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.shsite-h .shreg{margin-left:auto;font-weight:600;color:#4b4fd8;white-space:nowrap}
+.shsplit{margin-top:4px;color:#1d7a3a}
+.shsplit b{color:#1f2a44}
+.shunbtn{width:100%;margin-top:8px}
+.shform{margin-top:10px;padding-top:10px;border-top:1px dashed #ccd}
+.shform h3{margin:0 0 4px}
+.shmine{margin-top:8px}
+table.shedit input.shh{width:58px;min-width:0;padding:6px}
+table.shedit button{white-space:nowrap}
+.shsum{color:#4b4fd8}
+.shqueue .shdec input{max-width:220px;margin-bottom:4px}
+tr.sh-unusual td{background:#fff8e6}
+tr.sh-pending td{background:#fffbea}
+tr.sh-special td,tr.sh-specialpend td{background:#f2f0ff}
+.spest{display:flex;flex-direction:column;gap:2px;padding:12px 14px;margin:10px 0;border-radius:10px;background:#f2f3ff;border:1px solid #c9cdf6}
+.spest span{font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:#5b5f86}
+.spest b{font-size:1.1rem;color:#1f2a44}
+.spest small{color:#5b5f86}
+.spdone{margin-top:8px;padding:8px 10px;border:1px dashed #b9c3f5;border-radius:8px}
+.sprate{align-items:center;gap:10px;margin:6px 0 12px;flex-wrap:wrap}
+.cmbtns{display:flex;gap:10px;flex-wrap:wrap}
+.cmbtns .big{flex:1 1 260px}
+.cmtext{margin:6px 0;white-space:pre-wrap}
+.cmreply{margin:6px 0;padding:8px 10px;border-radius:8px;background:#f4f5f8}
+.cmreply.office{background:#eef7f0;border-left:3px solid #2e8b57}
+.cmact textarea{min-height:60px}
+@media (max-width:520px){.shsite-h .shreg{margin-left:0;width:100%}table.shedit input.shh{width:52px}.cmbtns .big{flex-basis:100%}}

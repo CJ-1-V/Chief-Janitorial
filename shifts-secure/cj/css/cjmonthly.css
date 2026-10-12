@@ -1,0 +1,16 @@
+/* cjmonthly.css – CJ twin monthly billing (monthly1, Oct 8 2026, TEST) */
+.cjm-th{min-width:150px}
+.cjm-amt{white-space:nowrap}
+.cjm-in{display:flex;align-items:center;gap:4px}
+.cjm-in input{max-width:110px}
+.cjm-amt .pill{margin-top:4px}
+.cjmonthly .cjm-nav{display:flex;gap:6px}
+.cjmonthly .cjm-sp span{color:inherit}
+.cjmonthly .trow.cjm-site b,.cjmonthly .trow.cjm-sp b{white-space:nowrap}
+.cjmonthly #cjmunset{margin-top:8px}
+.cjmlines td{background:#f7f7fd}
+.cjm-line{display:inline-flex;align-items:center;gap:6px;margin:2px 14px 2px 0}
+.cjm-line.unset{color:#a35a00}
+.cjm-warn{margin-top:6px;color:#a35a00;font-weight:600}
+.cjm-firmamts .pill{margin-left:2px}
+.cjm-intro{margin:4px 0 12px;font-size:14px;color:#444}

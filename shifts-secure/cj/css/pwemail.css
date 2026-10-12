@@ -1,0 +1,12 @@
+/* Password reset by email (Oct 5 2026): forgot-password screens + office "Email the temporary password". */
+.pwforgot h1{margin-top:0}
+.pwforgot .alert{margin:10px 0}
+.pwforgot form{display:grid;gap:10px}
+#pwmockhint b{font-weight:700}
+.pwreset [data-act=pwemail]{min-height:44px}
+#pwemailprev h2,#pwemailprev h3{margin-top:0;padding-right:40px}
+#pwemailprev h3{margin:12px 0 6px;font-size:16px}
+@media(max-width:480px){
+  .pwforgot .alert{font-size:14px}
+  #pwemailprev .ap-actions button{flex:1 1 auto}
+}

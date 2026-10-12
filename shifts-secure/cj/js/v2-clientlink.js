@@ -1,0 +1,291 @@
+/* v2-clientlink.js – existing clients pre-loaded + farm logins linked to them (owner request Oct 4, 2026, 11:57 PM).
+   TEST ONLY – fake names (Test Farm G …). In the real version the same screens run on the database (migration 016h).
+   1) Client records: one per existing client, holding its site codes. Client no. = its site code (e.g. HTP250; owner request
+      Oct 5, 2026 1:54 AM – before that C-01…); "Real name" field (office-editable).
+      Real names are shown ONLY to the office and to that client's own logins. Workers, crew leads and subcontractors see
+      the client code / site codes only (here: every page and pop-up is scrubbed; real version: row-level security, 016h).
+      Office: add, edit (real name, type, sites, notes), merge clients.
+   2) Linking a farm login: (a) office invite code/link per client (single-use, expires after 14 days by default, shown once
+      with Copy buttons) that the farm enters at sign-up – after office approval the login is attached to that client;
+      (b) without a code, the approval screen offers "Link to existing client" with a picker (client code / site codes / name).
+      A linked login immediately sees the client's sites, anonymous workers/crews on those sites, past + new invoices
+      (incl. uploaded past invoices), orders and the agreement.
+   3) Guardrails: one client per login, link/unlink/merge/invite audited, a code shows nothing before approval, no duplicate
+      links (same login twice, used/expired/revoked code, same email twice on one client), several logins per client allowed. */
+'use strict';
+var CL_INVITE_DAYS=14, CL_ALPHA='ABCDEFGHJKMNPQRSTUVWXYZ23456789', CL_ROLES=['Owner','Manager','Bookkeeper','Other'];
+var CL_LOGIN_FIELDS={passHash:1,mustChangePw:1,twoStep:1,username:1,email:1,phone:1,lastLogin:1,failed:1,lockedUntil:1,tempPwAt:1,tempPwBy:1,loginRole:1};
+
+/* ---------- small helpers ---------- */
+function clSha256(s){s=unescape(encodeURIComponent(String(s)));function rr(v,a){return (v>>>a)|(v<<(32-a));}var mp=Math.pow,mw=mp(2,32),out='',w=[],bl=s.length*8,h=[],k=[],pc=0,comp={},i,j;
+  for(var c=2;pc<64;c++){if(!comp[c]){for(i=0;i<313;i+=c)comp[i]=c;h[pc]=(mp(c,.5)*mw)|0;k[pc++]=(mp(c,1/3)*mw)|0;}}h=h.slice(0,8);s+='\x80';while(s.length%64-56)s+='\x00';
+  for(i=0;i<s.length;i++){j=s.charCodeAt(i);w[i>>2]|=j<<((3-i)%4)*8;}w[w.length]=((bl/mw)|0);w[w.length]=bl;
+  for(j=0;j<w.length;){var x=w.slice(j,j+=16),old=h;h=h.slice(0,8);for(i=0;i<64;i++){var a15=x[i-15],a2=x[i-2],a=h[0],e=h[4];
+    var t1=h[7]+(rr(e,6)^rr(e,11)^rr(e,25))+((e&h[5])^((~e)&h[6]))+k[i]+(x[i]=(i<16)?x[i]:(x[i-16]+(rr(a15,7)^rr(a15,18)^(a15>>>3))+x[i-7]+(rr(a2,17)^rr(a2,19)^(a2>>>10)))|0);
+    var t2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&h[1])^(a&h[2])^(h[1]&h[2]));h=[(t1+t2)|0].concat(h);h[4]=(h[4]+t1)|0;}for(i=0;i<8;i++)h[i]=(h[i]+old[i])|0;}
+  for(i=0;i<8;i++)for(j=3;j+1;j--){var b=(h[i]>>(j*8))&255;out+=((b<16)?'0':'')+b.toString(16);}return out;}
+function clNormCode(c){var s=String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');return s.length===8&&s.split('').every(function(ch){return CL_ALPHA.indexOf(ch)>=0;})?s.slice(0,4)+'-'+s.slice(4):'';}
+function clCodeHash(code){return clSha256('unscramble-invite:'+String(code).replace('-',''));}
+function clGenCode(){var a=new Uint32Array(8),s='';(window.crypto||window.msCrypto).getRandomValues(a);for(var i=0;i<8;i++)s+=CL_ALPHA[a[i]%CL_ALPHA.length];return s.slice(0,4)+'-'+s.slice(4);}
+function clSignupUrl(code){var base=window.REG_LIVE?'https://www.chiefjanitorial.com/shifts-secure/register/':(location.href.split('#')[0]);return base+'#/signup/firm?invite='+code;}
+function clCode(f){return (f&&f.firm&&f.firm.clientCode)||'–';}
+function clTypeOf(f){return typeof clientTypeOf==='function'?clientTypeOf(f):((f&&f.firm&&f.firm.clientType)||'Farm');}
+function clSites(f){return f?(DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;}):[];}
+function clLabel(f){var s=clSites(f),c=clCode(f);if(c==='–')return 'Client (no farm code yet)'+(s.length?' · '+s.join(', '):'');return 'Client '+c+(s.length&&!(s.length===1&&s[0]===c)?' · sites '+s.join(', '):'');}
+function clResolve(id){var u=user(id),n=0;while(u&&u.mergedInto&&n<10){u=user(u.mergedInto);n++;}return u;}
+function clIsClient(u){return !!(u&&u.type==='firm'&&!u.loginOf&&!u.mergedInto);}
+function clAll(){return (DB.users||[]).filter(clIsClient);}
+function clLoginsOf(f){return (DB.users||[]).filter(function(u){return u.type==='firm'&&u.loginOf===f.id;});}
+function clOwnLogin(f){return !!(f&&f.passHash&&!f.preloaded);}
+function clCanSeeName(f){return !!(ME&&f&&(ME.type==='admin'||(ME.type==='firm'&&ME.id===f.id)));}
+function clName(f){return clCanSeeName(f)?f.name:clLabel(f);}
+/* ---------- client no. = farm code (owner request Oct 5, 2026 1:54 AM: "Client no. and farm code should be same") ----------
+   One identifier: a client's number IS one of its farm/site codes (HTP250, DLC227 …).
+   - one site → that site's code; several sites → the code it already has (the "main" site); a client getting its first number
+     takes its first site A→Z; the office can switch to any other of its own farm codes (Edit).
+   - unique across every client record (also archived/merged ones and signed-up client accounts), letters/numbers/dashes only.
+   - if the site that gives the number moves to another client, the client takes its next own site (logged).
+   - invite codes and links point at the client record (its id), not the number, so they keep working when the number changes. */
+var CL_CODE_RE=/^[A-Z0-9][A-Z0-9-]{1,23}$/;
+function clNormFarm(c){return String(c==null?'':c).trim().toUpperCase().replace(/\s+/g,'');}
+function clSiteRow(code){code=clNormFarm(code);return (DB.sites||[]).filter(function(s){return clNormFarm(s.code)===code;})[0]||null;}
+function clCodeOwner(code,selfId){code=clNormFarm(code);if(!code)return null;return (DB.users||[]).filter(function(u){return u.type==='firm'&&u.id!==selfId&&u.firm&&clNormFarm(u.firm.clientCode)===code;})[0]||null;}
+function clCodeOwnerText(o){if(!o)return '';if(o.mergedInto){var k=clResolve(o.mergedInto);return 'an archived client record (merged into '+(k?clCode(k):'another client')+')';}if(o.loginOf)return 'a login linked to client '+clCode(clResolve(o.loginOf));return 'client '+clCode(o);}
+/* why a code can't be this client's number ('' = fine). sites = the client's site codes after the change */
+function clCodeProblem(f,code,sites){code=clNormFarm(code);if(!code)return 'Enter the farm code – it is the client no.';
+  if(!CL_CODE_RE.test(code))return 'A farm code is 2–24 letters, numbers or dashes (like HTP250).';
+  var o=clCodeOwner(code,f&&f.id);if(o)return code+' is already the client no. of '+clCodeOwnerText(o)+'. Client numbers must be unique.';
+  if(sites&&sites.length){if(sites.map(clNormFarm).indexOf(code)<0)return 'The client no. must be one of this client\'s own farm codes: '+sites.join(', ')+'.';}
+  else{var st=clSiteRow(code),w=st&&st.firmId?user(st.firmId):null;if(w&&(!f||w.id!==f.id))return code+' is a farm code of client '+clCode(w)+'. Move that site to this client first (tick it under Edit) or use Merge.';}
+  return '';}
+function clSetCode(f,code,why){code=clNormFarm(code);f.firm=f.firm||{};var old=f.firm.clientCode||'';if(old===code)return false;f.firm.clientCode=code;
+  if(!f.firm.realName&&(!f.name||f.name==='Client '+old||f.name==='Client –'))f.name='Client '+code;
+  audit('Changed client no.','Client '+code,(old||'none')+' → '+code+(why?' · '+why:''));return true;}
+function clMainSite(f){return clSites(f).slice().sort()[0]||'';}
+/* keeps a client's number on one of its own farm codes (after sites move, a new client, an approval) */
+function clEnsureCode(f,why){if(!f||f.type!=='firm'||f.loginOf||f.mergedInto)return false;var cur=clNormFarm(f.firm&&f.firm.clientCode),s=clSites(f).slice().sort();
+  if(!s.length||(cur&&s.map(clNormFarm).indexOf(cur)>=0))return false;
+  var pick=s.filter(function(c){return !clCodeOwner(c,f.id);})[0];if(!pick)return false;
+  return clSetCode(f,pick,why||(cur?'its site '+cur+' is no longer one of its site codes':'first farm code'));}
+/* test copy only: older saved test data with C-01… numbers → farm codes (same rule as migration 016m) */
+function clRenumberLegacy(db){var n=0,taken={};(db.users||[]).forEach(function(u){if(u.firm&&u.firm.clientCode&&!/^C-\d+$/.test(u.firm.clientCode))taken[clNormFarm(u.firm.clientCode)]=1;});
+  (db.users||[]).forEach(function(u){if(u.type!=='firm'||!u.firm||!/^C-\d+$/.test(u.firm.clientCode||''))return;var own=(db.sites||[]).filter(function(s){return s.firmId===u.id;}).map(function(s){return clNormFarm(s.code);}).sort();
+    var main=own.filter(function(c){return 'cl-'+c===u.id||'cl_'+c.replace(/-/g,'')===u.id;})[0]||own.filter(function(c){return !taken[c];})[0];if(!main||taken[main])return;
+    var old=u.firm.clientCode;u.firm.clientCode=main;taken[main]=1;if(u.name==='Client '+old)u.name='Client '+main;n++;});return n;}
+function clHasOwnData(u){var id=u.id,has=function(l){return (l||[]).some(function(x){return x.firmId===id;});};return has(DB.sites)||has(DB.clientInvoices)||has(DB.crewOrders)||has(DB.firmSigs)||has(DB.farmRates);}
+function clStatus(f){var L=clLoginsOf(f).filter(function(u){return u.active!==false;}).length+(clOwnLogin(f)?1:0);
+  if(f.accountApproved===false)return {t:'Sign-up pending',c:'s-pend'};if(f.active===false)return {t:'Switched off',c:'s-bad'};
+  return L?{t:L+' login'+(L>1?'s':''),c:'s-ok'}:{t:'Pre-loaded – no login yet',c:'s-mut'};}
+function clPickerOpts(cur){return clAll().filter(function(f){return f.accountApproved!==false;}).sort(function(a,b){return clCode(a)<clCode(b)?-1:1;}).map(function(f){
+  var s=clSites(f);return '<option value="'+esc(f.id)+'"'+(f.id===cur?' selected':'')+' data-search="'+esc((clCode(f)+' '+s.join(' ')+' '+f.name+' '+clTypeOf(f)).toLowerCase())+'">'+esc(clCode(f)+' · '+(s.join(', ')||'no sites')+' · '+f.name+' · '+clTypeOf(f))+'</option>';}).join('');}
+function clCopyBtn(text,label,id){return '<button type="button" class="small sec clcopy" data-act="clcopy" data-v="'+esc(text)+'"'+(id?' id="'+id+'"':'')+'>'+esc(label||'Copy')+'</button>';}
+ACT.clcopy=function(el){var v=el.dataset.v;var fb=function(){var t=document.createElement('textarea');t.value=v;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch(e){}t.remove();toast('Copied.');};
+  try{if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(v).then(function(){toast('Copied.');},fb);else fb();}catch(e){fb();}PAGE_STATE.clCopied=v;};
+
+/* ---------- 1) users('firm') = clients only (not the extra logins, not merged records) ---------- */
+(function(){var ou=users;users=function(type){var l=ou(type);return type==='firm'?l.filter(function(u){return !u.loginOf&&!u.mergedInto;}):l;};})();
+
+/* ---------- a linked login acts for its client: same sites, invoices, orders; sign-in fields stay the login's own ---------- */
+function clAsClient(login){if(!login||!login.loginOf||login.__isProxy)return login;var c=clResolve(login.loginOf);if(!c||c.active===false||c===login)return login;
+  return new Proxy(c,{get:function(t,k){if(k==='__login')return login;if(k==='__isProxy')return true;return CL_LOGIN_FIELDS[k]?login[k]:t[k];},
+    set:function(t,k,v){(CL_LOGIN_FIELDS[k]?login:t)[k]=v;return true;}});}
+function clLoginOf(me){return me&&me.__isProxy?me.__login:me;}
+(function(){var og=gateRoute;gateRoute=function(h){if(ME&&ME.loginOf&&!ME.__isProxy)ME=clAsClient(ME);return og(h);};})();
+/* audit lines name the client and the login that did it: ME.name (client) + ME.username (login, via the proxy) */
+
+/* ---------- real names never reach workers, crew leads or subcontractors (every page + pop-up is checked) ---------- */
+function clScrub(html){if(!ME||ME.type==='admin'||typeof html!=='string')return html;var own=ME.type==='firm'?ME.id:null,ownLogin=ME.__isProxy?ME.__login.id:own,mine=own?[ME.name,ME.firm&&ME.firm.realName,ME.__isProxy?ME.__login.name:''].filter(Boolean).map(String):[];
+  (DB.users||[]).forEach(function(f){if(f.type!=='firm'||f.id===own||f.id===ownLogin)return;var c=clIsClient(f)?f:(clResolve(f.loginOf||f.mergedInto)||f),lab='Client '+clCode(c);
+    if(c.id===own)return;[f.name,f.firm&&f.firm.realName].forEach(function(n){if(!n||String(n).length<5||mine.indexOf(String(n))>=0)return;n=String(n);html=html.split(n).join(lab);var e=esc(n);if(e!==n)html=html.split(e).join(esc(lab));});});
+  return html;}
+(function(){var ol=layout;layout=function(c){return clScrub(ol(c));};var om=modal;modal=function(h){return om(clScrub(h));};
+  var of=firmName;firmName=function(code){var f=siteFirm(code);if(f&&!clCanSeeName(f))return 'Client '+clCode(f);return of(code);};})();
+
+/* ---------- 2a) invite codes ---------- */
+function clInvites(f){return (DB.clientInvites||[]).filter(function(i){return !f||i.clientId===f.id;});}
+function clInviteState(i){if(i.usedBy)return {t:'Used',c:'s-mut'};if(i.revokedAt)return {t:'Revoked',c:'s-mut'};if(i.expires<today())return {t:'Expired',c:'s-bad'};return {t:'Active – until '+i.expires,c:'s-ok'};}
+function clInviteMatch(code){var n=clNormCode(code);if(!n)return {st:'none'};var h=clCodeHash(n),i=(DB.clientInvites||[]).filter(function(x){return x.codeHash===h;})[0];
+  if(!i)return {st:'nomatch'};var c=clResolve(i.clientId);if(i.usedBy)return {st:'used',inv:i,client:c};if(i.revokedAt)return {st:'revoked',inv:i,client:c};if(i.expires<today())return {st:'expired',inv:i,client:c};
+  if(!clIsClient(c))return {st:'nomatch'};return {st:'valid',inv:i,client:c};}
+ACT.clinvite=function(el){var f=user(el.dataset.id);if(!clIsClient(f))return;
+  modal('<h2>Invite code for '+esc(clCode(f))+'</h2><p class="small">'+esc(f.name)+' · sites '+esc(clSites(f).join(', ')||'none yet')+'</p><p class="small">Give the code or link to the farm. When they sign up with it, their request shows up in <b>Review &amp; approve</b> already matched to this client; nothing about the client is shown to them until you approve. One code = one login (single use). Make another code for each extra login (e.g. owner and manager).</p>'+
+  '<form data-form="clinvite" id="clinviteform"><input type="hidden" name="id" value="'+esc(f.id)+'">'+sel('days','Valid for',[['7','7 days'],['14','14 days'],['30','30 days']],String(CL_INVITE_DAYS))+'<button>Make invite code</button></form>'+
+  (clInvites(f).length?'<h3>Codes for this client</h3>'+clInviteTable(clInvites(f)):''));};
+FORMS.clinvite=function(f,d){var c=user(d.id);if(!clIsClient(c)){toast('Pick a client.');return;}var days=Math.min(30,Math.max(1,parseInt(d.days,10)||CL_INVITE_DAYS));
+  var code=clGenCode(),i={id:uid('inv'),clientId:c.id,codeHash:clCodeHash(code),last4:code.slice(-4),createdAt:new Date().toISOString(),createdBy:ME.name,expires:addDays(today(),days),days:days,usedBy:'',usedAt:'',revokedAt:''};
+  (DB.clientInvites=DB.clientInvites||[]).push(i);audit('Made client invite code','Client '+clCode(c),'code ending '+i.last4+' · valid until '+i.expires+' · single use');save();
+  var url=clSignupUrl(code);PAGE_STATE.clLastInvite={code:code,url:url,id:i.id};
+  modal('<h2>Invite code for '+esc(clCode(c))+'</h2><div class="clinvbox" id="clinvbox"><div class="small muted">Invite code (single use, valid until '+esc(i.expires)+')</div><div class="clinvcode" id="clinvcode">'+esc(code)+'</div>'+clCopyBtn(code,'Copy code','clcopycode')+
+    '<div class="small muted" style="margin-top:10px">Sign-up link</div><div class="clinvurl" id="clinvurl">'+esc(url)+'</div>'+clCopyBtn(url,'Copy link','clcopylink')+'</div>'+
+    '<div class="alert info small">This is the only time the full code is shown – the app keeps only a fingerprint of it. If it gets lost, revoke it and make a new one. Send it to the farm yourself (nothing is sent by the app).</div><button class="sec" data-act="closeModal">Done</button>');render();};
+function clInviteTable(list){return '<div class="tw"><table class="clinvtable"><tr><th>Client</th><th>Code</th><th>Made</th><th>Status</th><th></th></tr>'+list.slice().reverse().map(function(i){var c=user(i.clientId),st=clInviteState(i),u=i.usedBy?user(i.usedBy):null;
+  return '<tr data-inv="'+esc(i.id)+'"><td>'+esc(clCode(c))+'</td><td><code>••••-'+esc(i.last4)+'</code></td><td class="small">'+fmtStamp(i.createdAt)+'<br>'+esc(i.createdBy||'')+'</td><td><span class="pill '+st.c+'">'+esc(st.t)+'</span>'+(u?'<div class="small">by '+esc(u.username||u.email||u.name)+'</div>':'')+'</td><td>'+(st.c==='s-ok'?'<button class="small danger" data-act="clinvrevoke" data-id="'+esc(i.id)+'">Revoke</button>':'')+'</td></tr>';}).join('')+'</table></div>';}
+ACT.clinvrevoke=function(el){var i=(DB.clientInvites||[]).filter(function(x){return x.id===el.dataset.id;})[0];if(!i||i.usedBy||i.revokedAt)return;if(!confirmBox('clrev'+i.id,'Revoke this invite code?'))return;
+  i.revokedAt=new Date().toISOString();audit('Revoked client invite code','Client '+clCode(user(i.clientId)),'code ending '+i.last4);save();closeModal();toast('Code revoked.');render();};
+
+/* ---------- 2b) link / unlink / merge (all audited) ---------- */
+function clLink(login,client,o){o=o||{};
+  if(!login||login.type!=='firm'||login.preloaded)return 'This is not a farm or client login.';
+  if(login.loginOf){var cur=clResolve(login.loginOf);return cur===client?'This login is already linked to '+clCode(client)+'.':'This login is already linked to '+clCode(cur)+'. A login can belong to one client only – unlink it first.';}
+  if(!clIsClient(client)||client.id===login.id||client.accountApproved===false)return 'Pick an existing client.';
+  if(clHasOwnData(login))return 'This login already has its own client records (sites, invoices, orders, rates or a signed agreement). Use Merge on the Clients page instead.';
+  var em=String(login.email||'').toLowerCase();if(em&&(clLoginsOf(client).concat(clOwnLogin(client)?[client]:[])).some(function(u){return u.id!==login.id&&String(u.email||'').toLowerCase()===em;}))return 'This client already has a login with the same email.';
+  var inv=null;if(o.inviteId){inv=(DB.clientInvites||[]).filter(function(x){return x.id===o.inviteId;})[0];var m=inv?clInviteMatch(login.firm&&login.firm.inviteCode):{st:'nomatch'};
+    if(!inv||m.st!=='valid'||m.inv!==inv||inv.clientId!==client.id)return 'That invite code is not valid any more (used, expired, revoked or for another client). Use the client picker instead.';}
+  var role=CL_ROLES.indexOf(o.role)>=0?o.role:'Manager';
+  login.loginOf=client.id;login.accountApproved=true;login.approved=true;login.linkedAt=new Date().toISOString();login.linkedBy=ME.name;login.linkVia=inv?'invite code':'office picker';login.loginRole=role;
+  delete login.unlinkedFrom;if(inv){inv.usedBy=login.id;inv.usedAt=new Date().toISOString();}
+  audit('Linked farm login to client','Client '+clCode(client),(login.username||login.email)+' · '+role+' · via '+login.linkVia+(inv?' (code ending '+inv.last4+')':''));
+  notify(login.id,'Your Chief Janitorial account was approved and linked to your farm/client account. Sign in to see your sites, workers, invoices and orders.');save();return null;}
+function clUnlink(login,reason){if(!login||!login.loginOf)return 'This login is not linked.';var c=clResolve(login.loginOf);
+  login.unlinkedFrom=login.loginOf;login.loginOf=null;login.accountApproved=false;login.unlinkedAt=new Date().toISOString();
+  audit('Unlinked farm login from client','Client '+clCode(c),(login.username||login.email)+(reason?' · reason: '+reason:''));notify(login.id,'Your login is no longer linked to a farm/client account. Contact the Chief Janitorial office.');save();return null;}
+function clMerge(src,dst){if(!clIsClient(src)||!clIsClient(dst)||src.id===dst.id)return 'Pick two different clients.';
+  var n={sites:0,invoices:0,orders:0,changes:0,logins:0};
+  (DB.sites||[]).forEach(function(s){if(s.firmId===src.id){s.firmId=dst.id;n.sites++;}});
+  (DB.clientInvoices||[]).forEach(function(i){if(i.firmId===src.id){if(typeof pastDup==='function'&&pastDup(dst.id,i.number,i.id))i.number=i.number+'-'+clCode(src);i.firmId=dst.id;n.invoices++;}});
+  (DB.crewOrders||[]).forEach(function(o){if(o.firmId===src.id){o.firmId=dst.id;o.firmName=dst.name;n.orders++;}});
+  (DB.changes||[]).forEach(function(c){if(c.firmId===src.id){c.firmId=dst.id;c.firmName=dst.name;n.changes++;}});
+  (DB.users||[]).forEach(function(u){if(u.loginOf===src.id){u.loginOf=dst.id;n.logins++;}});
+  if(clOwnLogin(src)){src.loginOf=dst.id;src.loginRole=src.loginRole||'Owner';n.logins++;}else src.active=false;
+  src.mergedInto=dst.id;src.mergedAt=new Date().toISOString();
+  if(!dst.firm.realName&&src.firm&&src.firm.realName){dst.firm.realName=src.firm.realName;dst.name=src.firm.realName;}
+  audit('Merged clients','Client '+clCode(src)+' → Client '+clCode(dst),n.sites+' site(s), '+n.invoices+' invoice(s), '+n.orders+' order(s), '+n.logins+' login(s) moved. Rates and signed agreements of '+clCode(src)+' stay archived on it.');save();return null;}
+
+/* ---------- office screen: Clients & logins ---------- */
+NAV.admin.splice((function(){for(var i=0;i<NAV.admin.length;i++)if(NAV.admin[i][0]==='#/firms')return i+1;return NAV.admin.length;})(),0,['#/clients','Clients & logins']);
+if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.forEach(function(g){if(g[1].indexOf('#/firms')>=0&&g[1].indexOf('#/clients')<0)g[1].splice(g[1].indexOf('#/firms')+1,0,'#/clients');});
+function clPendingSignups(){return (DB.users||[]).filter(function(u){return u.type==='firm'&&u.accountApproved===false&&u.active!==false&&!u.loginOf&&!u.preloaded&&!clHasOwnData(u);});}
+function clPendingCard(){var p=clPendingSignups();if(!p.length)return '';
+  return '<div class="card hl" id="clpending"><h3 style="margin-top:0">Farm &amp; client sign-ups – link to an existing client</h3><p class="small">Most new farm logins belong to a client we already have. Link them so they see their sites, workers, invoices and orders right away. "Approve as new client" makes a brand-new client instead.</p><div class="tw"><table><tr><th>Sign-up</th><th>Login</th><th>Invite code</th><th></th></tr>'+
+  p.map(function(u){var m=clInviteMatch(u.firm&&u.firm.inviteCode),ic='<span class="muted small">none</span>';
+    if(m.st==='valid')ic='<span class="pill s-ok">Matches '+esc(clCode(m.client))+'</span><div class="small">'+esc(clSites(m.client).join(', '))+' · valid until '+esc(m.inv.expires)+'</div>';
+    else if(m.st!=='none')ic='<span class="pill s-bad">'+esc({nomatch:'No matching code',used:'Code already used',revoked:'Code revoked',expired:'Code expired'}[m.st])+'</span>';
+    return '<tr data-signup="'+esc(u.username||u.id)+'"><td><b>'+esc(u.name)+'</b><div class="small muted">'+esc((u.firm||{}).contact||'')+' · '+fmtStamp(u.createdAt)+'</div></td><td class="small">'+esc(u.username||'')+' '+esc(u.email||'')+'</td><td>'+ic+'</td><td><div class="row clbtns"><button class="small" data-act="cllinkpick" data-id="'+u.id+'">'+(m.st==='valid'?'Approve &amp; link to '+esc(clCode(m.client)):'Link to existing client')+'</button><button class="small sec" data-act="clnewask" data-id="'+u.id+'">Approve as new client</button></div></td></tr>';}).join('')+'</table></div></div>';}
+VIEWS['admin:clients']=function(){var list=clAll().slice().sort(function(a,b){return clCode(a)<clCode(b)?-1:clCode(a)>clCode(b)?1:0;}),q=PAGE_STATE.clQ||'';
+  var unassigned=(typeof companySites==='function'?companySites({skipPractice:true}):(DB.sites||[]).filter(function(s){return s.code!=='TEST-PRACTICE';})).filter(function(s){return !s.firmId;});
+  return '<h1>Clients &amp; logins</h1><p class="small muted">One record per client (farm, construction or other), holding its site codes. <b>The client no. is the client\'s farm code</b> (with several sites: its main one – change it under Edit). Real names are shown only to the office and to that client\'s own logins – workers, crew leads and subcontractors only ever see the client code and site codes.</p>'+
+  clPendingCard()+clCodeNeedsCard(list)+
+  '<div class="card"><div class="row clsearchrow"><input type="search" id="clsearch" data-calc="clsearch" placeholder="Find by client no. / farm code or name" value="'+esc(q)+'" aria-label="Find client"><span class="small muted" id="clcount">'+list.length+' clients</span></div>'+
+  '<div class="tw"><table id="clienttable"><tr><th>Client no. (farm code)</th><th>Real name</th><th>Type</th><th>Sites</th><th>Logins</th><th></th></tr>'+list.map(function(f){var st=clStatus(f),L=clLoginsOf(f);
+    return '<tr data-client="'+esc(clCode(f))+'" data-search="'+esc((clCode(f)+' '+clSites(f).join(' ')+' '+f.name+' '+clTypeOf(f)).toLowerCase())+'"><td><b class="clno">'+esc(clCode(f))+'</b>'+(clCodeNeeds(f)?'<div class="pill s-bad small">farm code needed</div>':'')+(f.preloaded?'<div class="small muted">pre-loaded</div>':'')+'</td><td>'+(f.firm&&f.firm.realName?esc(f.firm.realName):'<span class="muted small">not entered yet</span>')+'</td><td>'+esc(clTypeOf(f))+'</td><td class="small">'+esc(clSites(f).join(', ')||'–')+'</td>'+
+    '<td><span class="pill '+st.c+'">'+esc(st.t)+'</span>'+(L.length?'<div class="small">'+L.map(function(u){return esc((u.username||u.email)+' ('+(u.loginRole||'login')+(u.active===false?', off':'')+')');}).join('<br>')+'</div>':'')+'</td>'+
+    '<td><div class="row clbtns"><button class="small sec" data-act="cledit" data-id="'+f.id+'">Edit</button><button class="small" data-act="clinvite" data-id="'+f.id+'">Invite code</button><button class="small sec" data-act="clmergepick" data-id="'+f.id+'">Merge…</button></div></td></tr>';}).join('')+'</table></div></div>'+
+  (unassigned.length?'<div class="card"><h3 style="margin-top:0">Sites not linked to a client</h3><p class="small">'+unassigned.map(function(s){return esc(s.code);}).join(', ')+' – open a client\'s Edit to add them.</p></div>':'')+
+  '<details class="card" id="clnewcard"><summary><b>Add a client</b></summary><form data-form="clnew" class="clform">'+inp('farmCode','Site code = client no.','',{req:true,ph:'e.g. CJC101',extra:' autocapitalize="characters" maxlength="24"',hint:'The client\'s number is its site code. A code that is not a site yet is added as this client\'s site (site is owned in the Chief Janitorial app).'})+inp('realName','Real name (office and the client\'s own logins only)','',{})+'<div><label class="req">Type</label>'+(typeof clientSel==='function'?clientSel('clientType','Farm'):'<input name="clientType" value="Farm">')+'</div>'+clSiteChecks(null)+'<button>Add client</button></form></details>'+
+  (clInvites().length?'<details class="card" id="clinvcard"><summary><b>Invite codes</b> <span class="small muted">('+clInvites().filter(function(i){return clInviteState(i).c==='s-ok';}).length+' active)</span></summary>'+clInviteTable(clInvites())+'</details>':'')+
+  '<details class="card" id="clhowto"><summary><b>How sites are grouped into clients</b></summary><p class="small">Each existing site starts as its own client record (the database does not know which sites belong to the same farm), numbered with its site code. When one client has several sites, open the client that should stay, tick its other sites under Edit – or use <b>Merge…</b> to fold a whole record into another (sites, invoices, orders and logins move; nothing is deleted). Set the type (Farm, Construction, …) and type the real name if you want it on the office screens. The client you keep keeps its number; to show another of its site codes as the number, change <b>Client no.</b> under Edit.</p></details>';};
+function clCodeNeeds(f){var c=clNormFarm(f.firm&&f.firm.clientCode),s=clSites(f).map(clNormFarm);return !c||(s.length>0&&s.indexOf(c)<0);}
+function clCodeNeedsCard(list){var n=list.filter(clCodeNeeds);if(!n.length)return '';return '<div class="alert warn small" id="clcodeneeds"><b>'+n.length+' client'+(n.length>1?'s need':' needs')+' a farm code as client no.</b> Open Edit and enter one of its site codes: '+n.map(function(f){return esc(clCode(f)==='–'?(f.preloaded?'pre-loaded record':'new sign-up'):clCode(f))+(clSites(f).length?' ('+esc(clSites(f).join(', '))+')':'');}).join(' · ')+'</div>';}
+CALC.clsearch=function(el){var q=String(el.value||'').toLowerCase().trim();PAGE_STATE.clQ=el.value;var n=0;[].forEach.call(document.querySelectorAll('#clienttable tr[data-search]'),function(tr){var ok=!q||tr.dataset.search.indexOf(q)>=0;tr.style.display=ok?'':'none';if(ok)n++;});var c=document.getElementById('clcount');if(c)c.textContent=n+' clients';};
+CALC.clpick=function(el){var q=String(el.value||'').toLowerCase().trim(),s=document.querySelector('#cllinkform select[name=client]');if(!s)return;var first=null;[].forEach.call(s.options,function(o){if(!o.value)return;var ok=!q||(o.dataset.search||'').indexOf(q)>=0;o.hidden=!ok;o.disabled=!ok;if(ok&&!first)first=o;});if(first&&(s.selectedOptions[0]||{}).disabled)s.value=first.value;};
+function clSiteChecks(f){var sites=(typeof companySites==='function'?companySites({skipPractice:true}):(DB.sites||[]).filter(function(s){return s.code!=='TEST-PRACTICE';})).slice().sort(function(a,b){return a.code<b.code?-1:1;});
+  return '<fieldset class="clsites"><legend>Site codes</legend><div class="clsitegrid">'+sites.map(function(s){var owner=s.firmId?user(s.firmId):null,mine=f&&s.firmId===f.id;
+    return '<label class="inline"><input type="checkbox" name="sites[]" value="'+esc(s.code)+'"'+(mine?' checked':'')+'> <span><b>'+esc(s.code)+'</b>'+(owner&&!mine?' <span class="small muted">('+(clCode(owner)===s.code?'other client':'client '+esc(clCode(owner)))+')</span>':'')+'</span></label>';}).join('')+'</div><p class="small muted">Ticking a site that belongs to another client moves it here (logged).</p></fieldset>';}
+function clApplySites(f,codes){var moved=[],prev=[];(DB.sites||[]).forEach(function(s){var want=codes.indexOf(s.code)>=0;if(want&&s.firmId!==f.id){moved.push(s.code+(s.firmId?' (from '+clCode(user(s.firmId))+')':''));if(s.firmId)prev.push(user(s.firmId));s.firmId=f.id;}else if(!want&&s.firmId===f.id){moved.push(s.code+' removed');s.firmId=null;}});
+  prev.forEach(function(o){clEnsureCode(o);});return moved;}
+FORMS.clnew=function(f,d){if(typeof clientTypes==='function'&&clientTypes().indexOf(d.clientType)<0){toast('Pick a type.');return;}
+  var ticks=(d.sites||[]).slice(),code=clNormFarm(d.farmCode)||ticks.slice().sort()[0]||'',st=clSiteRow(code),err=clCodeProblem(null,code,ticks.concat([st?st.code:code]));
+  if(!err&&st&&st.firmId&&ticks.indexOf(st.code)<0)err=code+' is a farm code of client '+clCode(user(st.firmId))+'. Tick it below to move it to the new client, or use another code.';
+  if(err){toast(err);PAGE_STATE.clErr=err;return;}PAGE_STATE.clErr='';
+  var u={id:uid('cl'),type:'firm',preloaded:true,name:d.realName||('Client '+code),username:'',email:'',phone:'',active:true,suspended:false,approved:true,accountApproved:true,createdAt:new Date().toISOString(),lastLogin:null,profile:{},roles:[],orientations:[],firm:{billRate:0,contact:'',clientType:d.clientType||'Farm',clientCode:code,realName:d.realName||''}};
+  DB.users.push(u);var made=!st;if(made)DB.sites.push(typeof tagCompany==='function'?tagCompany({code:code,name:(d.clientType||'Farm')==='Farm'?'Farm':'Worksite',firmId:null}):{code:code,name:(d.clientType||'Farm')==='Farm'?'Farm':'Worksite',firmId:null});if(ticks.indexOf(st?st.code:code)<0)ticks.push(st?st.code:code);
+  var mv=clApplySites(u,ticks);audit('Added client','Client '+code,(d.clientType||'Farm')+' · client no. = farm code '+code+(made?' (new site)':'')+(mv.length?' · sites '+mv.join(', '):'')+(d.realName?' · real name entered':''));save();toast('Client '+code+' added.');render();};
+ACT.cledit=function(el){var f=user(el.dataset.id);if(!clIsClient(f))return;var L=clLoginsOf(f);
+  var cs=clSites(f).slice().sort();
+  modal('<h2>Client '+esc(clCode(f))+'</h2><form data-form="cledit" class="clform" id="cleditform"><input type="hidden" name="id" value="'+esc(f.id)+'">'+
+  inp('clientCode','Client no. = farm code',(f.firm&&f.firm.clientCode)||clMainSite(f),{req:true,extra:' list="clcodelist" autocapitalize="characters" maxlength="24"',hint:(cs.length>1?'This client has '+cs.length+' farm codes ('+esc(cs.join(', '))+'); the client no. is one of them – pick which.':'The client no. is this client\'s farm code.')+' Must be unique. Invite codes and links already given out keep working.'})+'<datalist id="clcodelist">'+cs.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist>'+inp('realName','Real name',(f.firm&&f.firm.realName)||'',{hint:'Shown only to the office and to this client\'s own logins. Workers, crew leads and subcontractors see "Client '+clCode(f)+'" and the site codes.'})+
+  '<div><label class="req">Type</label>'+(typeof clientSel==='function'?clientSel('clientType',clTypeOf(f)):'')+'</div>'+clSiteChecks(f)+'<div><label>Office notes</label><textarea name="notes" rows="2">'+esc((f.firm&&f.firm.notes)||'')+'</textarea></div><button>Save client</button></form>'+
+  '<h3>Logins</h3>'+((L.length||clOwnLogin(f))?'<div class="tw"><table id="clloginlist"><tr><th>Login</th><th>Role</th><th>Linked</th><th></th></tr>'+(clOwnLogin(f)?'<tr><td>'+esc(f.username||f.email)+'</td><td>Main login</td><td class="small">signed up as this client</td><td></td></tr>':'')+
+    L.map(function(u){return '<tr data-login="'+esc(u.username||u.id)+'"><td>'+esc(u.username||u.email)+'<div class="small muted">'+esc(u.email||'')+'</div></td><td>'+esc(u.loginRole||'')+'</td><td class="small">'+fmtStamp(u.linkedAt)+' · '+esc(u.linkVia||'')+'<br>by '+esc(u.linkedBy||'')+'</td><td><button class="small danger" data-act="clunlinkask" data-id="'+u.id+'">Unlink</button></td></tr>';}).join('')+'</table></div>':'<p class="small muted">No login yet. Use "Invite code" so the farm can sign up and be linked here.</p>'));};
+FORMS.cledit=function(f,d){var c=user(d.id);if(!clIsClient(c))return;if(typeof clientTypes==='function'&&clientTypes().indexOf(d.clientType)<0){toast('Pick a type.');return;}var ch=[];
+  var oldNo=clNormFarm(c.firm&&c.firm.clientCode),newNo=d.clientCode==null?oldNo:clNormFarm(d.clientCode),after=(d.sites||[]).slice();
+  if(newNo!==oldNo||!oldNo){var ce=clCodeProblem(c,newNo,after);if(ce){toast(ce);PAGE_STATE.clErr=ce;return;}}PAGE_STATE.clErr='';
+  var rn=String(d.realName||'').trim();if(rn!==(c.firm.realName||'')){ch.push(rn?(c.firm.realName?'real name changed':'real name entered'):'real name removed');c.firm.realName=rn;c.name=rn||('Client '+clCode(c));}
+  if(d.clientType&&d.clientType!==clTypeOf(c)){ch.push('type '+clTypeOf(c)+' → '+d.clientType);c.firm.clientType=d.clientType;}
+  var nt=String(d.notes||'');if(nt!==(c.firm.notes||'')){c.firm.notes=nt;ch.push('notes');}
+  var mv=clApplySites(c,d.sites||[]);if(mv.length)ch.push('sites: '+mv.join(', '));
+  if(newNo!==oldNo){if(clSetCode(c,newNo,'changed by the office'))ch.push('client no. '+(oldNo||'none')+' → '+newNo);}else if(clEnsureCode(c)){ch.push('client no. '+oldNo+' → '+clCode(c)+' (its site '+oldNo+' was removed)');}
+  audit('Edited client','Client '+clCode(c),ch.join(' · ')||'no changes');save();closeModal();toast('Client '+clCode(c)+' saved.');render();};
+ACT.clmergepick=function(el){var f=user(el.dataset.id);if(!clIsClient(f))return;
+  modal('<h2>Merge '+esc(clCode(f))+' into another client</h2><p class="small">Use this when two records are really the same client (e.g. one farm with two sites). Sites, invoices, orders and logins of <b>'+esc(clCode(f))+'</b> ('+esc(clSites(f).join(', ')||'no sites')+') move to the client you pick. <b>'+esc(clCode(f))+'</b> is kept as an archived record (it keeps its number, so '+esc(clCode(f))+' cannot be reused as a client no.); nothing is deleted. The client you keep keeps its own number. This is logged.</p>'+
+  '<form data-form="clmerge" id="clmergeform"><input type="hidden" name="src" value="'+esc(f.id)+'"><div><label class="req">Keep this client</label><select name="dst" required><option value="">– choose –</option>'+clPickerOpts('').replace('<option value="'+esc(f.id)+'"','<option disabled value="'+esc(f.id)+'"')+'</select></div>'+chk('ok','I checked that these are the same client',false,{req:true})+'<button>Merge</button></form>');};
+FORMS.clmerge=function(f,d){var s=user(d.src),t=user(d.dst);if(!d.ok){toast('Tick the box to confirm.');return;}var e=clMerge(s,t);if(e){toast(e);return;}closeModal();toast('Merged '+clCode(s)+' into '+clCode(t)+'.');render();};
+ACT.clunlinkask=function(el){var u=user(el.dataset.id);if(!u||!u.loginOf)return;
+  modal('<h2>Unlink login</h2><p>'+esc(u.username||u.email)+' will no longer see '+esc(clCode(clResolve(u.loginOf)))+'. The login goes back to <b>Review &amp; approve</b>, where you can link it to the right client or decline it.</p><form data-form="clunlink"><input type="hidden" name="id" value="'+esc(u.id)+'">'+inp('reason','Reason (for the audit log)','',{req:true})+'<button class="danger">Unlink</button></form>');};
+FORMS.clunlink=function(f,d){var u=user(d.id);if(!d.reason){toast('Give a reason.');return;}var e=clUnlink(u,d.reason);if(e){toast(e);return;}closeModal();toast('Login unlinked.');render();};
+ACT.cllinkpick=function(el){var u=user(el.dataset.id);if(!u)return;var m=clInviteMatch(u.firm&&u.firm.inviteCode),pre=m.st==='valid'?m.client.id:'';
+  modal('<h2>Link this sign-up to an existing client</h2><p class="small"><b>'+esc(u.name)+'</b> · '+esc(u.username||'')+' '+esc(u.email||'')+(u.firm&&u.firm.contact?' · contact '+esc(u.firm.contact):'')+(u.firm&&u.firm.siteRequest?' · site given: '+esc(u.firm.siteRequest):'')+'</p>'+
+  (m.st==='valid'?'<div class="alert ok small" id="clinvmatch">Invite code matches <b>'+esc(clCode(m.client))+'</b> ('+esc(clSites(m.client).join(', '))+') – made '+fmtStamp(m.inv.createdAt)+', valid until '+esc(m.inv.expires)+'.</div>':(m.st!=='none'?'<div class="alert warn small" id="clinvmatch">The invite code they entered can\'t be used ('+esc({nomatch:'no matching code',used:'already used',revoked:'revoked',expired:'expired'}[m.st])+'). Pick the client below if you know who they are.</div>':''))+
+  '<form data-form="cllink" id="cllinkform"><input type="hidden" name="id" value="'+esc(u.id)+'"><input type="hidden" name="invite" value="'+esc(m.st==='valid'?m.inv.id:'')+'">'+
+  '<div><label for="clpickq">Find client</label><input type="search" id="clpickq" data-calc="clpick" placeholder="Client code, site code or name"></div>'+
+  '<div><label class="req">Client</label><select name="client" required size="6" class="clpicker"><option value=""'+(pre?'':' selected')+' disabled>– choose –</option>'+clPickerOpts(pre)+'</select></div>'+
+  sel('role','This login is the client\'s…',CL_ROLES.map(function(r){return [r,r];}),'Manager')+'<button>Approve &amp; link</button> <button type="button" class="sec" data-act="closeModal">Cancel</button></form>');};
+FORMS.cllink=function(f,d){var u=user(d.id),c=user(d.client);if(!c){toast('Pick the client.');return;}var useInv=d.invite&&(DB.clientInvites||[]).some(function(i){return i.id===d.invite&&i.clientId===c.id;});
+  var e=clLink(u,c,{via:useInv?'invite':'picker',inviteId:useInv?d.invite:'',role:d.role});if(e){toast(e);audit('Link refused','Client '+clCode(c),(u?(u.username||u.email):'?')+' · '+e);save();return;}
+  closeModal();toast('Approved and linked to '+clCode(c)+'.');render();};
+(function(){var or=VIEWS['admin:review'];VIEWS['admin:review']=function(){var x=or();var card=clPendingCard();if(!card)return x;var at=x.indexOf('<h2 style="margin-top:0">New accounts waiting for approval</h2>');return at>=0?x.slice(0,at)+card+x.slice(at):card+x;};})();
+/* approving a farm as a NEW client: its client no. is its site code (asked for in the pop-up; else its first site; else flagged) */
+(function(){var oa=ACT.approvenew;ACT.approvenew=function(el){var u=user(el.dataset.id);oa(el);if(u&&u.type==='firm'&&!u.loginOf){u.firm=u.firm||{};
+  if(!u.firm.clientCode&&!clEnsureCode(u,'approved as a new client'))audit('Client no. needed','Client (no farm code yet)',(u.username||u.email)+' approved as a new client – enter its site code under Clients & logins → Edit');
+  if(!u.firm.realName)u.firm.realName=u.name;save();render();}};})();
+ACT.clnewask=function(el){var u=user(el.dataset.id);if(!u||u.type!=='firm')return;var s=clSites(u).slice().sort(),sr=clNormFarm(u.firm&&u.firm.siteRequest),pre=s[0]||(CL_CODE_RE.test(sr)&&!clCodeProblem(u,sr,null)?sr:'');
+  modal('<h2>Approve as a new client</h2><p class="small"><b>'+esc(u.name)+'</b> · '+esc(u.username||'')+' '+esc(u.email||'')+(u.firm&&u.firm.siteRequest?' · site given: '+esc(u.firm.siteRequest):'')+'</p>'+
+  '<form data-form="clapprovenew" id="clapprovenewform"><input type="hidden" name="id" value="'+esc(u.id)+'">'+inp('farmCode','Site code = client no.',pre,{req:true,ph:'e.g. CJC101',extra:' autocapitalize="characters" maxlength="24"',hint:'The new client\'s number is its site code (must be unique). A code that is not a site yet is added as its site.'})+
+  '<button>Approve as new client</button> <button type="button" class="sec" data-act="closeModal">Cancel</button></form>');};
+FORMS.clapprovenew=function(f,d){var u=user(d.id);if(!u||u.type!=='firm'||u.loginOf)return;var s=clSites(u),code=clNormFarm(d.farmCode),err=clCodeProblem(u,code,s.length?s:null);
+  if(err){toast(err);PAGE_STATE.clErr=err;return;}PAGE_STATE.clErr='';
+  if(!s.length){var st=clSiteRow(code);if(st)st.firmId=u.id;else DB.sites.push(typeof tagCompany==='function'?tagCompany({code:code,name:clTypeOf(u)==='Farm'?'Farm':'Worksite',firmId:u.id}):{code:code,name:clTypeOf(u)==='Farm'?'Farm':'Worksite',firmId:u.id});}
+  clSetCode(u,code,'approved as a new client');closeModal();ACT.approvenew({dataset:{id:u.id}});toast('Approved as new client '+code+'.');};
+/* a firm login made by the office, or a site added to a client, gives the client its number if it has none yet */
+(function(){var on=FORMS.newfirm;if(on)FORMS.newfirm=function(f,d){var n=DB.users.length;on(f,d);if(DB.users.length>n){var u=DB.users[DB.users.length-1];if(u.type==='firm'&&clEnsureCode(u,'farm code of its first site')){save();render();}}};
+  var oa=FORMS.addsite;if(oa)FORMS.addsite=function(f,d){oa(f,d);var u=user(d.id);if(u&&clEnsureCode(u,'farm code of its first site')){save();render();}};})();
+
+/* ---------- sign-up with an invite code (shows nothing about the client before approval) ---------- */
+function clInviteFromHash(){var m=/[?&]invite=([A-Za-z0-9-]{8,12})/.exec(location.hash||'');return m?clNormCode(m[1]):'';}
+(function(){var of=VIEWS.signupForm;VIEWS.signupForm=function(h){var x=of(h);if(String(h).split('/')[2]!=='firm')return x;var pre=clInviteFromHash();
+  var field='<div id="clinvitefield">'+inp('invite','Invite code from the office (optional)',pre,{ph:'e.g. ABCD-2345',hint:'Already a client of Chief Janitorial? Enter the code (or open the link) the office gave you, so your login is attached to your farm after approval.'})+'</div>';
+  var at=x.indexOf('<div><label class="req">Password');if(at<0)at=x.indexOf(inp('pw','Password','',{type:'password',req:true}));return at>=0?x.slice(0,at)+field+x.slice(at):x.replace('<button type="submit">',field+'<button type="submit">');};})();
+(function(){var of=FORMS.firmsignup;FORMS.firmsignup=function(f,d){var raw=String(d.invite||'').trim(),code=raw?clNormCode(raw):'';
+  if(raw&&!code){toast('Invite codes look like ABCD-2345 (8 letters/numbers). Check the code, or leave it empty.');return;}
+  var n=DB.users.length;of(f,d);if(code&&DB.users.length>n){var u=DB.users[DB.users.length-1];if(u.type==='firm'){u.firm=u.firm||{};u.firm.inviteCode=code;audit('Sign-up with invite code',u.name,'code ending '+code.slice(-4)+' – waiting for office approval');save();render();}}};})();
+(function(){var op=VIEWS.pending;VIEWS.pending=function(){var x=op();if(ME&&ME.type==='firm'&&ME.firm&&ME.firm.inviteCode)x+='<div class="card small" id="clinvitepending"><b>Invite code received.</b> The office checks it when it approves your account. After approval your login is attached to your farm and you will see your sites, invoices and orders.</div>';return x;};})();
+
+/* ---------- farm home after linking: who is signed in, which client, which sites ---------- */
+(function(){var oh=VIEWS['firm:home'];VIEWS['firm:home']=function(){var x=oh();if(!ME)return x;var L=clLoginOf(ME),others=clLoginsOf(ME).filter(function(u){return u.id!==L.id&&u.active!==false;}).length+(clOwnLogin(ME)&&L.id!==ME.id?1:0);
+  var b='<div class="card cllinked" id="clientlinkbanner"><div class="row"><span class="pill s-ok">Client '+esc(clCode(ME))+'</span><b>'+esc(ME.name)+'</b></div><div class="small">Sites: '+esc(clSites(ME).join(', ')||'none yet')+(ME.__isProxy?' · signed in as '+esc(L.username||L.email)+(L.loginRole?' ('+esc(L.loginRole)+')':'')+(others?' · '+others+' other login'+(others>1?'s':'')+' for your account':''):'')+'</div></div>';
+  return b+x;};})();
+
+/* ---------- small wording fix: no client names as examples on subcontractor screens ---------- */
+(function(){Object.keys(VIEWS).forEach(function(k){if(!/^sub:|^tester:/.test(k))return;var ov=VIEWS[k];VIEWS[k]=function(){var x=ov.apply(this,arguments);return typeof x==='string'?x.replace('placeholder="e.g. Test Farm A"','placeholder="e.g. site CJC101"'):x;};});})();
+
+/* ---------- access rules ---------- */
+ADMIN_ONLY_ACT.push('clinvite','clinvrevoke','cledit','clmergepick','clunlinkask','cllinkpick','clnewask');
+ADMIN_ONLY_FORM.push('clinvite','clnew','cledit','clmerge','clunlink','cllink','clapprovenew');
+
+/* ---------- sample data (TEST only – fake names) ---------- */
+function seedClientLink(db){db.settings=db.settings||{};if(db.settings.clSeeded)return;db.settings.clSeeded=1;db.clientInvites=db.clientInvites||[];
+  var by=function(n){return db.users.filter(function(u){return u.username===n;})[0];};
+  /* client no. = farm code: each sample client's first site (A→Z) */
+  ['firmA','firmB','clientFarm','firmD','firmE','clientCon','clientBake','clientPaint','clientClean'].forEach(function(n){var u=by(n);if(!u)return;var s=db.sites.filter(function(x){return x.firmId===u.id;}).map(function(x){return x.code;}).sort();u.firm=u.firm||{};if(s[0])u.firm.clientCode=s[0];u.firm.realName=u.name;});
+  var t0=Date.now(),mk=function(code,real,type,sites,rate){var u={id:'cl_'+code.replace(/-/g,''),type:'firm',preloaded:true,name:real||('Client '+code),username:'',email:'',phone:'',active:true,suspended:false,approved:true,accountApproved:true,createdAt:new Date(t0-86400000*90).toISOString(),lastLogin:null,profile:{},roles:[],orientations:[],firm:{billRate:rate||0,contact:'',clientType:type,clientCode:code,realName:real||'',notes:'Pre-loaded sample client (no login yet)'}};
+    db.users.push(u);sites.forEach(function(s){db.sites.push({code:s[0],name:s[1],firmId:u.id});});return u;};
+  /* cjstrip4 (CJ): the farm-era pre-loaded clients (Test Farm G / TFG-01, TFH-01, Sample Roofing Co. TRF-01), their farm rates,
+     farm agreement signature and crew order are NOT seeded in Chief Janitorial. The uploaded past-invoice sample sits under firmA (CJC101). */
+  void mk;var T=today(),G=by('firmA');if(!G)return;
+  db.clientInvoices=db.clientInvoices||[];
+  var pdf='%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF';
+  db.clientInvoices.push({id:'ci_clG2',firmId:G.id,number:'PI-2025-A07',issued:addDays(T,-200),periodStart:addDays(T,-230),periodEnd:addDays(T,-201),amount:2100,hst:315,total:2415,due:addDays(T,-170),paidAt:addDays(T,-175),note:'',billHours:0,interestPct:0,uploaded:true,file:{name:'PI-2025-A07.pdf',type:'application/pdf',size:pdf.length,data:'data:application/pdf;base64,'+btoa(pdf)},uploadedBy:'Sample office',uploadedAt:new Date(t0-86400000*30).toISOString()});
+  var w4=by('worker4'),mon=addDays(T,-((parseD(T).getDay()+6)%7));if(w4)db.shifts.push({id:'s_clG1',date:mon<T?mon:addDays(T,-1),start:'18:00',end:'22:00',role:'general',kind:'crew',orientation:false,booked:[w4.id],test:false,needed:2,site:'CJC102',title:'Cleaning crew – site (sample, past)'});}
+(function(){var os=seedV2;seedV2=function(db,o){os(db,o);seedClientLink(db);};})();
+(function(){var ol=load;load=function(){ol();if(DB&&!window.REG_LIVE&&!(DB.settings&&DB.settings.clSeeded)&&(DB.users||[]).some(function(u){return u.username==='firmA';})){seedClientLink(DB);save();}if(DB)DB.clientInvites=DB.clientInvites||[];
+  if(DB&&!window.REG_LIVE&&clRenumberLegacy(DB))save();};})();   /* test copy only – on the real database migration 016m does this */
+/* the "Client <farm code> / signed in as" line stays at the top of the farm home (after the home is grouped into sections) */
+(function(){var oa=afterRender;afterRender=function(root){oa(root);try{var b=root&&root.querySelector&&root.querySelector('#clientlinkbanner'),m=root&&root.querySelector&&root.querySelector('main');
+  if(b&&m){var h=m.querySelector('h1');if(h&&h.parentNode===m)h.insertAdjacentElement('afterend',b);else m.insertBefore(b,m.firstChild);}}catch(e){}};})();
+/* "My profile" of a linked farm login is the PERSON's own login (name, username, email, phone), not the client record:
+   the page and the save run with ME = the login (fixes "username already used" – the check compared against the client's id –
+   and stops a profile save from renaming the client). */
+function clAsLoginDo(fn){if(!(ME&&ME.__isProxy))return fn();var px=ME;ME=px.__login;try{return fn();}finally{if(ME===px.__login)ME=px;}}
+(function(){var ov=VIEWS.profile;VIEWS.profile=function(){var a=arguments;return clAsLoginDo(function(){return ov.apply(null,a);});};
+  var of=FORMS.profile;FORMS.profile=function(f,d){return clAsLoginDo(function(){return of(f,d);});};})();
