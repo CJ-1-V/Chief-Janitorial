@@ -168,11 +168,17 @@
       var movedSt = {}; (db.time || []).forEach(function (t) { if (t && t.stShiftId) movedSt['st-' + t.stShiftId] = 1; });
       if (Object.keys(movedSt).length) db.time = db.time.filter(function (t) { return !(t && movedSt[t.id]); });
     } catch (e) { console.warn('st dedupe', e); }
+    var myRow = (db.users || []).find(function (u) { return u && String(u.id) === String(s.me); }) || null;
     if (typeof scopeDbToCompany === 'function') {
       try { scopeDbToCompany(db); } catch (e) { console.warn('company scope', e); }
     }
+    /* loginblank1 (Oct 14 2026): the company filter dropped client accounts whose industry is not 'farm' (e.g. cleaning)
+       – including the person signing in – so ME was empty and they were signed out with no message. Always keep your own row. */
+    if (myRow && !(db.users || []).some(function (u) { return u && String(u.id) === String(s.me); })) db.users.push(myRow);
     installDB(db);
     ME = user(s.me);
+    var blk = ME ? blockedReason(ME) : (OFFICE ? '' : 'We found your sign-in, but could not open your UnScramble profile. Please contact the UnScramble office so they can fix your account.');
+    if (blk) { PAGE_STATE.loginMsg = blk; ME = null; sessionStorage.removeItem('us-test-me'); return false; }
     if (ME) {
       sessionStorage.setItem('us-test-me', ME.id);
       if (OFFICE) ME.officeRoles = s.officeRoles || [];
@@ -181,6 +187,13 @@
     }
     LAST_REFRESH = Date.now();
     return !!ME;
+  }
+  function blockedReason(u) {
+    if (!u || OFFICE) return '';
+    if (u.active === false && u.accountApproved === false) return 'Your account request was not approved by the office, so you cannot sign in. If you think this is a mistake, please contact the UnScramble office.';
+    if (u.active === false) return 'Your account is switched off, so you cannot sign in right now. Please contact the UnScramble office.';
+    if (u.suspended) return 'Your account is on hold, so you cannot sign in right now. Please contact the UnScramble office.';
+    return '';
   }
   async function refresh(why) {
     if (LOADING) return; LOADING = true;
@@ -398,8 +411,16 @@
   };
   async function afterSignIn(how) {
     SIGNED_IN = true;
-    var ok = await loadSnapshot();
-    if (!ok) { SIGNED_IN = false; await sb.auth.signOut(); go('#/'); render(); return; }
+    var ok = false;
+    try { ok = await loadSnapshot(); }
+    catch (e) { PAGE_STATE.loginMsg = 'Could not open your account: ' + friendly(e) + ' Please try again. If it keeps happening, contact the UnScramble office.'; }
+    if (!ok) {
+      var why = PAGE_STATE.loginMsg || (PAGE_STATE.notReg ? '' : 'Could not open your account. Please try again, or contact the UnScramble office.');
+      var nr = PAGE_STATE.notReg;
+      SIGNED_IN = false; try { await sb.auth.signOut(); } catch (e) {}
+      try { await loadPublic(); } catch (e) {}
+      PAGE_STATE.loginMsg = why || null; PAGE_STATE.notReg = nr; go('#/'); return;   // one render only: the sign-in screen clears the message once it shows it
+    }
     var u = ME; u.lastLogin = new Date().toISOString(); touch();
     logLogin(u, u.username || u.email, true, 'Signed in (' + how + ')'); audit('Signed in', u.name, how); runAlerts(); save();
     homeOrClock(true);
@@ -412,7 +433,7 @@
     await loadPublic(); if (msg) PAGE_STATE.loginMsg = msg; go('#/');
   }
   // the idle timer (security.js) clears ME after 30 minutes: also end the real session and wipe the data from memory
-  setInterval(function () { if (SIGNED_IN && !ME && !SNAP_BUSY) { var m = PAGE_STATE.loginMsg; signOutLocal(m); } }, 2000);
+  setInterval(function () { if (SIGNED_IN && !ME && !SNAP_BUSY) { var m = PAGE_STATE.loginMsg || 'You were signed out. Please sign in again.'; signOutLocal(m); } }, 2000);
   ACT.resetData = function () {};
   ACT.quick = function () {};
 
@@ -744,7 +765,10 @@
     if (app) app.innerHTML = '<div class="login-wrap"><div class="card"><p class="muted">Loading…</p></div></div>';
     try {
       var s = await sb.auth.getSession();
-      if (s.data && s.data.session) { SIGNED_IN = true; if (!(await loadSnapshot())) { SIGNED_IN = false; } }
+      if (s.data && s.data.session) {
+        SIGNED_IN = true;
+        if (!(await loadSnapshot())) { var bw = PAGE_STATE.loginMsg, bn = PAGE_STATE.notReg; SIGNED_IN = false; try { await sb.auth.signOut(); } catch (e) {} try { await loadPublic(); } catch (e) {} PAGE_STATE.loginMsg = bw; PAGE_STATE.notReg = bn; }
+      }
       else await loadPublic();
     } catch (e) {
       try { await loadPublic(); } catch (x) { DB = emptyDB(); }

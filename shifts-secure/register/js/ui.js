@@ -67,7 +67,7 @@ function render(){
       html=v(h);track('screen',h);save();
     }
   }catch(e){html='<div class="alert bad" id="screenerr"><b>Sorry – this screen could not open.</b> Please go back and try again. If it keeps happening, contact the office.</div>';try{console.warn('[screen error – friendly message shown]',e);}catch(x){}logError(e);}
-  app.innerHTML=layout(html);stackTables(app);afterRender(app);window.scrollTo(0,0);
+  try{app.innerHTML=layout(html);stackTables(app);afterRender(app);}catch(e){/* loginblank1: never leave a blank page */try{console.warn('[layout error – friendly message shown]',e);logError(e);}catch(x){}app.innerHTML='<div class="login-wrap"><div class="card"><div class="alert bad" id="screenerr"><b>Sorry – this page could not open.</b> Please reload. If it keeps happening, contact the UnScramble office.</div><p><button data-act="logout">Sign out</button> <a class="btn sec" href="#/" onclick="location.reload()">Reload</a></p></div></div>';}window.scrollTo(0,0);
   var f=document.querySelector('[data-autofocus]');if(f)f.focus();
   if(PAGE_STATE.after){var a=PAGE_STATE.after;PAGE_STATE.after=null;a();}
 }
