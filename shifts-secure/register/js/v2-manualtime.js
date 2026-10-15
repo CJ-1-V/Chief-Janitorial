@@ -28,8 +28,8 @@ function mtTag(){return '<span class="pill s-manual">Manual</span>';}
 function mtClientName(code){var f=siteFirm(code);if(!f)return '';var real=f.realName||f.clientRealName||(f.firm&&(f.firm.realName||f.firm.clientRealName))||'';return real||f.name||'';}
 function mtOfficeSite(code){var n=mtClientName(code);return code+(n?' – '+n:'');}
 function mtSites(){return (typeof companySites==='function'?companySites({withFirm:true,skipPractice:true,activeOnly:true}):DB.sites.filter(function(s){return s.firmId&&s.code!=='TEST-PRACTICE'&&s.active!==false;}));}
-function mtPeople(){return DB.users.filter(function(u){return (u.type==='employee'||u.type==='worker')&&u.accountApproved!==false;}).sort(function(a,b){return a.name<b.name?-1:1;});}
-function mtWho(u){return u.type==='employee'?'UnScramble employee':employerName(u);}
+function mtPeople(){return DB.users.filter(function(u){return (u.type==='employee'||u.type==='worker'||u.type==='sub')&&u.accountApproved!==false;   /* manualsub1 (owner Oct 15 3:01 PM): subcontractor companies too */}).sort(function(a,b){return a.name<b.name?-1:1;});}
+function mtWho(u){return u.type==='employee'?'UnScramble employee':u.type==='sub'?'Subcontractor (company)':employerName(u);}
 /* 96 quarter-hour choices – the only times you can pick */
 function mtTimeSel(name,label,val,o){o=o||{};var x='';for(var m=0;m<1440;m+=15){var v=pad(Math.floor(m/60))+':'+pad(m%60);x+='<option value="'+v+'"'+(v===val?' selected':'')+'>'+v+'</option>';}
   return '<div><label class="req">'+esc(label)+'</label><select name="'+name+'" class="mt-time" required'+(o.form?' form="'+o.form+'"':'')+'>'+x+'</select></div>';}
@@ -62,7 +62,8 @@ function mtCheck(u,d,exceptId){var E=[],W=[];
 function mtCrewShift(uid0,site,date){return DB.shifts.filter(function(s){return s.kind==='crew'&&!s.test&&s.site===site&&s.date===date&&(s.booked||[]).indexOf(uid0)>=0&&!DB.time.some(function(t){return t.userId===uid0&&t.shiftId===s.id&&!t.test;});})[0]||null;}
 function mtNew(u,d,src){var now=new Date().toISOString(),sh=mtCrewShift(u.id,d.site,d.date);
   var t={id:uid('t'),userId:u.id,site:d.site,shiftId:sh?sh.id:null,role:jobRoleOf(u),date:d.date,in:d['in'],out:d.out,clock:false,manual:true,manualSource:src,manualReason:d.reason,manualNote:d.note||'',manualBy:ME.id,manualByName:ME.name,manualAt:now,addedAt:now,daysLate:daysBetween(d.date,today()),breakMissed:d.brk==='none',test:false,note:'',lateEntry:'',manualHistory:[{at:now,by:ME.name,action:'added',reason:mtReason(d.reason)+(d.note?' – '+d.note:'')}]};
-  if(u.subId)t.subId=u.subId;if(d.bulkId)t.bulkId=d.bulkId;return t;}
+  if(u.subId)t.subId=u.subId;if(u.type==='sub')t.subId=u.id;   /* same as a subcontractor's own (work-shifts-myself) entry: userId = subId = the company */
+  if(d.bulkId)t.bulkId=d.bulkId;return t;}
 function mtShow(id,list,cls){var b=document.getElementById(id);if(b){b.innerHTML=list.length?'<div class="alert '+cls+' small"><ul>'+list.map(function(m){return '<li>'+esc(m)+'</li>';}).join('')+'</ul></div>':'';}}
 /* returns true when it is OK to save (no errors, and warnings – if any – confirmed with the tick box) */
 function mtGate(f,E,W,box){mtShow(box,E.length?E:W,E.length?'bad':'warn');var c=f.querySelector('.mt-confirm');
@@ -75,7 +76,7 @@ function mtConfirmBox(){return '<div class="mt-confirm" hidden><label class="inl
 NAV.admin.splice((function(){for(var i=0;i<NAV.admin.length;i++)if(NAV.admin[i][0]==='#/lateentries')return i+1;return NAV.admin.length;})(),0,['#/manualtime','Manual hours']);
 if(typeof MENU_GROUPS!=='undefined')MENU_GROUPS.forEach(function(g){if(g[0]==='Daily work'&&g[1].indexOf('#/manualtime')<0)g[1].splice(Math.max(0,g[1].indexOf('#/lateentries')+1),0,'#/manualtime');});
 function mtForm(){var bulk=PAGE_STATE.mtMode==='bulk',P=mtPeople(),last=PAGE_STATE.mtLast||{};
-  var groups={};P.forEach(function(u){var g=u.type==='employee'?'UnScramble employees':'Subcontractor workers – '+employerName(u);(groups[g]=groups[g]||[]).push(u);});
+  var groups={};P.forEach(function(u){var g=u.type==='employee'?'UnScramble employees':u.type==='sub'?'Subcontractors (company)':'Subcontractor workers – '+employerName(u);(groups[g]=groups[g]||[]).push(u);});
   var gk=Object.keys(groups).sort();
   var who=bulk?'<div class="mt-wfield"><label class="req">Workers (tick everyone on the timesheet)</label><div class="mt-wlist" id="mtwlist">'+gk.map(function(g){return '<div class="mt-wgrp"><div class="small muted"><b>'+esc(g)+'</b></div>'+groups[g].map(function(u){return '<label class="inline mt-w"><input type="checkbox" name="wids[]" value="'+u.id+'"> <span>'+esc(u.name)+(u.active===false?' <span class="muted">(off)</span>':'')+'</span></label>';}).join('')+'</div>';}).join('')+'</div></div>'
     :'<div><label class="req">Worker</label><select name="wid" required><option value="">– choose –</option>'+gk.map(function(g){return '<optgroup label="'+esc(g)+'">'+groups[g].map(function(u){return '<option value="'+u.id+'">'+esc(u.name)+(u.active===false?' (switched off)':'')+'</option>';}).join('')+'</optgroup>';}).join('')+'</select></div>';
@@ -109,7 +110,7 @@ document.addEventListener('change',function(e){var f=e.target&&e.target.form;if(
 FORMS.manualtime=function(f,d){if(!mtCan()){toast('Only the Owner, an Admin or Payroll (billing) can add manual hours.');audit('Blocked: add manual hours (office role)',ME.name);save();return;}
   if(!d.reason){toast('Pick a reason.');mtShow('mtwarn',['Pick a reason.'],'bad');return;}if(d.reason==='other'&&!d.note){toast('Write a note for "Other".');mtShow('mtwarn',['Write a note for "Other".'],'bad');return;}
   var ids=d.mode==='bulk'?(d.wids||[]):(d.wid?[d.wid]:[]);if(!ids.length){toast(d.mode==='bulk'?'Tick at least one worker.':'Pick a worker.');mtShow('mtwarn',[d.mode==='bulk'?'Tick at least one worker.':'Pick a worker.'],'bad');return;}
-  var E=[],W=[],people=ids.map(user).filter(Boolean);people.forEach(function(u){if(u.type!=='employee'&&u.type!=='worker'){E.push('Not a worker.');return;}var c=mtCheck(u,d);E=E.concat(c.E);c.W.forEach(function(w){if(W.indexOf(w)<0)W.push(w);});});
+  var E=[],W=[],people=ids.map(user).filter(Boolean);people.forEach(function(u){if(u.type!=='employee'&&u.type!=='worker'&&u.type!=='sub'){E.push('Not a worker.');return;}var c=mtCheck(u,d);E=E.concat(c.E);c.W.forEach(function(w){if(W.indexOf(w)<0)W.push(w);});});
   if(!mtGate(f,E,W,'mtwarn'))return;
   var bulkId=people.length>1?uid('bk'):'',inv=mtInvoiced(d.site,d.date),made=[];
   people.forEach(function(u){var t=mtNew(u,{site:d.site,date:d.date,'in':d['in'],out:d.out,brk:d.brk,reason:d.reason,note:d.note,bulkId:bulkId},'office');
