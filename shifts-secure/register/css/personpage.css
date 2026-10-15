@@ -1,0 +1,11 @@
+.pp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.pp-head h1{margin:0}
+.pp-tabs{gap:6px;flex-wrap:wrap;margin:10px 0}
+.pp-banner{position:sticky;top:0;z-index:5;background:#1f3b57;color:#fff;padding:10px 12px;border-radius:10px;display:flex;gap:10px;align-items:center;justify-content:space-between;margin:8px 0}
+.pp-banner button{background:#fff;color:#1f3b57}
+.pp-view{border:3px dashed #9fb3c8;border-radius:12px;padding:12px;background:#fbfdff;pointer-events:none;user-select:text;opacity:.97}
+.pp-view *{pointer-events:none!important}
+.pp-tot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}.pp-tot>div{background:#f3f6f9;border-radius:10px;padding:10px}.pp-tot b{display:block;font-size:1.25em}.pp-tot small{color:#667}
+.pp-dates{gap:8px;flex-wrap:wrap;align-items:end}
+.pp-void td{color:#999;text-decoration:line-through}.pp-void td:nth-child(8),.pp-void td:last-child{text-decoration:none}
+.pp-lists>div{margin-bottom:8px}.pp-record h2{font-size:1.1em}
+.pp-banner button{white-space:nowrap;flex:0 0 auto}
