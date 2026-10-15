@@ -9,3 +9,7 @@
 .pp-void td{color:#999;text-decoration:line-through}.pp-void td:nth-child(8),.pp-void td:last-child{text-decoration:none}
 .pp-lists>div{margin-bottom:8px}.pp-record h2{font-size:1.1em}
 .pp-banner button{white-space:nowrap;flex:0 0 auto}
+.hdc-bar{gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}.hdc-bar form{gap:6px}
+.hdc-farm .hdc-top{display:flex;justify-content:space-between;align-items:center}.hdc-n{font-size:1.6em;font-weight:700}.hdc-n small{font-size:.5em;color:#667}
+.hdc-flags{gap:6px;flex-wrap:wrap;margin:4px 0}.hdc-list{list-style:none;padding:0;margin:6px 0 0}.hdc-list li{padding:6px 0;border-top:1px solid #eee}
+.hdc-grid td,.hdc-grid th{text-align:center}.hdc-grid td:first-child{text-align:left}.hdc-sum{font-size:1.1em}

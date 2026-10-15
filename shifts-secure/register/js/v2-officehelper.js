@@ -23,7 +23,7 @@ window.ohIs=ohIs;window.ohOpts=ohOpts;
 /* ---------- routes: whitelist for the assistant (any new office page stays closed until added here) ---------- */
 var OH_OK=['#/home','#/review','#/people','#/addperson','#/documents','#/compliance','#/missingdocs','#/training','#/lateentries','#/manualtime',
   '#/allhours','#/payroll','#/farmchanges','#/creworders','#/crewcoming','#/shiftsadmin','#/invoicesadmin','#/recordsadmin','#/alerts',
-  '#/feedbackadmin','#/privacy','#/ohhidden'];
+  '#/feedbackadmin','#/privacy','#/ohhidden','#/headcount'];   /* personpage3: Daily headcount (codes only) */
 var OH_LABEL={'#/invoicesadmin':'Invoices (status)','#/payroll':'Payroll hours'};
 var BASE_NAV=NAV.admin;
 Object.defineProperty(NAV,'admin',{configurable:true,enumerable:true,
