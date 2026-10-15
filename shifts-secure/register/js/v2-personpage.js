@@ -15,6 +15,7 @@ function st(){return PAGE_STATE.pp||null;}
 var KIND={firm:'Farm / client',sub:'Subcontractor',worker:'Sub worker',employee:'Employee',admin:'Office',tester:'Tester'};
 function statusTxt(u){if(u.active===false&&u.accountApproved===false)return ['Declined','s-bad'];if(u.active===false)return ['Switched off','s-mut'];
   if(u.suspended)return ['On hold','s-bad'];if(u.accountApproved===false)return ['Waiting for approval','s-pend'];return ['Active','s-ok'];}
+function farmHoursOk(u){return !(u&&u.type==='firm')||(owner()&&!helper());}   /* personpage2 (owner Oct 15 11:08): farm hours + farm view = owner only */
 function canViewAs(u){if(!u||u.type==='admin')return false;if(u.type==='firm')return owner()&&!helper();return true;}
 function firmCodesOf(f){return (DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;});}
 function siteOfT(t){if(t.site)return t.site;var sh=t.shiftId&&(DB.shifts||[]).filter(function(x){return x.id===t.shiftId;})[0];return sh&&sh.site||'';}
@@ -25,7 +26,7 @@ ACT.person=function(el){var id=el.dataset.id;if(!user(id)){toast('Not found.');r
   PAGE_STATE.pp={id:id,tab:'details',back:location.hash||'#/people'};if((location.hash||'').split('?')[0]==='#/people')render();else go('#/people');};
 ACT.ppback=function(){var s=st();PAGE_STATE.pp=null;var b=(s&&s.back)||'#/people';if(b.split('?')[0]==='#/people')render();else go(b);};
 ACT.pptab=function(el){var s=st();if(!s)return;s.tab=el.dataset.tab;if(el.dataset.page)s.page=el.dataset.page;render();};
-ACT.ppcsv=function(){var s=st();if(!s)return;var u=user(s.id),R=hourRows(u,s.from,s.to);
+ACT.ppcsv=function(){var s=st();if(!s)return;var u=user(s.id);if(!farmHoursOk(u)){toast('Farm hours are visible to the owner only.');return;}var R=hourRows(u,s.from,s.to);
   var head=['Date','Person','Farm code','In','Out','Break (h)','Hours','Status','Source','Edits'];
   var lines=[head].concat(R.map(function(r){return [r.date,r.who,r.site,r['in'],r.out,r.brk.toFixed(2),r.h.toFixed(2),r.status,r.src,r.edits];}));
   var csv=lines.map(function(a){return a.map(function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');}).join('\n');
@@ -105,9 +106,9 @@ function viewHtml(u){var s=st(),pg=s.page||'home',r=viewAs(u,pg);
 function page(){var s=st(),u=s&&user(s.id);if(!u){PAGE_STATE.pp=null;return null;}var tab=s.tab||'details';var S=statusTxt(u);
   var name=u.type==='firm'&&helper()?'Farm '+(firmCodesOf(u)[0]||'?'):u.name;
   var x='<div class="pp-head"><button class="small sec" data-act="ppback">← Back</button><h1>'+E(name)+'</h1><span class="pill '+S[1]+'">'+S[0]+'</span> <span class="small muted">'+E(KIND[u.type]||u.type)+'</span></div>';
-  x+='<div class="pp-tabs row"><button class="small '+(tab==='details'?'':'sec')+'" data-act="pptab" data-tab="details">Details</button><button class="small '+(tab==='hours'?'':'sec')+'" data-act="pptab" data-tab="hours">Hours (all)</button>'+
-    (canViewAs(u)?'<button class="small '+(tab==='view'?'':'sec')+'" data-act="pptab" data-tab="view">👁 See their page</button>':(u.type==='firm'?'<span class="small muted">The farm\'s own view is for the owner only.</span>':''))+'</div>';
-  if(tab==='view'&&canViewAs(u))x+=viewHtml(u);else if(tab==='hours')x+=hoursHtml(u);else x+=detailsHtml(u);
+  x+='<div class="pp-tabs row"><button class="small '+(tab==='details'?'':'sec')+'" data-act="pptab" data-tab="details">Details</button>'+(farmHoursOk(u)?'<button class="small '+(tab==='hours'?'':'sec')+'" data-act="pptab" data-tab="hours">Hours (all)</button>':'')+
+    (canViewAs(u)?'<button class="small '+(tab==='view'?'':'sec')+'" data-act="pptab" data-tab="view">👁 See their page</button>':(u.type==='firm'?'<span class="small muted">Farm hours and the farm\'s own view are for the owner only.</span>':''))+'</div>';
+  if(tab==='view'&&canViewAs(u))x+=viewHtml(u);else if(tab==='hours'&&farmHoursOk(u))x+=hoursHtml(u);else x+=detailsHtml(u);
   return scrub(x);}
 var ov=VIEWS['admin:people'];VIEWS['admin:people']=function(){if(st()){var p=page();if(p!=null)return p;}return ov.apply(this,arguments);};
 /* leaving People through the menu closes the person page */
