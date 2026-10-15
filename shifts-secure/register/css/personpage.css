@@ -13,3 +13,4 @@
 .hdc-farm .hdc-top{display:flex;justify-content:space-between;align-items:center}.hdc-n{font-size:1.6em;font-weight:700}.hdc-n small{font-size:.5em;color:#667}
 .hdc-flags{gap:6px;flex-wrap:wrap;margin:4px 0}.hdc-list{list-style:none;padding:0;margin:6px 0 0}.hdc-list li{padding:6px 0;border-top:1px solid #eee}
 .hdc-grid td,.hdc-grid th{text-align:center}.hdc-grid td:first-child{text-align:left}.hdc-sum{font-size:1.1em}
+.hdc-farmday .hdc-top{display:flex;justify-content:space-between;align-items:center}.hdc-farmday .hdc-n{font-size:2em;font-weight:700}
