@@ -51,14 +51,21 @@ ACT.hcday=function(el){PAGE_STATE.hc.d=el.dataset.d;PAGE_STATE.hc.m='day';render
 FORMS.hcdate=function(f,d){if(d.d){PAGE_STATE.hc.d=d.d;render();}};
 /* personpage4 (owner Oct 15 11:25): on a FARM's person page, just the number of people who worked there on the chosen day.
    Same rules as above. Owner + Office Assistant only (office admin / billing never see it). */
+function farmCodes(f){return (DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;});}
+function farmShifts(f,day){var c=farmCodes(f);return entries(day).filter(function(t){return c.indexOf(siteOfT(t))>=0;}).sort(function(a,b){var x=(user(a.userId)||{}).name||'',y=(user(b.userId)||{}).name||'';return x.localeCompare(y)||String(a['in']).localeCompare(String(b['in']));});}
+function paidOf(t){if(!t.out)return 0;var w=hrs(t['in'],t.out);return Math.max(0,w-(typeof unpaidBreak==='function'?unpaidBreak(w,t):0));}   /* same rule as payroll/billing (break by shift length; breakMissed) */
 function farmCount(f,day){var codes=(DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;}),p={};
   entries(day).forEach(function(t){if(codes.indexOf(siteOfT(t))>=0)p[t.userId]=1;});return Object.keys(p).length;}
 var opp=VIEWS['admin:people'];VIEWS['admin:people']=function(){var x=opp.apply(this,arguments),s=PAGE_STATE.pp,u=s&&user(s.id);
   if(!u||u.type!=='firm'||!allowed()||(s.tab&&s.tab!=='details'))return x;
-  var d=PAGE_STATE.ppHc=PAGE_STATE.ppHc||today(),n=farmCount(u,d);
+  var d=PAGE_STATE.ppHc=PAGE_STATE.ppHc||today(),n=farmCount(u,d),L=farmShifts(u,d),tot=0;
+  var list=L.length?'<ul class="hdc-list hdc-fl">'+L.map(function(t){var w=user(t.userId),st=stOf(t),g=t.out?hrs(t['in'],t.out):0,h=paidOf(t);tot+=h;
+      return '<li>'+(w?'<a href="#" data-act="person" data-id="'+E(w.id)+'">'+E(w.name)+'</a>':'Unknown person')+' <span class="small muted">'+E(siteOfT(t))+'</span>'+
+        '<div class="small">'+E(t['in']||'?')+'–'+E(t.out||'…')+(t.out?' · break '+(g-h).toFixed(2)+' h':'')+' · <b>'+h.toFixed(2)+' h</b> <span class="pill '+st[1]+'">'+E(st[0])+'</span></div></li>';}).join('')+'</ul>'+
+      '<p class="hdc-tot"><b>Total: '+tot.toFixed(2)+' h</b> <span class="small muted">('+L.length+' shift'+(L.length===1?'':'s')+'; open shifts count 0 until clocked out)</span></p>':'<p class="small muted">No shifts on this day.</p>';
   var card='<div class="card hdc-farmday" id="hdcfarmday"><div class="hdc-top" style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span>People who worked here</span><span class="hdc-n" style="font-size:2em;font-weight:700;line-height:1">'+n+'</span></div>'+
-    '<div class="row hdc-bar"><button class="small sec" data-act="hcfmove" data-n="-1" aria-label="Previous day">◀</button><form data-form="hcfdate" class="row"><input type="date" name="d" value="'+E(d)+'"><button class="small">Go</button></form><button class="small sec" data-act="hcfmove" data-n="1" aria-label="Next day">▶</button></div></div>';
-  var i=x.indexOf('<div class="card pp-facts"');return i<0?x+card:x.slice(0,i)+card+x.slice(i);};
+    '<div class="row hdc-bar"><button class="small sec" data-act="hcfmove" data-n="-1" aria-label="Previous day">◀</button><form data-form="hcfdate" class="row"><input type="date" name="d" value="'+E(d)+'"><button class="small">Go</button></form><button class="small sec" data-act="hcfmove" data-n="1" aria-label="Next day">▶</button></div>'+list+'</div>';
+  if(typeof ohScrub==='function')card=ohScrub(card);var i=x.indexOf('<div class="card pp-facts"');return i<0?x+card:x.slice(0,i)+card+x.slice(i);};
 ACT.hcfmove=function(el){PAGE_STATE.ppHc=add(PAGE_STATE.ppHc||today(),+el.dataset.n);render();};
 FORMS.hcfdate=function(f,d){if(d.d){PAGE_STATE.ppHc=d.d;render();}};
 window.addEventListener('hashchange',function(){if(!PAGE_STATE.pp)PAGE_STATE.ppHc=null;});
