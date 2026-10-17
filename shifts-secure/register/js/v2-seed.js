@@ -26,7 +26,11 @@ function seedV2(db,o){var A=o.A;
   db.firmSigs=[o.fA,o.fB].map(function(f,i){return {id:o.uid('fs'),firmId:f.id,firmName:f.name,version:'1.0',label:FIRM_AGR_LABEL,signerName:i?'Sam Sample':'Pat Placeholder',title:i?'Farm Manager':'Owner',signature:i?'Sam Sample':'Pat Placeholder',authorized:true,at:new Date(Date.now()-86400000*(25-i)).toISOString(),tz:'America/Halifax',device:'Computer – sample data',text:firmAgreementText(f.name)};});
   /* sample clocked hours for subcontractor workers (shown on the sub's Workers' hours page – never used for invoices) */
   var rows=[[-13,o.w1,'TFA-01','07:00','15:30'],[-12,o.w1,'TFA-01','07:00','15:15'],[-11,o.w1,'TFB-01','08:00','16:00'],[-10,o.w2,'TFA-02','07:15','15:30'],[-6,o.w1,'TFA-01','07:00','15:00'],[-5,o.w2,'TFA-02','07:00','12:00'],[-4,o.w1,'TFA-02','06:45','15:15'],[-3,o.w2,'TFA-01','07:00','15:30']];
-  rows.forEach(function(r,i){db.time.push({id:o.uid('t'),userId:r[1].id,site:r[2],date:A(r[0]),in:r[3],out:r[4],test:false,clock:true,subId:o.s1.id,crew:4,loc:'Location check-in (simulated)',breakMissed:i===4});});
+  rows.forEach(function(r,i){db.time.push({id:o.uid('t'),userId:r[1].id,site:r[2],date:A(r[0]),in:r[3],out:r[4],test:false,clock:true,subId:o.s1.id,crewIn:4,crew:4,loc:'Location check-in (simulated)',breakMissed:i===4});});
+  /* clockboxes1 (mock only): crew numbers that do NOT match on one farm – 3 days ago only 1 person clocked at TFA-01 but 6 were reported;
+     today an early shift at TFA-02 reported 4 at clock-in and 5 at clock-out (crewin1: .crewIn = clock-in number). Shows "Possibly missing" in Clocked in right now / All hours. */
+  db.time.filter(function(x){return x.userId===o.w2.id&&x.date===A(-3)&&x.site==='TFA-01';}).forEach(function(x){x.crew=6;});
+  db.time.push({id:o.uid('t'),userId:o.w3.id,site:'TFA-02',date:A(0),in:'05:00',out:'07:00',test:false,clock:true,subId:o.w3.subId||o.s1.id,crewIn:4,crew:5,loc:'Location check-in (simulated)'});
   var t=db.time.filter(function(x){return x.userId===o.w2.id&&x.date===A(-3);})[0];
   db.changes.push({id:o.uid('fc'),firmId:o.fA.id,firmName:o.fA.name,by:o.fA.name+' (firmA)',key:'t:'+t.id,site:t.site,date:t.date,workerNo:1,uid:o.w2.id,origStart:t.in,origEnd:t.out,propStart:t.in,propEnd:'14:30',comment:'Sample: crew left an hour early',at:new Date().toISOString(),status:'Pending'});
   /* invoices: holdback at 10% on real invoices; one office hold tied to the unsettled farm change */
