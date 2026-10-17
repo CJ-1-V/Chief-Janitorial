@@ -11,6 +11,8 @@ window.REG_STORE = {
   resetEmail: true,                                  // 016l: office 'Email the temporary password' (set true AFTER migration 016l + Edge Function reg-send-temp-pw)
   voidSync: true,                                    // 016s: removed hours keep reasons + self-service remove / remove requests (set true only AFTER migration 016s)
   officeHelper: true,                                // 016u: Office Assistant (second office login, farm names / money hidden) (set true only AFTER migration 016u)
+  invRevise: true,                                   // 017a: revised farm invoices (v2 needs farm approval) (set true only AFTER migration 017a)
+  clientFiles: true,                                 // 017b: past invoices & timesheets per farm (owner + that farm) (set true only AFTER migration 017b)
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com
