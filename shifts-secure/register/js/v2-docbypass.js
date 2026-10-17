@@ -26,17 +26,17 @@ function logDocBypass(u,action,site,items,t){var miss=items.map(function(b){retu
   return e;}
 function docModal(items,act,lead){modal('<h2>Documents still needed</h2><p>'+lead+'</p><ul class="small" id="docmissing">'+items.slice(0,6).map(function(b){return '<li>'+esc(docShort(b.m))+'</li>';}).join('')+(items.length>6?'<li>…and '+(items.length-6)+' more</li>':'')+'</ul><div class="small">The office is told and will follow up. Finish them from your checklist when you can.</div><div class="row-end"><button class="btn sec" data-act="closeModal">Go back</button><button class="btn primary" id="docContinue" data-act="'+act+'">Continue anyway</button></div>');}
 
-ACT.clockin2=function(){var u=ME,site=PAGE_STATE.site;if(!site){toast('Pick a site first.');return;}if(openEntry(u)){toast('You are already clocked in.');return;}
+ACT.clockin2=function(){var u=ME,site=PAGE_STATE.site;if(!site){toast('Pick a site first.');return;}var crewIn=typeof crewInVal==='function'?crewInVal():null;if(crewIn===0){toast('How many workers are at the site? Enter a number (1–50).');var ci=document.getElementById('crewIn');if(ci)ci.focus();return;}if(openEntry(u)){toast('You are already clocked in.');return;}
   if(!readyForClock(u)){toast('Clock-in unlocks when your account is approved and your terms are accepted.');go('#/checklist');return;}
   var chosen=qVal('qIn')||Date.now(),sh=DB.shifts.filter(function(s){return s.date===today()&&s.site===site&&(s.booked||[]).indexOf(u.id)>=0&&!s.test;})[0];
   var hard=clockHardBlockers(u,sh||undefined);if(hard.length){toast(hard[0].m);return;}
   var note=((document.getElementById('notes')||{}).value||'').trim(),items=clockDocItems(u,sh||undefined);
-  PAGE_STATE.pendIn={site:site,chosen:chosen,shiftId:sh?sh.id:null,note:note};
+  PAGE_STATE.pendIn={site:site,chosen:chosen,shiftId:sh?sh.id:null,note:note,crewIn:crewIn||null};
   if(items.length){docModal(items,'docclockin','You can clock in at <b>'+esc(site)+'</b> now. Still needed:');return;}
   doClockIn(u,null);};
 ACT.docclockin=function(){var u=ME;if(!PAGE_STATE.pendIn||openEntry(u))return closeModal();var sh=DB.shifts.filter(function(s){return s.id===PAGE_STATE.pendIn.shiftId;})[0];doClockIn(u,clockDocItems(u,sh));};
 function doClockIn(u,items){var p=PAGE_STATE.pendIn;if(!p)return;PAGE_STATE.pendIn=null;var sh=p.shiftId?DB.shifts.filter(function(s){return s.id===p.shiftId;})[0]:null;
-  var t={id:uid('t'),userId:u.id,site:p.site,shiftId:sh?sh.id:null,role:sh?sh.role:jobRoleOf(u),date:today(),in:hmOf(p.chosen),inMs:p.chosen,realIn:new Date().toISOString(),out:'',clock:true,test:false,temp:u.type==='worker'&&(tempActive(subOf(u))||tempActive(u)),subId:u.subId||null,note:p.note,loc:'Location check-in (simulated)'};
+  var t={id:uid('t'),userId:u.id,site:p.site,shiftId:sh?sh.id:null,role:sh?sh.role:jobRoleOf(u),date:today(),in:hmOf(p.chosen),inMs:p.chosen,realIn:new Date().toISOString(),out:'',clock:true,test:false,temp:u.type==='worker'&&(tempActive(subOf(u))||tempActive(u)),subId:u.subId||null,note:p.note,loc:'Location check-in (simulated)'};if(p.crewIn)t.crewIn=p.crewIn; /* crewin1: workers at the site at clock-in */
   if(items&&items.length)t.docsMissing=items.map(function(b){return docShort(b.m);});
   DB.time.push(t);audit('Clocked in',u.name,p.site+' at '+hmOf(p.chosen));if(items&&items.length)logDocBypass(u,'Clock in',p.site,items,t);
   save();closeModal();toast(items&&items.length?'Clocked in ✓ (documents still needed – the office is told)':'Clocked in ✓');render();}

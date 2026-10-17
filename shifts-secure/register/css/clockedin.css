@@ -10,3 +10,24 @@
 .ci-row small{display:block;color:#6b6880;font-size:.8rem}
 .ci-lead{grid-column:1/-1;font-size:.85rem;color:#6f67b3}
 @media (max-width:600px){.ci-row{grid-template-columns:1fr 1fr}.ci-who{grid-column:1/-1}}
+/* clockboxes1 – farm boxes first */
+.cb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:4px 0 8px}
+.cb-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;padding:12px 8px;border:1px solid #e0ddef;border-left:5px solid #D9A03C;border-radius:12px;background:#fff;color:#332E57;cursor:pointer;font:inherit;text-align:center;box-shadow:0 1px 3px rgba(51,46,87,.08)}
+.cb-box:hover,.cb-box:focus-visible{border-color:#332E57;outline:2px solid #D9A03C;outline-offset:2px}
+.cb-code{font-size:1.45rem;font-weight:800;letter-spacing:.02em;color:#332E57}
+.cb-n{font-size:2rem;font-weight:800;line-height:1;color:#6f67b3}
+.cb-l{font-size:.8rem;color:#6b6880;text-transform:uppercase;letter-spacing:.05em}
+.cb-name{font-size:.78rem;color:#6b6880;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cb-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 8px}
+.cb-head h3{margin:0;color:#332E57;font-size:1.05rem}.cb-head h3 small{color:#6b6880;font-weight:500}
+.cb-head .cb-code{font-size:1.3rem}
+.ci-flags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px}
+@media (max-width:600px){.cb-grid{grid-template-columns:repeat(2,1fr)}}
+/* clockboxes1 – crew numbers */
+.cb-box{position:relative}
+.cb-badge{position:absolute;top:6px;right:6px;background:#b42318;color:#fff;font-size:.72rem;font-weight:800;border-radius:999px;padding:2px 7px}
+.cs-sum{display:grid;gap:4px;margin:0 0 10px;padding:10px 12px;border:1px solid #e0ddef;border-radius:10px;background:#f8f7fc;color:#332E57;font-size:.92rem}
+.cs-sum small{color:#6b6880}
+.cs-st{font-weight:700;border-radius:8px;padding:6px 10px;margin-top:2px}
+.cs-bad{background:#fde8e6;color:#b42318}.cs-ok{background:#e6f4ea;color:#1e6b34}.cs-none{background:#f1f0f6;color:#5e5a7a;font-weight:500}
+.ci-crew{grid-column:1/-1;font-size:.84rem;color:#5e5a7a}

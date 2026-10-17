@@ -1,0 +1,8 @@
+/* clockboxes1 – All hours boxes (uses .cb-* from clockedin.css) */
+.hb-day{margin:0 0 14px}.hb-day h3{margin:10px 0 6px;color:#332E57;font-size:1rem}.hb-day h3 small{color:#6b6880;font-weight:500}
+.cb-e{font-size:.75rem;color:#6b6880}
+.hb-hint{margin:6px 0}
+#hbwrap .cb-head{margin-top:8px}
+.hb-day .cb-box{min-height:88px;padding:8px 6px}.hb-day .cb-code{font-size:1.2rem}.hb-day .cb-n{font-size:1.6rem}
+@media (min-width:601px){.hb-day .cb-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+@media (max-width:600px){.hb-day .cb-grid{grid-template-columns:repeat(3,1fr);gap:8px}.hb-day .cb-name{display:none}}
