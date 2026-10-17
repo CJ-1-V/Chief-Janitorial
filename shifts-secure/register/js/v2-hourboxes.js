@@ -40,8 +40,10 @@ function enhance(){var tb=document.getElementById('vshtable');if(!tb||tb.dataset
   var hr=tb.querySelector('tr:not([data-key])');if(hr&&hr.cells.length>3){var th=document.createElement('th');th.textContent='Break';hr.insertBefore(th,hr.cells[4]);var tc=document.createElement('th');tc.textContent='Crew reported';hr.insertBefore(tc,hr.cells[6]);}
   G.rows.forEach(function(r){var td=document.createElement('td');td.className='small hb-brk';td.setAttribute('data-label','Break');td.textContent=brk(r._hb.t);if(r.cells.length>4)r.insertBefore(td,r.cells[4]);var tc=document.createElement('td');tc.className='small hb-crew';tc.setAttribute('data-label','Crew reported');var t=r._hb.t;tc.textContent=(+t.crewIn>0||+t.crew>0)?'in: '+(+t.crewIn>0?+t.crewIn:'–')+' · out: '+(+t.crew>0?+t.crew:'–'):'–';if(r.cells.length>6)r.insertBefore(tc,r.cells[6]);});
   tb.classList.add('hb-open');}
-document.addEventListener('click',function(e){if(!e.target.closest)return;var b=e.target.closest('#hbwrap [data-hb]');if(b){st().sel=b.getAttribute('data-hb');again();window.scrollTo(0,0);return;}
-  if(e.target.closest('#hbwrap [data-hb-back]')){st().sel=null;again();}});
+document.addEventListener('click',function(e){if(!e.target.closest)return;var b=e.target.closest('#hbwrap [data-hb]');if(b){var s=st();s.y0=window.scrollY;s.sel=b.getAttribute('data-hb');again();setTimeout(hbShow,0);return;}
+  if(e.target.closest('#hbwrap [data-hb-back]')){var s2=st(),y0=s2.y0;s2.sel=null;again();if(y0!=null)setTimeout(function(){window.scrollTo(0,y0);},0);}});
+/* keepscroll1: open a box → its entries start at the top of the screen (not the top of the page); ← All farms → back to that box. */
+function hbShow(){var w=document.getElementById('hbwrap');if(!w)return;var t=w.getBoundingClientRect().top;if(t<0||t>window.innerHeight*0.5)w.scrollIntoView({block:'start'});}
 function again(){var w=document.getElementById('hbwrap');if(w)w.remove();var tb=document.getElementById('vshtable');if(!tb)return;
   if(typeof render==='function'){render();return;}delete tb.dataset.hb;enhance();}
 new MutationObserver(enhance).observe(document.documentElement,{childList:true,subtree:true});enhance();

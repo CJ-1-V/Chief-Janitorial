@@ -1,0 +1,45 @@
+/* invrevise1 – revised invoices, farm hub, past invoices & timesheets (TEST COPY) */
+.ir-changes{margin:10px 0}
+.ir-changes h3{margin:6px 0}
+.ir-ctab td,.ir-ctab th{padding:6px 8px;font-size:.9rem;white-space:nowrap}
+.ir-ctab .r,.cf-table .r{text-align:right}
+.ir-ctab tr.ir-add td{background:#eefaf1}
+.ir-ctab tr.ir-rem td{background:#fdeeee}
+.ir-ctab tr.ir-chg td{background:#fff7e6}
+.ir-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.ir-sum>div{border:1px solid #e1dfe8;border-radius:10px;padding:8px 10px;background:#fff}
+.ir-sum span{display:block;font-size:.8rem;color:#6b7280}
+.ir-sum b{display:block;font-size:1.1rem}
+.ir-sum small{display:block;color:#6b7280;font-size:.75rem}
+.ir-sum .ir-diff.pos b{color:#9a5b00}
+.ir-sum .ir-diff.neg b{color:#1a7f37}
+.ir-tag{display:block;color:#332e57;font-weight:600;margin-top:2px}
+.ir-qnote{color:#9a5b00}
+.ir-revbtn{margin:2px 0}
+.ir-panel ul{margin:6px 0 0 18px;padding:0}
+.ir-panel li{margin:4px 0}
+.ir-farmcard{border:2px solid #d9a03c}
+.ir-farmbtns{gap:8px;flex-wrap:wrap}
+.ir-banner a{font-weight:700}
+.ir-hub .ir-hublinks{gap:8px;flex-wrap:wrap}
+.ir-hub .ir-hublinks .btn{text-decoration:none}
+.ir-mindays .daycard{margin:6px 0}
+.ir-mindays .dc-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.cf-table td{vertical-align:top}
+.cf-table .nw{white-space:nowrap}
+.cf-removed td{opacity:.65}
+.cf-rmnote{color:#b42318;font-size:.8rem}
+.cf-add summary{cursor:pointer;margin:8px 0}
+.cf-form .grid2{margin-bottom:6px}
+@media (max-width:600px){
+  .ir-sum{grid-template-columns:1fr 1fr}
+  .ir-sum .ir-diff{grid-column:1 / -1}
+  .ir-ctab td,.ir-ctab th{font-size:.8rem;padding:5px}
+  .cf-table td,.cf-table th{font-size:.8rem;padding:5px}
+}
+.ir-btns{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.ir-mintab td,.ir-mintab th{padding:6px 8px;vertical-align:middle}
+.ir-mintab .r{text-align:right}
+.ir-mintab .mw-ctl .mw-btn,.ir-mindays .mw-ctl .mw-btn{width:auto;display:inline-block}
+.ir-mintab .mw-ctl .small.muted{display:none}
+.cf-table .pill{white-space:nowrap}
