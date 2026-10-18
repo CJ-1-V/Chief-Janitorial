@@ -13,6 +13,22 @@
   if (!C || C.mode !== 'supabase') return;
   if (!window.supabase || !window.supabase.createClient) { document.addEventListener('DOMContentLoaded', function () { document.getElementById('app').innerHTML = '<div class="alert bad">Could not load the sign-in library. Please reload.</div>'; }); return; }
   window.REG_LIVE = true;
+  /* qbfix1 (Oct 18 2026): owner saw "Could not open your account: QUIZ_BANK is not defined". CAUSE: the office account-open step
+     (loadSnapshot, below) writes the quiz questions into the global QUIZ_BANK made by js/v2-quizbank.js. When that one file did not
+     run in this page (download cut off / failed on the phone, or a broken cached copy), every sign-in and session restore threw and the
+     office could never open the account until the app was fully closed and reopened. FIX: never depend on it – make an empty bank,
+     fetch the file once more (fresh URL), and keep any questions already loaded from the server. Quiz questions can never block sign-in. */
+  if (!window.QUIZ_BANK || typeof window.QUIZ_BANK !== 'object') {
+    var QB_GUARD = window.QUIZ_BANK = {};
+    try { console.warn('[qbfix1] v2-quizbank.js did not load – loading it again'); } catch (e) {}
+    try {
+      var qbs = document.createElement('script');
+      qbs.src = 'js/v2-quizbank.js?v=20261018-qbfix1&retry=' + Date.now();
+      qbs.onload = function () { try { var f = window.QUIZ_BANK; if (f && f !== QB_GUARD) Object.keys(QB_GUARD).forEach(function (k) { f[k] = QB_GUARD[k]; }); else if (!f) window.QUIZ_BANK = QB_GUARD; } catch (e) {} };
+      qbs.onerror = function () { if (!window.QUIZ_BANK) window.QUIZ_BANK = QB_GUARD; };
+      (document.head || document.documentElement).appendChild(qbs);
+    } catch (e) {}
+  }
   try { document.removeEventListener('DOMContentLoaded', start); } catch (e) {}
 
   var sb = window.supabase.createClient(C.url, C.key, { auth: { storageKey: C.authStorageKey, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
@@ -161,8 +177,11 @@
       }
     }
     if (OFFICE) {                                       // office edits quiz banks: load them (with answers) from the server
-      var q = await sb.from('reg_quiz_questions').select('bank,qid,q,opts,ans,why,sort').eq('active', true).order('sort');
-      if (!q.error && q.data) { var by = {}; q.data.forEach(function (x) { (by[x.bank] = by[x.bank] || []).push({ id: x.qid, q: x.q, opts: x.opts, ans: x.ans, why: x.why }); }); Object.keys(by).forEach(function (b) { QUIZ_BANK[b] = by[b]; }); }
+      try {                                             // qbfix1: quiz questions are never allowed to stop an account from opening
+        var q = await sb.from('reg_quiz_questions').select('bank,qid,q,opts,ans,why,sort').eq('active', true).order('sort');
+        var QB = window.QUIZ_BANK || (window.QUIZ_BANK = {});
+        if (!q.error && q.data) { var by = {}; q.data.forEach(function (x) { (by[x.bank] = by[x.bank] || []).push({ id: x.qid, q: x.q, opts: x.opts, ans: x.ans, why: x.why }); }); Object.keys(by).forEach(function (b) { QB[b] = by[b]; }); }
+      } catch (e) { try { console.warn('[qbfix1] quiz questions', e); } catch (x) {} }
     }
     /* unstrip-live1: a Shift Tracker shift that was moved into reg_time_entries (data.stShiftId) is shown once – drop the read-only
        'st-<id>' copy that reg_st_shifts() still adds to the snapshot, so hours are never counted twice. */
