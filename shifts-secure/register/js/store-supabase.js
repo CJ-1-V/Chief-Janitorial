@@ -36,7 +36,9 @@
   // login can be linked to a client made in the same save); invite codes (SHA-256 hash only, never the code) to reg_client_invites.
   MAP = Object.assign({ clientRecs: 'reg_clients' }, MAP, { clientInvites: 'reg_client_invites' });
   NEVER_DELETE.clientRecs = 1; NEVER_DELETE.clientInvites = 1;
-  function rowsOf(c) { return c === 'clientRecs' ? (DB.users || []).filter(function (u) { return u.preloaded; }) : (DB[c] || []); }
+  /* invdelete1: deleted farm invoices are kept apart in DB.clientInvoicesDel (v2-invdelete.js) but are still rows of reg_client_invoices –
+     count them here so a soft delete is saved as an UPDATE (never a DELETE) and restore works. */
+  function rowsOf(c) { return c === 'clientRecs' ? (DB.users || []).filter(function (u) { return u.preloaded; }) : c === 'clientInvoices' ? (DB.clientInvoices || []).concat(DB.clientInvoicesDel || []) : (DB[c] || []); }
   var MY_ID = null;                                        // the signed-in account (a linked farm login acts for its client; see v2-clientlink.js)
 
   var BASE = {}, SUSPEND = false, HOLD = 0, TIMER = null, BUSY = false, AGAIN = false, SIGNED_IN = false, SESSION_USER = null;

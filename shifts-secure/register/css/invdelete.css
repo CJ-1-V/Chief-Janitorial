@@ -1,0 +1,25 @@
+/* invdelete1 */
+.danger-ghost{background:#fff;color:#b42318;border:1px solid #f3b2ab}
+.danger-ghost:hover,.danger-ghost:focus{background:#fdecea}
+.id-delbtn{margin:2px 0 2px 4px;white-space:nowrap}
+.id-top{border-left:4px solid #d9a400}
+.id-tophead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.id-tophead h3{margin:0}
+.id-topbtns{gap:6px;flex-wrap:wrap}
+.id-ttab td,.id-ttab th{padding:6px 8px}
+.id-ttab td.r,.id-ttab th.r{text-align:right}
+.id-acts{white-space:nowrap}
+.id-facts{margin:8px 0}
+.id-eff{margin:8px 0 8px 18px}
+.id-modal input[type=text]{width:100%;max-width:420px}
+.id-dellink{margin:4px 0 8px}
+.id-lwho{gap:8px;align-items:center;margin:6px 0}
+.id-lwho select{max-width:260px}
+.id-logbtn{margin:10px 0}
+@media (max-width:560px){.id-ttab{font-size:13px}.id-ttab td,.id-ttab th{padding:5px 4px}.id-topbtns .small{flex:1 1 auto}}
+.id-acts button{width:auto;display:inline-block;margin:2px}
+.id-top .tw{margin-top:6px}
+.id-dlist{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.id-ditem{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e3e1ef;border-radius:10px;padding:8px 10px}
+.id-dmain{min-width:0;overflow-wrap:anywhere}
+#pplogtop{margin-left:6px}
