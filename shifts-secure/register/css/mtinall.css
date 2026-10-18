@@ -1,0 +1,21 @@
+/* mtinall1 – Manual entries inside All hours */
+.mia-card{border-left:4px solid #6b5bd2}
+.mia-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.mia-head h3{margin:0}
+.mia-btns,.mia-box{gap:6px;flex-wrap:wrap;align-items:center}
+.mia-box{margin:8px 0}
+.mia-filters{gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.mia-filters select{max-width:320px}
+.mia-farm{margin-top:12px}
+.mia-pre{margin:0 0 6px}
+#miamodal #mtformcard{box-shadow:none;border:0;padding:0;margin:0}
+#miamodal select,#miamodal input,#miamodal textarea{max-width:100%;min-width:0}
+#miamodal .grid2>div,#miamodal .grid2{min-width:0}
+/* mtinall2 – "+ Add farm" boxes in All hours */
+.cb-box.mia-addbox{border:2px dashed #8a7fd6;background:#f7f5ff;color:#3b2f8f;justify-content:center}
+.cb-box.mia-addbox .cb-code{font-size:1.05em}
+.cb-box.mia-addbox:hover,.cb-box.mia-addbox:focus{background:#eeeaff}
+.cb-box.mia-added{border-style:solid;border-color:#c9c2f0}
+.cb-box .cb-f{display:block;font-size:.75em;opacity:.75;margin-top:2px}
+.mia-day h3 small{color:#888}
+#miapick select,#miapick input{width:100%;max-width:420px}
