@@ -41,7 +41,7 @@ function boxSub(k){if(!k||helper())return '';var f=typeof siteFirm==='function'?
 function flags(u,t){var f=[],oth=0;try{if(t&&t.docsMissing&&t.docsMissing.length)f.push('Clocked in with documents missing');if(u.type!=='sub'&&u.type!=='admin'&&!u.approved)f.push('Not approved');
   var b=u.type==='sub'?(typeof companyBlockers==='function'?companyBlockers(u,today()):[]).map(function(m){return {m:m};}):(typeof blockers==='function'?blockers(u,today()):[]);
   b.forEach(function(x){var m=String(x.m||'');if(/not (yet )?approved/i.test(m))m=/^employer/i.test(m)?'Employer not approved':'Not approved';else if(/document|upload|permit|licen|insurance|WCB|certificate|abstract|clearance/i.test(m))m='Missing / expired documents';else if(/training|quiz/i.test(m))m='Training not done';else if(/terms|agreement/i.test(m))m='Terms not accepted';else if(/employer|SIN/i.test(m))m='Employer checks pending';else if(/personal|availability|emergency|profile|missing|fill in/i.test(m))m='Registration not finished';else if(/switched off|suspended/i.test(m))m='Account off / suspended';else{oth++;return;}if(f.indexOf(m)<0)f.push(m);});if(oth)f.push(oth+' other item'+(oth===1?'':'s'));}catch(e){}return f;}
-function groups(L){var g={};L.forEach(function(t){var k=siteKey(t);(g[k]=g[k]||[]).push(t);});
+function groups(L){var g={};L.forEach(function(t){if(t.removed||t.voided)return;var k=siteKey(t);(g[k]=g[k]||[]).push(t);});
   return Object.keys(g).map(function(k){var ppl={};g[k].forEach(function(t){ppl[t.userId]=1;});return {k:k,L:g[k],n:Object.keys(ppl).length};})
     .sort(function(a,b){return b.n-a.n||(a.k||'~').localeCompare(b.k||'~');});}
 function grid(G){return '<div class="cb-grid" role="list">'+G.map(function(x){var nm=boxSub(x.k);
@@ -54,10 +54,15 @@ function list(L){return '<ul class="ci-list">'+L.map(function(t){var u=user(t.us
       '<div class="ci-crew">Crew at clock-in: <b>'+(+t.crewIn>0?+t.crewIn:'–')+'</b> · at clock-out: <b>'+(+t.crew>0?+t.crew:'on shift')+'</b></div>'+
       (fl.length?'<div class="ci-flags">'+fl.map(function(m){return '<span class="pill s-warn">'+E(m)+'</span>';}).join(' ')+'</div>':'')+
       (lead&&lead.id!==u.id?'<div class="ci-lead">Crew lead: '+E(lead.name)+'</div>':'')+'</li>';}).join('')+'</ul>';}
+/* dupshift1 (owner Oct 19 2026 6:07 PM): a farm punched in today whose punched shifts were ALL removed → faded box, 0 people, tap = All hours for that farm/day */
+function gone(G){var have={},R={};G.forEach(function(x){have[x.k]=1;});(DB.time||[]).forEach(function(t){if(t.test||!t.removed||t.date!==today()||t.manual||t.crewPlaceholder||!t['in'])return;var k=siteKey(t);if(!k||have[k])return;R[k]=(R[k]||0)+1;});
+  return Object.keys(R).sort().map(function(k){var nm=boxSub(k);return '<button type="button" class="cb-box cb-gone" role="listitem" data-act="cigone" data-site="'+E(k)+'" aria-label="'+E(k+': no workers now, shifts removed')+'"><span class="cb-code">'+E(k)+'</span><span class="cb-n">0</span><span class="cb-l">people</span><span class="cb-gonel">No workers now – shifts removed</span>'+(nm?'<span class="cb-name">'+E(nm)+'</span>':'')+'</button>';}).join('');}
+ACT.cigone=function(el){if(typeof PAGE_STATE!=='undefined'){PAGE_STATE.hb=PAGE_STATE.hb||{};PAGE_STATE.hb.sel=today()+'|'+el.dataset.site;}try{if(typeof closeModal==='function')closeModal();}catch(e){}location.hash='#/allhours';if(typeof render==='function')setTimeout(render,0);};
 function body(){var L=rows().sort(function(a,b){return startMs(a)-startMs(b);});
-  if(!L.length)return '<p class="ci-empty">Nobody is clocked in right now.</p>';
-  var G=groups(L),one=SEL!==null&&G.filter(function(x){return x.k===SEL;})[0];
-  if(!one){SEL=null;return grid(G);}
+  var G=groups(L),gh=(typeof ME!=='undefined'&&ME&&ME.type==='admin')?gone(G):'';
+  if(!L.length)return '<p class="ci-empty">Nobody is clocked in right now.</p>'+(gh?'<div class="cb-grid" role="list">'+gh+'</div>':'');
+  var one=SEL!==null&&G.filter(function(x){return x.k===SEL;})[0];
+  if(!one){SEL=null;return grid(G).replace(/<\/div>$/,gh+'</div>');}
   var nm=boxSub(one.k);
   return '<div class="cb-head"><button type="button" class="small sec cb-back" data-cb-back="1">← All farms</button><h3><span class="cb-code">'+E(one.k||'No site')+'</span> '+one.n+(one.n===1?' person':' people')+(nm?' <small>'+E(nm)+'</small>':'')+'</h3></div>'+sumHtml(crewSum(one.k,one.n))+list(one.L);}
 function note(){var n=rows().length,t=new Date().toTimeString().slice(0,5);return (n?n+(n===1?' person is':' people are')+' on shift (clocked in, not clocked out yet). '+(SEL===null?'Tap a farm to see who. ':''):'')+'Updated '+t+'.';}
