@@ -5162,3 +5162,82 @@ button {
         padding: 32px 20px;
     }
 }
+
+/* Footer social icons — brand purple from the footer rules (--blue-dark / rgba(89, 86, 233)) */
+.footer-social{
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-wrap: wrap;
+        flex-wrap: wrap;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    -webkit-box-pack: end;
+        -ms-flex-pack: end;
+            justify-content: flex-end;
+    gap: 12px;
+    margin: 0;
+}
+.footer-copyright > .footer-social{
+    -webkit-box-pack: center;
+        -ms-flex-pack: center;
+            justify-content: center;
+    margin-bottom: 16px;
+}
+.footer-social a{
+    display: -webkit-inline-box;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    -webkit-box-pack: center;
+        -ms-flex-pack: center;
+            justify-content: center;
+    -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    -webkit-box-flex: 0;
+        -ms-flex: 0 0 44px;
+            flex: 0 0 44px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(89, 86, 233, 0.35);
+    background-color: rgba(89, 86, 233, 0.08);
+    color: var(--blue-dark);
+    line-height: 0;
+}
+.footer-social a:hover,
+.footer-social a:focus{
+    color: #fff;
+    background-color: var(--blue-dark);
+    border-color: var(--blue-dark);
+}
+.footer-social a:focus-visible{
+    outline: 2px solid var(--blue-dark);
+    outline-offset: 3px;
+}
+.footer-social svg{
+    display: block;
+    width: 20px;
+    height: 20px;
+}
+/* Clear the fixed back-to-top control (50px, 30px from the corner). */
+.footer-area .footer-copyright{
+    padding-bottom: 96px;
+}
+@media (max-width: 991px){
+    .footer-social{
+        -webkit-box-pack: center;
+            -ms-flex-pack: center;
+                justify-content: center;
+        margin-top: 18px;
+    }
+    .footer-copyright > .footer-social{
+        margin-top: 0;
+    }
+}
