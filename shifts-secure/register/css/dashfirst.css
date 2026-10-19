@@ -1,0 +1,5 @@
+/* dashfirst1 – "Assistant changes this week" as a closed section at the bottom of Overview */
+details.df-week{margin:14px 0 10px}
+details.df-week>summary .pill{font-weight:600;margin-left:4px;vertical-align:middle}
+details.df-week .df-week-body{padding-top:2px}
+details.df-week .tw{max-width:100%;overflow-x:auto}
