@@ -1,0 +1,13 @@
+/* alertdismiss1 – bell toggle for the "possibly missing" alert */
+.cb-box{position:relative}
+.cb-box .ad-bell{position:absolute;top:4px;left:4px;font-size:15px;line-height:1;padding:3px 4px;border-radius:8px;background:#fff;border:1px solid #d7d3e6;cursor:pointer;z-index:2}
+.cb-box .ad-bell:hover,.cb-box .ad-bell:focus{border-color:#6b5fb5;outline:none;box-shadow:0 0 0 2px #6b5fb544}
+.cb-box .ad-bell.ad-off{background:#f1f0f5;border-style:dashed;border-color:#9a94b3;filter:grayscale(1);opacity:.8}
+.cb-box.ad-hide .cb-badge,.cb-box.ad-hide .ua-badge{display:none}
+.cb-box.ad-hide.ua-box-y{border-color:#e0ddef;border-left-color:#D9A03C;box-shadow:none}
+.cs-sum.ad-hide .cs-st{display:none}
+#uasug.ad-hide{display:none}
+.ad-row{margin:6px 0 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ad-btn.ad-off{background:#f1f0f5;color:#4a4560;border:1px dashed #9a94b3}
+.hb-day .cb-box:has(.ad-bell),.cb-box:has(.ad-bell){padding-top:24px}
+.cb-box .ad-bell{font-size:13px;padding:2px 3px}
