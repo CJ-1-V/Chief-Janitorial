@@ -1,0 +1,9 @@
+/* edithours1 – "Edit hours" next to "Remove" */
+.eh-pair{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
+.eh-btn{white-space:nowrap}
+.eh-calc{margin:8px 0;padding:8px 10px;background:#f4f2fb;border-radius:8px}
+.eh-was{color:#6b5fb5}
+.eh-hist{margin-top:10px}
+.eh-flash{outline:2px solid #e0a100;border-radius:6px}
+#eheditform select,#eheditform input[type=text]{max-width:100%;min-width:0}
+@media (max-width:600px){.eh-pair{display:flex;width:100%}.eh-pair>button{flex:1 1 0}}
