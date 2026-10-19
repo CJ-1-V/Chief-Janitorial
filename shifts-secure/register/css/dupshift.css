@@ -1,0 +1,14 @@
+/* dupshift1 – "Same hours" button + add-same-hours box */
+.ds-btn{margin-right:4px;border-color:#b3261e;color:#b3261e}
+.ds-fbox{grid-column:1/-1;margin-top:12px;padding:10px;border:2px dashed #b3261e;border-radius:10px;background:#fff6f6}
+.ds-fbox h3{margin:0 0 4px;font-size:1em}
+.ds-frow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ds-frow input[type=number]{width:5em}
+.ds-frow input[type=text]{flex:1 1 10em;min-width:0}
+.ds-hint{color:#b3261e}
+.ds-q{font-size:1.1em}
+#dsbox input{max-width:100%}
+/* farm box with every shift removed: faded, still tappable */
+.cb-box.cb-gone{opacity:.55;filter:grayscale(1) blur(.4px);background:#f2f2f2;border-style:dashed}
+.cb-box.cb-gone:hover,.cb-box.cb-gone:focus{opacity:.85;filter:grayscale(1)}
+.cb-box .cb-gonel{display:block;margin-top:4px;font-size:.75em;font-weight:600;color:#444}
