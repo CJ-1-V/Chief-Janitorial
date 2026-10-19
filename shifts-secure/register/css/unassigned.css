@@ -1,0 +1,21 @@
+/* unassigned1 – red unassigned shifts, yellow "all counted, need a person" */
+.ua-row td{background:#fdecec}
+.ua-name{color:#b3261e}
+.ua-sub{color:#b3261e;opacity:.85}
+.ua-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ua-btns button.ua-assign{background:#b3261e;border-color:#b3261e;color:#fff}
+.ua-pill,.ua-daypill{display:inline-block;background:#b3261e;color:#fff;border-radius:999px;padding:1px 8px;font-size:.8em;font-weight:600}
+.cb-box .ua-badge{display:block;margin-top:4px;color:#fff;background:#b3261e;border-radius:999px;padding:1px 8px;font-size:.75em;font-weight:600}
+.cb-box .cb-badge.ua-yellow{background:#f6c343;color:#3d2c00;border-color:#d9a400}
+.cb-box.ua-box-y{border-color:#d9a400;box-shadow:0 0 0 2px #f6c34366}
+.cs-st.cs-warn,.ua-yellow-st{background:#fff4cc;color:#5c4300;border:1px solid #e0b100;border-radius:8px;padding:6px 10px}
+.ua-sug{border:2px solid #b3261e;background:#fff6f6}
+.ua-sugbtns{gap:8px;margin-top:6px}
+.ua-nickrow{grid-column:1/-1}
+.ua-nickrow input{max-width:100%}
+.ua-hint{color:#b3261e}
+.ua-sugtab input{min-width:0;width:100%}
+.ua-sugtab select{min-width:0}
+#uasugbox .tw{overflow-x:auto}
+@media (max-width:600px){.ua-sugtab th:first-child,.ua-sugtab td:first-child{display:none}.ua-sugtab td{padding:2px}}
+.cb-box .cb-badge.ua-yellow{font-size:.68em;padding:1px 5px}
