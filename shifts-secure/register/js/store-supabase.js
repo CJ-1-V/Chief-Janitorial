@@ -52,6 +52,7 @@
   // login can be linked to a client made in the same save); invite codes (SHA-256 hash only, never the code) to reg_client_invites.
   MAP = Object.assign({ clientRecs: 'reg_clients' }, MAP, { clientInvites: 'reg_client_invites' });
   NEVER_DELETE.clientRecs = 1; NEVER_DELETE.clientInvites = 1;
+  if (C.shiftJobs) MAP.shiftJobs = 'reg_shift_jobs';                 // 022a jobpos1: per-shift job + break (set true only AFTER migration 022a)
   /* invdelete1: deleted farm invoices are kept apart in DB.clientInvoicesDel (v2-invdelete.js) but are still rows of reg_client_invoices –
      count them here so a soft delete is saved as an UPDATE (never a DELETE) and restore works. */
   function rowsOf(c) { return c === 'clientRecs' ? (DB.users || []).filter(function (u) { return u.preloaded; }) : c === 'clientInvoices' ? (DB.clientInvoices || []).concat(DB.clientInvoicesDel || []) : (DB[c] || []); }
