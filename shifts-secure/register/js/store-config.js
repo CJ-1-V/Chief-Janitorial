@@ -14,6 +14,7 @@ window.REG_STORE = {
   invRevise: true,                                   // 017a: revised farm invoices (v2 needs farm approval) (set true only AFTER migration 017a)
   clientFiles: true,                                 // 017b: past invoices & timesheets per farm (owner + that farm) (set true only AFTER migration 017b)
   invDelete: true,                                   // 018a: owner can delete / restore farm invoices (soft delete) (set true only AFTER migration 018a)
+  shiftJobs: true,                                   // 022a: per-shift job/position + break (set true only AFTER migration 022a)
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
