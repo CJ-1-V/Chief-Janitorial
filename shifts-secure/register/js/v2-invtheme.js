@@ -163,7 +163,13 @@ invFileName=function(i){return String(i.number||'invoice').replace(/[^A-Za-z0-9.
   w.document.close();w.focus();setTimeout(function(){try{w.print();}catch(e){}},400);};})();
 
 /* ---------- numbering: USDC-<FARM>-NNN (called by v2-clientbilling.js / v2-lateentry.js when an invoice is created) ---------- */
-function invNextNumber(firm){var all=DB.clientInvoices||[],pfx='';
+/* topupnum1: top-ups are numbered <base>.1, .2, .3 off the ORIGINAL invoice (a top-up of a top-up still counts off the base; -R revisions are stripped too) */
+function invBaseNo(no){var s=String(no||''),t;do{t=s;s=s.replace(/\.\d+$/,'').replace(/-R\d+$/,'');}while(s!==t);return s;}
+function invTopupNo(no){var b=invBaseNo(no),max=0,all=(DB.clientInvoices||[]).concat(DB.clientInvoicesDel||[]),esc_=b.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),re=new RegExp('^'+esc_+'\\.(\\d+)$');
+  all.forEach(function(i){var m=re.exec(String(i.number||''));if(m)max=Math.max(max,+m[1]);});return b+'.'+(max+1);}
+function invNoCmp(a,b){var x=String(a||'').split(/(\d+)/),y=String(b||'').split(/(\d+)/);for(var k=0;k<Math.max(x.length,y.length);k++){var p=x[k]||'',q=y[k]||'';if(p===q)continue;if(/^\d+$/.test(p)&&/^\d+$/.test(q))return (+p)-(+q)||(p<q?-1:1);return p<q?-1:1;}return 0;}
+window.invBaseNo=invBaseNo;window.invTopupNo=invTopupNo;window.invNoCmp=invNoCmp;
+function invNextNumber(firm){var all=DB.clientInvoices||[],pfx='';if(window.__invNoNext){var ov=window.__invNoNext;window.__invNoNext=null;return ov;}
   all.filter(function(i){return firm&&i.firmId===firm.id;}).sort(function(a,b){return a.issued<b.issued?1:a.issued>b.issued?-1:0;})
     .some(function(i){var m=/^USDC-([A-Z]{2,5})-\d{3}/.exec(i.number||'');if(m){pfx=m[1];return true;}return false;});
   if(!pfx)pfx=invtCode(firm).replace(/[^A-Z]/g,'').slice(0,3)||'CL';

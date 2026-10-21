@@ -6,7 +6,7 @@ function invPlain(i){if(i.paidAt)return {t:'Paid',c:'s-ok',d:'Paid '+i.paidAt};v
 function invById(id){return (DB.clientInvoices||[]).filter(function(x){return x.id===id;})[0]||null;}
 function invAllowed(i){return !!(i&&ME&&(ME.type==='admin'||(ME.type==='firm'&&i.firmId===ME.id)));}
 function invDenied(i){toast('Not allowed – you can only see your own invoices.');if(ME){audit('Blocked invoice access (not own invoice)',ME.name,i?i.number:'');save();}}
-function myInvoices(firm){return clientInvs(firm).slice().sort(function(a,b){return a.issued<b.issued?1:a.issued>b.issued?-1:a.number<b.number?1:-1;});}
+function myInvoices(firm){return clientInvs(firm).slice().sort(function(a,b){return a.issued<b.issued?1:a.issued>b.issued?-1:(typeof invNoCmp==='function'?-invNoCmp(a.number,b.number):(a.number<b.number?1:-1));});}
 /* client-safe invoice content (shared by the screen view, print view and PDF) */
 function invDoc(i){var f=user(i.firmId),st=invPlain(i),it=clientInvInterest(i),c=CB();var L=[];
   L.push(['h','UnScramble – The HR Company Inc.']);L.push(['s','TEST VERSION – sample invoice made by the test app, not a real invoice']);L.push(['g']);
