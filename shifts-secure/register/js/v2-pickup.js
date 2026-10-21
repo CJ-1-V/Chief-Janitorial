@@ -30,7 +30,11 @@
     x = x.replace(/<label(?: class="")?>Phone(?: \(optional\))?<\/label>/, '<label class="req">Mobile phone</label>')
       .replace(/(<input type="tel" name="phone"[^>]*?)(?: required)?>/, function (m, a) { return a + ' required inputmode="tel" autocomplete="tel">'; })
       .replace(/You can also sign in with this number\./, 'Required – the office and your crew lead call or text this number. You can also sign in with it.')
-      .replace(/Contact only\. SMS reminders only if you add a phone\./, 'Required – the office and your crew lead call or text this number.');
+      .replace(/Contact only\. SMS reminders only if you add a phone\./, 'Required – the office and your crew lead call or text this number.')
+      .replace(/Phone or email – at least one is required\. You can also sign in with either\./, 'Required – the office and your crew lead call or text this number. You can also sign in with it.')
+      .replace(/Phone or email – at least one is required\. Wagepoint uses email when you have one\./, 'Optional. Wagepoint (payroll) uses your email when you have one.')
+      .replace(/Phone or email – at least one is required\./, 'Optional. You can also sign in with it.')
+      .replace(/You need a phone or an email \(at least one\)\. A username is optional\./, 'Optional – if you skip it, your phone number is your login.');
     /* insert after the phone block (the <div> that holds the phone input) */
     var i = x.indexOf('name="phone"');
     if (i < 0) return x;
