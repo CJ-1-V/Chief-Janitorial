@@ -1,4 +1,4 @@
-/* authlook1 (Oct 21 2026) – visual layer for the signed-out screens: sign in, forgot password, create account.
+/* authlook2 (Oct 21 2026) – visual layer for the signed-out screens: sign in, forgot password, create account.
  * Wraps whatever the existing views return (forms untouched, so v2-pwshow / v2-pwemail / v2-security keep working)
  * in a two-column shell with a company-coloured hero panel: logo, "how it works" steps and fact chips.
  * The create-account choices get an icon tile each. Company is read from the folder (/cj/ = Chief Janitorial).
@@ -84,14 +84,13 @@
     VIEWS[name] = function (h) {
       var html = orig(h);
       if (typeof ME !== 'undefined' && ME) return html;                 /* signed in: never touch */
-      if (String(html).indexOf('class="login-wrap"') < 0) return html;  /* unknown shape: leave it */
+      html = String(html);
+      if (html.indexOf('class="auth-shell"') >= 0) return html;         /* already wrapped (another overlay re-wrapped us): never double */
+      if (html.indexOf('class="login-wrap"') < 0) return html;          /* unknown shape: leave it */
       /* create-account choices: wrap the text so the icon tile (CSS ::before) sits in its own column */
-      html = String(html).replace(/<a class="choice"([^>]*)>([\s\S]*?)<\/a>/g, '<a class="choice"$1><span class="ch-tx">$2</span></a>');
+      html = html.replace(/<a class="choice"([^>]*)>([\s\S]*?)<\/a>/g, '<a class="choice"$1><span class="ch-tx">$2</span></a>');
       return '<div class="auth-shell">' + hero(name) + '<div>' + html + '</div></div>';
     };
   }
   ['login', 'forgot', 'signup', 'signupForm', 'twofa'].forEach(wrap);
-  /* other overlays may replace a view after us (unlikely – we load last); re-wrap on first render if so */
-  var guard = 0;
-  document.addEventListener('DOMContentLoaded', function () { if (!guard++) ['login', 'forgot', 'signup', 'signupForm', 'twofa'].forEach(function (n) { if (VIEWS[n] && !/auth-shell/.test(String(VIEWS[n]))) wrap(n); }); });
 })();
