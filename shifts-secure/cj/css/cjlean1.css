@@ -1,0 +1,17 @@
+/* cjlean1.css – CJ twin (TEST): lean phase 1 (visit checklist, weekly sign-off, issues). Oct 19 2026. */
+.lnvisit .lntasks{display:grid;grid-template-columns:1fr;gap:4px;margin:8px 0}
+.lnvisit .lntasks label.inline{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid #ececf4;border-radius:8px;background:#fafaff}
+.lnvisit .lntasks input{width:20px;height:20px;flex:0 0 20px;margin-top:1px}
+.lnvisit.st-done{border-left:5px solid #1f8a4c}.lnvisit.st-partial{border-left:5px solid #D9A03C}.lnvisit.st-missed{border-left:5px solid #c0392b}
+.lnvisit textarea{min-height:56px}
+.lnbtns button{min-width:96px}
+@media (min-width:700px){.lnvisit .lntasks{grid-template-columns:1fr 1fr}}
+.lnhome,.lnfirmhome{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lnedit label.inline{display:flex;gap:6px;margin:4px 0}
+.sopick{align-items:center;gap:8px}
+#sotable tr.tot td{border-top:2px solid #ddd}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.grid3{grid-template-columns:1fr}}
+#soprev .invdoc{max-width:680px}
+.issue .isact .row{align-items:center}
+.issue .isact textarea{width:100%;min-height:50px}
