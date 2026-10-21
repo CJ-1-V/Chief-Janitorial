@@ -1,0 +1,12 @@
+/* crewone1 – Bookings page */
+.bkcard .bk-sum{display:flex;align-items:center;gap:12px;margin:-2px 0 8px}
+.bk-date{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;height:52px;border-radius:12px;background:#eef4ff;color:#1d3f8a;line-height:1}
+.bk-date b{font-size:20px}.bk-date small{font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.bk-facts{display:flex;flex-direction:column;flex:1;min-width:0}.bk-site{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bk-n{font-size:14px;color:#445}
+.bk-st{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.bk-req{background:#fff4d6;color:#8a5a00}.bk-ok{background:#dcf5e3;color:#11602d}.bk-chg{background:#e6ecff;color:#2c3f9c}.bk-can{background:#eee;color:#666;text-decoration:line-through}
+.bkcard{border-left:4px solid #e0b84a}.bk-c-ok{border-left-color:#2e9d57}.bk-c-chg{border-left-color:#5a6fd8}.bk-c-can{border-left-color:#bbb;opacity:.85}
+.bkcard.bk-hit{box-shadow:0 0 0 3px #4d7cff66;transition:box-shadow .3s}
+#fhcoming .bk-all{margin-left:auto;align-self:center;white-space:nowrap;flex:none}
+#fhcoming.bk-coming{margin-bottom:14px}
+@media (prefers-reduced-motion:reduce){.bkcard.bk-hit{transition:none}}
