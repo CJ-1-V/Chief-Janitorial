@@ -17,6 +17,8 @@ window.REG_STORE = {
   shiftJobs: true,                                   // 022a: per-shift job/position + break (set true only AFTER migration 022a)
   farmTimesheets: true,                              // 023a invmonth1: farm day approvals + reminder setting -> reg_farm_timesheets (set true only AFTER migration 023a)
   farmEditWindow: { until: '2026-10-31', days: 30, after: 'week' },  // farms change hours: up to 'until' = any day in the last 'days' days; after = current week (Mon-Sun) only
+  farmSites: false,                                  // 026a farmsites1: saved farm sites + direct crew reductions (3 h rule) – set true only AFTER migration 026a
+  farmRoles: false,                                  // 025a farmroles1: farm managers / supervisors (no invoices, rates or amounts) – set true only AFTER migration 025a
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
