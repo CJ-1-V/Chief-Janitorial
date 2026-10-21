@@ -15,6 +15,8 @@ window.REG_STORE = {
   clientFiles: true,                                 // 017b: past invoices & timesheets per farm (owner + that farm) (set true only AFTER migration 017b)
   invDelete: true,                                   // 018a: owner can delete / restore farm invoices (soft delete) (set true only AFTER migration 018a)
   shiftJobs: true,                                   // 022a: per-shift job/position + break (set true only AFTER migration 022a)
+  farmTimesheets: true,                              // 023a invmonth1: farm day approvals + reminder setting -> reg_farm_timesheets (set true only AFTER migration 023a)
+  farmEditWindow: { until: '2026-10-31', days: 30, after: 'week' },  // farms change hours: up to 'until' = any day in the last 'days' days; after = current week (Mon-Sun) only
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',

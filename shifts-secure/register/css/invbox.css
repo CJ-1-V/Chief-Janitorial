@@ -10,3 +10,7 @@
 .ib-mname{font-weight:700;font-size:1.05rem}.ib-mn,.ib-mm{font-size:.85rem}.ib-head h3{margin:6px 0}.ib-head .cb-code{font-size:1.1rem}
 @media (max-width:600px){.ib-grid{grid-template-columns:repeat(2,1fr);gap:8px}.ib-months{grid-template-columns:1fr}.ib-box{min-height:120px;padding:26px 4px 8px}}
 #ppindustry select{max-width:220px}
+/* invmonth1 – month first, then farms; "No invoice yet" farms */
+.ib-month-miss{border-left-color:#c0392b}.ib-missn{font-size:.8rem;font-weight:700;color:#a3271b;background:#fdecea;border:1px solid #f0b7b0;border-radius:9px;padding:1px 7px}
+.ib-miss{border:2px dashed #c0392b;border-left:5px solid #c0392b;background:#fff8f7;cursor:default}.ib-badge-miss{background:#c0392b;color:#fff;border-color:#c0392b;font-weight:700}
+.ib-mkinv{margin-top:6px}.ib-misshint{color:#a3271b;margin:4px 0 6px}
