@@ -1,0 +1,8 @@
+/* invmonth1 – farm Time sheets */
+.ts-win{background:#f4f2fb;border:1px solid #d9d4f0;color:#332E57}.ts-bar{align-items:center;gap:8px;flex-wrap:wrap}.ts-wlabel{min-width:150px;text-align:center}
+.ts-remind{align-items:center;gap:6px;margin:6px 0}.ts-remind select{max-width:260px}
+.ts-day{margin:10px 0}.ts-day.ts-ok{border-left:5px solid #1e7a46}.ts-day.ts-focus{box-shadow:0 0 0 3px #b9b0e8}
+.ts-dh{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ts-dh h3{margin:0}.ts-acts{gap:8px;margin-top:6px;flex-wrap:wrap}
+.ts-t td,.ts-t th{padding:4px 6px}.ts-invm{margin:8px 0;border:1px solid #e0ddef;border-radius:10px;padding:6px 10px;background:#fff}.ts-invm summary{cursor:pointer;padding:4px 0}
+@media (max-width:600px){.ts-t{font-size:.82rem}.ts-t td,.ts-t th{padding:3px}.ts-bar button{flex:1 1 auto}}
+.ts-note{color:#4a4560;margin:8px 0}
