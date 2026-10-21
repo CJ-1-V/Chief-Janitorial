@@ -16,7 +16,7 @@ function pastNorm(n){return String(n||'').replace(/\s+/g,'').toUpperCase();}
 function pastDup(firmId,number,exceptId){return (DB.clientInvoices||[]).filter(function(i){return i.firmId===firmId&&i.id!==exceptId&&pastNorm(i.number)===pastNorm(number);})[0]||null;}
 function pastR2(n){return Math.round((Number(n)||0)*100)/100;}
 function pastFileName(i){var f=user(i.firmId),ext=(String(i.file&&i.file.name||'').match(/\.([A-Za-z0-9]{2,5})$/)||[])[1]||(/pdf/.test(i.file&&i.file.type||'')?'pdf':'jpg');
-  return 'Invoice-'+String(i.number).replace(/[^A-Za-z0-9-]+/g,'-')+'-'+String(f?f.name:'client').replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'')+'.'+ext.toLowerCase();}
+  return 'Invoice-'+String(i.number).replace(/[^A-Za-z0-9.-]+/g,'-')+'-'+String(f?f.name:'client').replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'')+'.'+ext.toLowerCase();}
 /* live (Supabase) mode: invoice rows are readable by that client, so the office note is kept in the office audit log only;
    uploads need a money role (server rule: reg_client_invoices write = owner/admin/billing); files live in the private bucket. */
 function pastLive(){return !!window.REG_LIVE;}

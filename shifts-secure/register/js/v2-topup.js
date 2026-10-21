@@ -22,12 +22,12 @@ function inPeriod(firm,from,to){return (DB.clientInvoices||[]).filter(function(i
 function byId(id){return (DB.clientInvoices||[]).filter(function(x){return x.id===id;})[0]||null;}
 function full(i){return {amount:i.topup?i.topup.fullAmount:i.amount,hst:i.topup?i.topup.fullHst:i.hst,total:i.topup?i.topup.fullTotal:i.total};}
 /* what was already billed and paid for the period = the last paid invoice's FULL period value (a top-up already carries the earlier ones) */
-function paidBase(prev){var p=prev.filter(function(i){return i.paidAt;}).sort(function(a,b){return String(a.issued||'').localeCompare(String(b.issued||''))||String(a.number).localeCompare(String(b.number));});
+function paidBase(prev){var p=prev.filter(function(i){return i.paidAt;}).sort(function(a,b){return String(a.issued||'').localeCompare(String(b.issued||''))||(typeof invNoCmp==='function'?invNoCmp(a.number,b.number):String(a.number).localeCompare(String(b.number)));});
   var amt=0,hst=0,list=[];p.forEach(function(i){var a=+i.amount||0,h=+i.hst||0;amt+=a;hst+=h;list.push({id:i.id,number:i.number,issued:i.issued,paidAt:i.paidAt,amount:R2(a),hst:R2(h),total:R2(a+h)});});return {amt:R2(amt),hst:R2(hst),list:list,last:p[p.length-1]||null};}
 function calc(firm,m){var from=m+'-01',to=mEnd(m),prev=inPeriod(firm,from,to),R=firmReport(firm,from,to),B=paidBase(prev),amount=R2(R.tot.amount-B.amt),hst=R2(R.tot.hst-B.hst);
   return {from:from,to:to,prev:prev,unpaid:prev.filter(function(i){return !i.paidAt;}),R:R,B:B,amount:amount,hst:hst,total:R2(amount+hst)};}
 function withHidden(firm,from,to,fn){var o=clientInvs;clientInvs=function(f){return o(f).filter(function(i){return !(f&&f.id===firm.id&&i.periodStart===from);});};try{return fn();}finally{clientInvs=o;}}
-function makeBase(firm,m){var n=(DB.clientInvoices||[]).length,C=calc(firm,m);withHidden(firm,C.from,C.to,function(){FORMS.clientinv(null,{firmId:firm.id,month:m,confirmed:'1',tuGo:'1'});});var L=DB.clientInvoices||[];return L.length>n?L[L.length-1]:null;}
+function makeBase(firm,m,no){var n=(DB.clientInvoices||[]).length,C=calc(firm,m);window.__invNoNext=no||null;try{withHidden(firm,C.from,C.to,function(){FORMS.clientinv(null,{firmId:firm.id,month:m,confirmed:'1',tuGo:'1'});});}finally{window.__invNoNext=null;}var L=DB.clientInvoices||[];return L.length>n?L[L.length-1]:null;}
 var oci=FORMS.clientinv;
 FORMS.clientinv=function(f,d){d=d||{};if(d.tuGo)return oci.apply(this,arguments);var firm=user(d.firmId);
   if(!firm||!/^\d{4}-\d{2}$/.test(d.month||''))return oci.apply(this,arguments);var C=calc(firm,d.month);if(!C.prev.length)return oci.apply(this,arguments);
@@ -50,7 +50,7 @@ FORMS.clientinv=function(f,d){d=d||{};if(d.tuGo)return oci.apply(this,arguments)
     '<div class="row-end"><button type="button" class="btn sec" data-act="closeModal">Cancel</button>'+(zero?'':'<button type="button" data-act="tugo" data-f="'+E(firm.id)+'" data-m="'+E(d.month)+'" id="tugo">'+(cr?'Create credit invoice':'Create top-up invoice')+'</button>')+'</div>');};
 ACT.tureviseit=function(el){closeModal();ACT.irrev({dataset:{id:el.dataset.id}});};
 ACT.tugo=function(el){if(!owner())return;var firm=user(el.dataset.f),m=el.dataset.m;if(!firm)return;var C=calc(firm,m);if(C.unpaid.length||Math.abs(C.total)<0.005){closeModal();toast('Nothing to create.');return;}
-  closeModal();var inv=makeBase(firm,m);if(!inv){toast('The invoice was not created.');return;}
+  closeModal();var tuNo=(typeof invTopupNo==='function')?invTopupNo((C.B.list[0]||C.B.last).number):null;var inv=makeBase(firm,m,tuNo);if(!inv){toast('The invoice was not created.');return;}if(tuNo&&inv.number!==tuNo)inv.number=tuNo;inv.topupOf=invBaseNo(tuNo);
   inv.topup={fullAmount:inv.amount,fullHst:inv.hst,fullTotal:inv.total,less:C.B.list,at:new Date().toISOString(),by:ME.name};
   inv.amount=R2(inv.amount-C.B.amt);inv.hst=R2(inv.hst-C.B.hst);inv.total=R2(inv.amount+inv.hst);inv.credit=inv.total<0;if(inv.credit)inv.interestPct=0;inv.adjOf=C.B.last.id;inv.billHours=inv.billHours;
   try{if(window.scInvFlags)scInvFlags().forEach(function(x){if(C.prev.some(function(p){return p.id===x.inv.id;}))x.inv.scReviewed=x.sig;});}catch(e){}  /* the top-up settles the "hours changed" flag of the earlier invoice */
