@@ -878,7 +878,12 @@
     if (ME) { touch(); runAlerts(); save(); homeOrClock(false); }
     render();
   }
+  /* loginfix1: the Login history page still described the old test-only lockout (5 tries / 15 min) and failed attempts are not
+     recorded in the live app – say what really happens. */
+  if (VIEWS['admin:logins']) { var _lgv = VIEWS['admin:logins']; VIEWS['admin:logins'] = function () { return _lgv().replace(/Every sign-in attempt: time, account, device, success or failure\. Accounts lock for \d+ minutes after \d+ failed tries\./, 'Successful sign-ins: time, account and device. Wrong-password attempts are limited by the login service (not listed here).'); }; }
   sb.auth.onAuthStateChange(function (ev) { if (ev === 'SIGNED_OUT' && SIGNED_IN) { SIGNED_IN = false; ME = null; loadPublic().then(function () { go('#/'); }); } });
   window.addEventListener('beforeunload', function () { if (TIMER) { clearTimeout(TIMER); flush(); } });
+  /* loginfix1 (Oct 21 2026): phones rarely fire beforeunload – send pending saves as soon as the app goes to the background. */
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && TIMER) { clearTimeout(TIMER); flush(); } });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
