@@ -124,21 +124,30 @@ ACT.obkcancel=function(el){var o=ordById(el.dataset.id);if(!canAct(o))return;
    '<div class="row-end"><button type="button" class="sec" data-act="closeModal">Keep it</button><button class="danger" id="obkcango">Cancel booking</button></div></form></div>');};
 FORMS.obkcancelok=function(f,d){var o=ordById(d.id);if(!canAct(o))return;var cm=String(d.comment||'').trim();if(!cm){toast('Please write a comment for the farm.');return;}
   o.status='Cancelled';cancelOrderShift(o);recPush(o,'Cancelled by office','cancel',cm,[],o.cur);ordLog(o,'Office cancelled the booking','Comment: '+cm);notify(o.firmId,'Booking '+o.no+' was cancelled by the office. Note: '+cm);save();closeModal();toast('Booking cancelled. The farm sees it now.');render();};
-/* assign people (same people list as All hours "Assign a person": worked here last 30 days first, then by employer) */
-function people(o){var f=user(o.firmId),codes=(DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;}),from=addDays(today(),-30),seenU={},rec=[];
-  var P=(DB.users||[]).filter(function(u){return (u.type==='worker'||u.type==='employee')&&u.accountApproved!==false&&u.active!==false&&!u.virtual;});
-  (DB.time||[]).forEach(function(t){if(t.test||seenU[t.userId]||codes.indexOf(t.site)<0||t.date<from)return;var u=P.filter(function(x){return x.id===t.userId;})[0];if(u){seenU[u.id]=1;rec.push(u);}});
-  var g={};P.forEach(function(u){if(seenU[u.id])return;var k=u.type==='employee'?'UnScramble employees':'Subcontractor workers – '+employerName(u);(g[k]=g[k]||[]).push(u);});return {rec:rec,groups:g};}
+/* assign people (crewone4): every active, approved employee, subcontractor and sub worker. Groups: Our employees, Subcontractors, then each sub's workers under that sub. Worked at this farm in the last 30 days = sorted first + tagged. Names only, never rates. */
+function obkOk(u){return !!u&&u.active!==false&&!u.suspended&&u.approved!==false&&u.accountApproved!==false&&!u.virtual&&!u.test&&!u.anonymous;}
+function obkCan(u){if(!obkOk(u))return false;if(u.type==='employee'||u.type==='sub')return true;if(u.type!=='worker')return false;var sb=u.subId?user(u.subId):null;return !u.subId||obkOk(sb);}
+function people(o){var f=user(o.firmId),codes=(DB.sites||[]).filter(function(s){return s.firmId===f.id;}).map(function(s){return s.code;}),from=addDays(today(),-30),seenU={};
+  var P=(DB.users||[]).filter(obkCan);
+  (DB.time||[]).forEach(function(t){if(t.test||codes.indexOf(t.site)<0||t.date<from)return;seenU[t.userId]=1;});
+  var groups=[],gi={},add=function(key,label,kind,u){if(!gi[key]){gi[key]={key:key,label:label,kind:kind,list:[]};groups.push(gi[key]);}gi[key].list.push(u);};
+  var subs=P.filter(function(u){return u.type==='sub';}).sort(function(a,b){return a.name<b.name?-1:1;});
+  P.filter(function(u){return u.type==='employee';}).forEach(function(u){add('emp','Our employees','emp',u);});
+  subs.forEach(function(u){add('subs','Subcontractors','subs',u);});
+  subs.forEach(function(sb){P.filter(function(u){return u.type==='worker'&&u.subId===sb.id;}).forEach(function(u){add('w-'+sb.id,'Workers – '+(sb.company&&sb.company.legalName||sb.name),'subw',u);});});
+  P.filter(function(u){return u.type==='worker'&&!u.subId;}).forEach(function(u){add('w-none','Workers – no sub linked','subw',u);});
+  groups.forEach(function(g){g.list.sort(function(a,b){var x=seenU[a.id]?0:1,y=seenU[b.id]?0:1;return x-y||(a.name<b.name?-1:1);});});
+  return {seen:seenU,groups:groups,ids:P.map(function(u){return u.id;})};}
 function busy(u,s){var a=function(t){var p=String(t||'').split(':');return +p[0]*60+(+p[1]||0);};var s0=a(s.start),s1=a(s.end);if(s1<=s0)s1+=1440;
   return (DB.shifts||[]).some(function(x){if(x.id===s.id||x.date!==s.date||(x.booked||[]).indexOf(u.id)<0)return false;var x0=a(x.start),x1=a(x.end);if(x1<=x0)x1+=1440;return x0<s1&&s0<x1;});}
 ACT.obkassign=function(el){var o=ordById(el.dataset.id),s=o&&ordShift(o);if(!s){toast('Turn the booking into a shift first.');return;}var P=people(o),bk=s.booked||[];
-  var row=function(u){var b=busy(u,s),on=bk.indexOf(u.id)>=0;return '<label class="inline obk-p'+(b?' muted':'')+'"><input type="checkbox" name="who" value="'+E(u.id)+'"'+(on?' checked':'')+(b&&!on?' disabled':'')+'> '+E(u.name)+(b&&!on?' – booked on another shift then':'')+'</label>';};
+  var row=function(u){var bl=[];try{bl=typeof blockers==='function'?blockers(u,s.date,s)||[]:[];}catch(e){bl=[];}var b=busy(u,s)||bl.length>0,on=bk.indexOf(u.id)>=0;return '<label class="inline obk-p'+(b?' muted':'')+'"><input type="checkbox" name="who" value="'+E(u.id)+'"'+(on?' checked':'')+(b&&!on?' disabled':'')+'> '+E(u.name)+(P.seen[u.id]?' <span class="obk-here">worked here</span>':'')+(b&&!on?(bl.length?' – can’t take this shift: '+E(bl[0].m):' – booked on another shift then'):'')+'</label>';};
   modal('<div id="obkassignbox"><h2>Assign people</h2><p>'+E(o.no)+' · '+E(shortDay(s.date))+' '+E(s.start)+'–'+E(s.end)+' · <b id="obkneed">'+s.needed+'</b> needed</p><form data-form="obkassignok" id="obkassignform"><input type="hidden" name="id" value="'+E(o.id)+'">'+
-   (P.rec.length?'<fieldset><legend>Worked at this farm (last 30 days)</legend>'+P.rec.map(row).join('')+'</fieldset>':'')+Object.keys(P.groups).sort().map(function(k){return '<details class="obk-grp"'+(P.rec.length?'':' open')+'><summary>'+E(k)+' ('+P.groups[k].length+')</summary>'+P.groups[k].sort(function(a,b){return a.name<b.name?-1:1;}).map(row).join('')+'</details>';}).join('')+
+   P.groups.map(function(g){return '<details class="obk-grp obk-g-'+g.kind+'" data-grp="'+E(g.key)+'" open><summary>'+E(g.label)+' ('+g.list.length+')</summary>'+g.list.map(row).join('')+'</details>';}).join('')+(P.groups.length?'':'<p class="muted">No active, approved people yet.</p>')+
    '<p class="small muted">The farm sees how many are assigned (never the names). Each person gets the shift.</p><div class="row-end"><button type="button" class="sec" data-act="closeModal">Cancel</button><button id="obkassigngo">Save</button></div></form></div>');};
 FORMS.obkassignok=function(f,d){var o=ordById(d.id),s=o&&ordShift(o);if(!s)return;var ids=[].concat(f.querySelectorAll?[].map.call(f.querySelectorAll('input[name=who]:checked'),function(i){return i.value;}):(d.who||[]));
   if(ids.length>s.needed){toast('Only '+s.needed+' needed – untick '+(ids.length-s.needed)+', or raise the crew size with Change.');return;}
-  var keep=(s.booked||[]).filter(function(id){var u=user(id);return !u||(u.type!=='worker'&&u.type!=='employee');}),old=s.booked||[];
+  var keep=(s.booked||[]).filter(function(id){var u=user(id);return !u||(u.type!=='worker'&&u.type!=='employee'&&u.type!=='sub');}),old=s.booked||[];
   s.booked=keep.concat(ids);var add=ids.filter(function(i){return old.indexOf(i)<0;}),rem=old.filter(function(i){return s.booked.indexOf(i)<0;});
   add.forEach(function(id){notify(id,'You are booked: '+s.title+' on '+s.date+' '+s.start+'–'+s.end+' at '+s.site+'.');});rem.forEach(function(id){notify(id,'Shift removed: '+s.title+' on '+s.date+' at '+s.site+'.');});
   ordLog(o,'Office assigned people',ordAssigned(o)+'/'+s.needed+' assigned');audit('Crew updated',ME.name,s.date+' '+s.site+': '+ids.length+' worker(s)');save();closeModal();toast('Saved: '+ordAssigned(o)+' of '+s.needed+' assigned.');render();};
