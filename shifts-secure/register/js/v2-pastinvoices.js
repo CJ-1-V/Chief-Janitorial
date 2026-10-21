@@ -93,7 +93,7 @@ ACT.pastinvedit=function(el){if(!pastCanUpload())return;var i=invById(el.dataset
 ACT.pastinvdel=function(el){if(!pastCanUpload())return;var i=invById(el.dataset.id);if(!i||!i.uploaded)return;
   modal('<h2>Remove uploaded invoice?</h2><p>Invoice <b>'+esc(i.number)+'</b> for '+esc(user(i.firmId).name)+' ('+money(i.total)+', file '+esc(i.file?i.file.name:'')+') will be removed from the office list and from the client\'s My invoices. This is written to the audit log.</p><p class="row"><button class="danger" data-act="pastinvdelok" data-id="'+i.id+'">Remove invoice</button><button class="sec" data-act="closeModal">Keep it</button></p>');};
 ACT.pastinvdelok=function(el){if(!pastCanUpload())return;var i=invById(el.dataset.id);if(!i||!i.uploaded)return;
-  DB.clientInvoices=DB.clientInvoices.filter(function(x){return x.id!==i.id;});audit('Removed uploaded past invoice',user(i.firmId).name,i.number+' · '+i.issued+' · '+money(i.total)+' · file '+(i.file?i.file.name:''));save();closeModal();toast('Invoice '+i.number+' removed.');render();};
+  (window.REG_INV_DROP=window.REG_INV_DROP||{})[i.id]=1;DB.clientInvoices=DB.clientInvoices.filter(function(x){return x.id!==i.id;});audit('Removed uploaded past invoice',user(i.firmId).name,i.number+' · '+i.issued+' · '+money(i.total)+' · file '+(i.file?i.file.name:''));save();closeModal();toast('Invoice '+i.number+' removed.');render();};
 ACT.pastopen=function(){PAGE_STATE.pastOpen=true;render();};
 ADMIN_ONLY_FORM.push('pastinv');ADMIN_ONLY_ACT.push('pastinvedit','pastinvdel','pastinvdelok','pastopen');
 

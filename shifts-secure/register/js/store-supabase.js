@@ -293,7 +293,7 @@
   async function flush() {
     if (BUSY) { AGAIN = true; return; }
     if (!SIGNED_IN || !ME || HOLD) return;
-    BUSY = true; var failed = 0, firstErr = null;
+    BUSY = true; var failed = 0, firstErr = null, invFail = [];
     try {
       // keep the Shift Tracker clock reminders current (informational only – never blocks clocking)
       (OFFICE ? DB.users.filter(function (u) { return u.type === 'worker' || u.type === 'employee'; }) : (ME.type === 'worker' || ME.type === 'employee') ? [ME] : []).forEach(function (u) {
@@ -323,7 +323,7 @@
               var q1 = sb.from(MAP[c]).insert({ id: ins[j].k, data: JSON.parse(ins[j].pl) });
               var one = await (RET ? q1.select('id,data') : q1);
               if (one.error && one.error.code === '23505' && !INSERT_ONLY[c]) { upd.push(ins[j]); continue; }
-              if (one.error) { if (!(INSERT_ONLY[c] && one.error.code === '23505')) { failed++; firstErr = firstErr || one.error; } continue; }
+              if (one.error) { if (!(INSERT_ONLY[c] && one.error.code === '23505')) { failed++; firstErr = firstErr || one.error; if (c === 'clientInvoices') invFail.push({ no: ins[j].r.number || ins[j].k, err: one.error, isNew: 1 }); } continue; }
               accept(c, ins[j], one.data && one.data[0]);
             }
           } else ins.forEach(function (x) { accept(c, x, (res.data || []).filter(function (y) { return y.id === x.k; })[0]); });
@@ -332,11 +332,13 @@
           var x = upd[u2], q;
           if (c === 'users') q = await sb.rpc('reg_account_save', { p_id: x.k, p_data: JSON.parse(x.pl) });
           else q = await sb.from(MAP[c]).update({ data: JSON.parse(x.pl) }).eq('id', x.k).select('id,data');
-          if (q.error || (c !== 'users' && !(q.data || []).length)) { failed++; firstErr = firstErr || q.error || { message: 'Not allowed for your account.' }; continue; }
+          if (q.error || (c !== 'users' && !(q.data || []).length)) { failed++; firstErr = firstErr || q.error || { message: 'Not allowed for your account.' }; if (c === 'clientInvoices') invFail.push({ no: x.r.number || x.k, err: q.error || { message: 'Not allowed for your account.' } }); continue; }
           accept(c, x, c === 'users' ? { id: x.k, data: q.data } : q.data[0]);
         }
         if (!NEVER_DELETE[c]) {
           for (var bk in BASE[c]) if (!seen[bk]) {
+            /* topupfix1: a farm invoice is never hard-deleted just because it is missing from a (possibly masked) list – only an explicit drop */
+            if (c === 'clientInvoices' && !(window.REG_INV_DROP && window.REG_INV_DROP[bk])) continue;
             var del = await sb.from(MAP[c]).delete().eq('id', bk).select('id');
             if (del.error || !(del.data || []).length) { failed++; firstErr = firstErr || del.error || { message: 'Not allowed to remove that.' }; } else delete BASE[c][bk];
           }
@@ -357,6 +359,17 @@
       }
     } catch (e) { failed++; firstErr = firstErr || e; }
     finally { BUSY = false; }
+    if (invFail.length) {                       // topupfix1: a refused farm invoice is never left on screen as if it were saved
+      try {
+        var esc = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+        modal('<h2>Invoice not saved</h2><div class="alert danger" id="invsavefail"><p><b>The server refused ' + (invFail.length > 1 ? 'these invoices' : 'this invoice') + '. Nothing was sent to the farm.</b></p><ul>' +
+          invFail.map(function (f) { return '<li><b>' + esc(f.no) + '</b>' + (f.isNew ? ' (new)' : '') + ': ' + esc((f.err && (f.err.message || f.err.details)) || 'not allowed') + '</li>'; }).join('') +
+          '</ul><p class="small">The list is reloaded from the server so you see what is really saved. Please tell IT the message above.</p></div><div class="row-end"><button type="button" data-act="closeModal">OK</button></div>');
+      } catch (e) { toast('Invoice ' + invFail[0].no + ' was NOT saved: ' + friendly(invFail[0].err)); }
+      try { console.error('[topupfix1] invoice save refused', invFail); } catch (e) {}
+      refresh();
+      failed -= invFail.length;           // the invoice modal already told them; other refusals still get the usual note
+    }
     if (failed) {
       var msg = friendly(firstErr);
       warnOnce(msg, 'Some changes were not saved: ' + msg);

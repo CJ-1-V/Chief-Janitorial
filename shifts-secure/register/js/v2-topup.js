@@ -60,7 +60,7 @@ ACT.tugo=function(el){if(!owner())return;var firm=user(el.dataset.f),m=el.datase
 ACT.tureplace=function(el){if(!owner())return;var old=byId(el.dataset.id),firm=user(el.dataset.f),m=el.dataset.m;if(!old||!firm||old.paidAt){toast('Can\'t replace this invoice.');return;}
   if(typeof window.idCheck==='function'){var c=window.idCheck(old);if(c&&c.why){toast(c.why);return;}}
   closeModal();var inv=makeBase(firm,m);if(!inv){toast('The new invoice was not created.');return;}
-  var at=new Date().toISOString();old.deleted=true;old.deletedAt=at;old.deletedBy=ME.name;old.deletedById=ME.id;old.deleteReason='Replaced by '+inv.number;old.delGroup=uid('dg');old.supersededBy=inv.number;inv.replaces=old.number;
+  var at=new Date().toISOString();old.deleted=true;old.deletedAt=at;old.deletedBy=ME.name;old.deletedById=ME.id;old.deleteReason='Replaced by '+inv.number;old.delGroup=uid('dg');old.replacedByNo=inv.number;inv.replaces=old.number;
   DB.clientInvoices=(DB.clientInvoices||[]).filter(function(x){return x.id!==old.id;});(DB.clientInvoicesDel=DB.clientInvoicesDel||[]).push(old);
   audit('Replaced farm invoice',firm.name,old.number+' → '+inv.number+' '+money(inv.total));notify(firm.id,'Invoice '+old.number+' was replaced by '+inv.number+' ('+money(inv.total)+'). Please use '+inv.number+'.');save();toast(old.number+' replaced by '+inv.number+'.');render();};
 /* ---------- B. marked paid by mistake ---------- */
@@ -85,7 +85,7 @@ if(typeof window.invtHtml==='function'){var oth=window.invtHtml;window.invtHtml=
   if(i.topup){x=x.replace(/<td class="a">([^<]*)<\/td><\/tr>/g,function(a,v){return a;}).replace(/(<span class="l">)TOTAL(<\/span>)/,'$1'+(i.total<0?'CREDIT DUE TO YOU':'AMOUNT DUE NOW')+'$2');
     x=x.replace('<div class="ui-band"></div>','<div class="ui-band"></div><div class="tu-tag'+(i.total<0?' tu-cr':'')+'">'+(i.total<0?'CREDIT INVOICE':'TOP-UP INVOICE')+' · '+E(i.periodStart)+' – '+E(i.periodEnd)+'</div>');
     if(i.topup.stale&&ME&&ME.type==='admin')x='<div class="alert warn tu-stale" id="tustale"><b>Check this top-up:</b> it deducted '+E(i.topup.stale.number)+' as paid, but '+E(i.topup.stale.number)+' was set back to not paid on '+E(String(i.topup.stale.at).slice(0,10))+'. Revise or replace it so the farm is not billed twice.</div>'+x;}
-  if(i.supersededBy)x='<div class="alert warn">Replaced by '+E(i.supersededBy)+'.</div>'+x;
+  if(i.replacedByNo||i.supersededBy)x='<div class="alert warn">Replaced by '+E(i.replacedByNo||i.supersededBy)+'.</div>'+x;
   if(i.payLog&&i.payLog.length)x+='<div class="tu-hist" id="tuhist"><b>Invoice history</b>'+i.payLog.map(function(h){return '<div class="small">'+E(String(h.at).slice(0,16).replace('T',' '))+' · '+E(h.what)+(ME&&ME.type==='admin'?' · by '+E(h.by):'')+(h.reason?' · “'+E(h.reason)+'”':'')+' (was paid '+E(h.wasPaidAt)+')</div>';}).join('')+'</div>';
   return x;};if(typeof invHtml!=='undefined')invHtml=window.invtHtml;}
 /* blank amount cell on the "recalculated total" note row */
