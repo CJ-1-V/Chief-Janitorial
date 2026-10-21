@@ -37,20 +37,20 @@
   /* company copy – only things the apps actually do */
   var CO = isCJ ? {
     logo: 'assets/cj_Logo.png', alt: 'Chief Janitorial', tag: 'Cleaners, sites & invoices',
-    title: 'Your cleaning shifts, in one place',
-    sub: 'Sign in once for clocking in, your site task lists, photos, documents and hours.',
-    steps: [['id', 'Sign in or create an account', 'The office approves new accounts before the first shift.'],
-            ['clock', 'Clock in at your site', 'Tick the task list for the visit and add photos when they are needed.'],
-            ['check', 'Office reviews your hours', 'Approved hours go to payroll; clients get one monthly invoice.']],
-    chips: [['lock', 'Password-protected'], ['phone', 'Works on your phone'], ['camera', 'Visit photos'], ['calendar', 'Site calendar']]
+    title: 'Welcome to Chief Janitorial',
+    sub: 'One sign in for cleaners, subcontractors and client sites.',
+    steps: [['id', 'Create your account', 'The office approves it before your first shift.'],
+            ['clock', 'Clock in at your site', 'Tick the task list and add visit photos when they are needed.'],
+            ['check', 'Hours reviewed, clients invoiced', 'The office reviews the hours; clients see visit logs and one monthly invoice.']],
+    chips: [['lock', 'Secure sign in'], ['phone', 'Works on your phone'], ['camera', 'Visit photos'], ['calendar', 'Site calendar']]
   } : {
     logo: 'assets/unscramble-logo.svg', alt: 'UnScramble', tag: 'Clock, farms & compliance',
-    title: 'One login for your work with UnScramble',
-    sub: 'Registration, documents, agreements, clocking in and your hours – all behind one sign in.',
-    steps: [['id', 'Register and upload your documents', 'Create an account, then add your ID, licence or permits. The office reviews them.'],
-            ['clock', 'Clock in at the farm', 'Pick your job for the shift and clock in and out from your phone.'],
-            ['pay', 'Hours are approved and paid', 'The office checks the week, farms approve their timesheet, and hours go to payroll.']],
-    chips: [['lock', 'Password-protected'], ['phone', 'Works on your phone'], ['doc', 'Documents kept private'], ['team', 'Subcontractor crews welcome']]
+    title: 'Welcome to UnScramble',
+    sub: 'One sign in for workers, subcontractor crews and farm clients.',
+    steps: [['id', 'Create your account', 'Workers add their documents online; farms and clients sign the agreement online.'],
+            ['clock', 'Clock in or book a crew', 'Workers clock in from their phone. Clients book the crew they need, day by day.'],
+            ['pay', 'Approve and get paid', 'Farms approve the week; hours go to payroll and one monthly invoice.']],
+    chips: [['lock', 'Secure sign in'], ['phone', 'Works on your phone'], ['doc', 'Documents kept private'], ['team', 'Subcontractor crews welcome']]
   };
 
   function hero(kind) {
