@@ -15,26 +15,29 @@ if(window.REG_LIVE&&!(window.REG_STORE&&window.REG_STORE.farmRoles))return;
 var LIVE=!!window.REG_LIVE;
 var ROLES={manager:'Manager',supervisor:'Supervisor'};
 var FR_OK=['#/home','#/orders','#/timesheets','#/profile','#/alerts','#/terms','#/pending','#/changepw','#/frhidden'];
-function frDefault(role){return {approve:role==='manager',order:true};}
+function frDefault(role){return {approve:role==='manager',order:true,invoices:false};}
+/* faminv1 (027a): per person "Invoices & amounts" (view only), off by default. Live switch famInv (only AFTER 027a). */
+var FI_ON=!LIVE||!!(window.REG_STORE&&window.REG_STORE.famInv);
 function frLogin(){return (typeof clLoginOf==='function')?clLoginOf(ME):ME;}
 function frRoleOf(u){return u&&u.type==='firm'&&ROLES[u.farmRole]?u.farmRole:null;}
 function frLimited(){return !!(ME&&ME.type==='firm'&&frRoleOf(frLogin()));}
 function frPerms(u){return Object.assign(frDefault(u.farmRole),u.farmPerms||{});}
-function frCan(w){return frLimited()?!!frPerms(frLogin())[w]:true;}
+function frCan(w){if(w==='invoices'&&!FI_ON)return !frLimited();return frLimited()?!!frPerms(frLogin())[w]:true;}
+function frNoMoney(){return frLimited()&&!frCan('invoices');}
 function frMain(){if(!ME||ME.type!=='firm'||frLimited())return false;var l=frLogin();return !l.loginOf||l.loginRole==='Owner';}
 function frClient(){var l=frLogin();return l&&l.loginOf?(typeof clResolve==='function'?clResolve(l.loginOf):user(l.loginOf)):ME;}
 function frMoneyText(t){t=String(t||'');return /\$\s?\d|\d\s?\$/.test(t)||/\b(invoice|invoices|rate|rates|billing|billed|credit note|top-up|HST)\b/i.test(t);}
-window.frLimited=frLimited;window.frCan=frCan;window.frMain=frMain;window.frMoneyText=frMoneyText;
+window.frLimited=frLimited;window.frNoMoney=frNoMoney;window.frCan=frCan;window.frMain=frMain;window.frMoneyText=frMoneyText;
 
 /* ---------- tabs and routes ---------- */
 var BASE_NAV=NAV.firm;
 Object.defineProperty(NAV,'firm',{configurable:true,enumerable:true,
-  get:function(){if(frLimited())return BASE_NAV.filter(function(n){return FR_OK.indexOf(n[0])>=0;}).concat([['#/frhidden','']]);
+  get:function(){if(frLimited())return BASE_NAV.filter(function(n){return FR_OK.indexOf(n[0])>=0||(n[0]==='#/invoices'&&frCan('invoices'));}).concat([['#/frhidden','']]);
     return frMain()?BASE_NAV.concat([['#/team','']]):BASE_NAV;},
   set:function(v){BASE_NAV=v;}});
 if(typeof fhTabs==='function'){var ofh=fhTabs;fhTabs=function(nav,h,u){return ofh((nav||[]).filter(function(n){return n[0]!=='#/team'&&n[0]!=='#/frhidden';}),h,u);};}
 var og=gateRoute;gateRoute=function(h){var r=og(h);if(!ME||ME.type!=='firm')return r;
-  if(frLimited()&&r.indexOf('#/')===0&&FR_OK.indexOf(r)<0){PAGE_STATE.frWas=r;return '#/frhidden';}
+  if(frLimited()&&r.indexOf('#/')===0&&FR_OK.indexOf(r)<0&&!(r==='#/invoices'&&frCan('invoices'))){PAGE_STATE.frWas=r;return '#/frhidden';}
   if((r==='#/team'&&!frMain())||(r==='#/frhidden'&&!frLimited()))return '#/home';return r;};
 VIEWS['firm:frhidden']=function(){var w=PAGE_STATE.frWas||'',inv=/invoice/.test(w);
   return '<h1>'+(inv?'Invoices':'This page')+' – for the farm owner</h1><div class="card fr-hidden" id="frhidden"><p><b>'+(inv?'Invoices, rates and amounts':'This page')+' are only for the farm owner.</b></p>'+
@@ -42,9 +45,10 @@ VIEWS['firm:frhidden']=function(){var w=PAGE_STATE.frWas||'',inv=/invoice/.test(
 
 /* ---------- actions a team login can't use (the database refuses them too) ---------- */
 var NO_ALWAYS='firmsign firmagrpub firmagrdl firmagrprint civview civprint civdl clientinvpaid pastinvview pastinvdl tuunpay farmratesmodal'.split(' ');
+var FI_VIEW='civview civprint civdl pastinvview pastinvdl'.split(' ');
 var NO_ORDER='crewOrder crewOrderEdit crewOrderCancel crewOrderCancelAll cobook codates codecnone coedit cocancel cocancelall'.split(' ');
 var NO_APPROVE=['tsokday','tsokweek'];
-var oaa=actionAllowed;actionAllowed=function(name,kind){if(frLimited()){if(NO_ALWAYS.indexOf(name)>=0)return false;if(!frCan('order')&&NO_ORDER.indexOf(name)>=0)return false;
+var oaa=actionAllowed;actionAllowed=function(name,kind){if(frLimited()){if(NO_ALWAYS.indexOf(name)>=0&&!(FI_VIEW.indexOf(name)>=0&&frCan('invoices')))return false;if(!frCan('order')&&NO_ORDER.indexOf(name)>=0)return false;
     if(!frCan('approve')&&NO_APPROVE.indexOf(name)>=0)return false;if(/^fr(t|team)/.test(name))return false;}
   if(/^frteam/.test(name)&&!frMain())return false;return oaa(name,kind);};
 var odn=denied;denied=function(name){if(frLimited()){toast(NO_APPROVE.indexOf(name)>=0?'Approving time sheets is for the farm owner or a manager.':NO_ORDER.indexOf(name)>=0?'Ordering crew is turned off for your login. Ask the farm owner.':'This is for the farm owner.');return;}return odn(name);};
@@ -52,6 +56,8 @@ var odn=denied;denied=function(name){if(frLimited()){toast(NO_APPROVE.indexOf(na
 /* ---------- a team login never gets invoices, rates, signed agreement, money notes (same as the database gives it) ---------- */
 var FR_SW=null,FR_K=['clientInvoices','clientInvoicesDel','clientFiles','farmRates','firmSigs','notes'];
 function swapOn(){if(FR_SW||!frLimited())return false;var keep={};FR_K.forEach(function(k){keep[k]=DB[k];});FR_SW=keep;
+  DB.firmSigs=(keep.firmSigs||[]).map(function(x){return x.teamStub?x:{id:x.id,firmId:x.firmId,version:x.version,rateVersion:x.rateVersion,at:x.at,teamStub:true};});
+  if(frCan('invoices'))return true;
   DB.clientInvoices=[];DB.clientInvoicesDel=[];
   /* agreement signed + rate version (so hours and crew orders work) – never the amounts or the signed text */
   DB.farmRates=(keep.farmRates||[]).map(function(r){return r.teamStub?r:{id:r.id,firmId:r.firmId,version:r.version,effective:r.effective,rates:{},overtime:0,other:null,hst:r.hst,teamStub:true};});
@@ -72,7 +78,10 @@ function frWalk(root){if(!frLimited()||!root||!root.querySelectorAll)return;
   var rem=root.querySelector('#tsrem');if(rem){var p=rem.closest('label')?rem.closest('label').parentNode:rem.parentNode;if(p&&p!==root)p.style.display='none';rem.disabled=true;}
   if(!frCan('approve'))[].forEach.call(root.querySelectorAll('[data-act=tsokday],[data-act=tsokweek]'),function(b){var s=document.createElement('span');s.className='small muted fr-noapprove';s.textContent='Approval: farm owner or a manager';b.replaceWith(s);});
   if(!frCan('order'))[].forEach.call(root.querySelectorAll('a[href="#/orders?new=1"],[data-act=coopen],[data-act=coedit],[data-act=cocancel],form[data-form=crewOrder]'),function(b){b.style.display='none';});
-  [].forEach.call(root.querySelectorAll('#sect-agr,#firmagr,.fh-stat-money,[data-fr-money]'),function(e){e.style.display='none';});
+  [].forEach.call(root.querySelectorAll('#sect-agr,#firmagr,[data-act=firmagrdl],[data-act=firmagrprint],[data-act=farmratesmodal],[data-act=clientinvpaid],[data-act=tuunpay]'),function(e){e.style.display='none';});
+  [].forEach.call(root.querySelectorAll('details'),function(d){var su=d.querySelector('summary');if(su&&/agreement/i.test(su.textContent))d.style.display='none';});
+  if(!frNoMoney())return;
+  [].forEach.call(root.querySelectorAll('.fh-stat-money,[data-fr-money]'),function(e){e.style.display='none';});
   [].forEach.call(root.querySelectorAll('.trow'),function(r){if(/rate|amount|bill(ed|ing)? /i.test(r.textContent)&&/×|rate/i.test(r.textContent))r.style.display='none';});
   [].forEach.call(root.querySelectorAll('th'),function(th){if(/amount|rate|\$/i.test(th.textContent)){var t=th.closest('table'),i=[].indexOf.call(th.parentNode.children,th);if(t)[].forEach.call(t.rows,function(r){if(r.cells[i])r.cells[i].style.display='none';});}});
   [].forEach.call(root.querySelectorAll('.fh-stat'),function(st){if(/\$|amount|billing|bill\b/i.test(st.textContent))st.style.display='none';});
@@ -84,7 +93,7 @@ function frWalk(root){if(!frLimited()||!root||!root.querySelectorAll)return;
     if(MONEY.test(s)){MONEY.lastIndex=0;t.nodeValue=s.replace(MONEY,'–');}});}
 var oar=afterRender;afterRender=function(root){oar(root);try{frWalk(root);frTeamLinks(root);}catch(e){console.warn('farmroles',e);}};
 /* anything written later (count-up animations, live refresh) is scrubbed too */
-var FR_MO=null;function frObserve(){if(FR_MO||typeof MutationObserver==='undefined')return;FR_MO=new MutationObserver(function(){if(!frLimited())return;FR_MO.disconnect();try{frWalk(document.getElementById('app'));var m=document.getElementById('modal');if(m)frWalk(m);}catch(e){}FR_MO.observe(document.body,{subtree:true,childList:true,characterData:true});});
+var FR_MO=null;function frObserve(){if(FR_MO||typeof MutationObserver==='undefined')return;FR_MO=new MutationObserver(function(){if(!frNoMoney())return;FR_MO.disconnect();try{frWalk(document.getElementById('app'));var m=document.getElementById('modal');if(m)frWalk(m);}catch(e){}FR_MO.observe(document.body,{subtree:true,childList:true,characterData:true});});
   FR_MO.observe(document.body,{subtree:true,childList:true,characterData:true});}
 if(document.body)frObserve();else document.addEventListener('DOMContentLoaded',frObserve);
 /* CSV downloads for a team login: no money columns or rows */
@@ -96,9 +105,9 @@ function frCsvClean(text){var rows=frCsvParse(String(text)),drop={},out=[];
     out.push(r.filter(function(c,i){return !drop[i];}).map(function(c){c=String(c).replace(/\$\s?\d[\d,]*(\.\d+)?/g,'–');return /[",\n]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(','));});
   return out.join('\n');}
 window.frCsvClean=frCsvClean;
-if(typeof downloadText==='function'){var odt=downloadText;downloadText=function(name,text,mime){if(frLimited()&&(/csv/i.test(mime||'')||/\.csv$/i.test(name||'')))text=frCsvClean(text);return odt.call(this,name,text,mime);};}
+if(typeof downloadText==='function'){var odt=downloadText;downloadText=function(name,text,mime){if(frNoMoney()&&(/csv/i.test(mime||'')||/\.csv$/i.test(name||'')))text=frCsvClean(text);return odt.call(this,name,text,mime);};}
 /* toasts with money for a team login */
-if(typeof toast==='function'){var otz=toast;toast=function(m){if(frLimited()&&frMoneyText(m))m='Saved.';return otz.apply(this,[m].concat([].slice.call(arguments,1)));};}
+if(typeof toast==='function'){var otz=toast;toast=function(m){if(frNoMoney()&&frMoneyText(m))m='Saved.';return otz.apply(this,[m].concat([].slice.call(arguments,1)));};}
 
 /* ---------- farm owner: Team ---------- */
 /* ---------- icons (same line style as the farm tabs: 24px grid, 2px round strokes) ---------- */
@@ -119,7 +128,7 @@ function frAvatar(name,role){var n=String(name||'?').trim().split(/\s+/),ini=((n
 function frTeamLinks(root){if(!frMain()||!root||!root.querySelector)return;var h=(location.hash||'#/home').split('?')[0],m=root.querySelector('main');if(!m||m.querySelector('#frteamlink'))return;
   if(h!=='#/profile'&&h!=='#/home'&&h!=='#/')return;var n=frPeopleMock?((LIVE?((PAGE_STATE.frTeam&&PAGE_STATE.frTeam.d.people)||[]):frPeopleMock(frClient())).length):0;
   var d=document.createElement('div');d.className='card fr-entry';d.id='frteamlink';
-  d.innerHTML='<div class="fr-entry-ic">'+frI('team')+'</div><div class="fr-entry-tx"><b>Team</b><span class="small muted">'+(n?n+(n===1?' manager or supervisor':' managers and supervisors'):'Add your managers and supervisors')+' · no invoices or amounts</span></div>'+
+  d.innerHTML='<div class="fr-entry-ic">'+frI('team')+'</div><div class="fr-entry-tx"><b>Team</b><span class="small muted">'+(n?n+(n===1?' manager or supervisor':' managers and supervisors'):'Add your managers and supervisors')+' · '+(FI_ON?'invoices only if you turn them on':'no invoices or amounts')+'</span></div>'+
     '<button type="button" class="small sec fr-entry-btn" data-act="frteamgo" id="frteambtn">'+(n?'Manage':'Add people')+'</button>';
   if(h==='#/profile')m.insertBefore(d,m.children[1]||null);else{var a=m.querySelector('#fhtimesheets,.fh-ts');if(a&&a.parentNode)a.parentNode.insertBefore(d,a.nextSibling);else m.appendChild(d);}}
 ACT.frteamgo=function(){location.hash='#/team';};
@@ -138,16 +147,16 @@ function frEmpty(){return '<div class="fr-empty" id="frempty"><svg class="fr-art
   '<circle cx="56" cy="34" r="14" fill="#fbf1de" stroke="#D9A03C" stroke-width="2.5"/><path d="M32 72a24 24 0 0 1 48 0" fill="#fbf1de" stroke="#D9A03C" stroke-width="2.5"/>'+
   '<circle cx="104" cy="38" r="11" fill="#ece9f6" stroke="#332E57" stroke-width="2.5"/><path d="M85 72a19 19 0 0 1 38 0" fill="#ece9f6" stroke="#332E57" stroke-width="2.5"/>'+
   '<circle cx="132" cy="22" r="10" fill="#fff" stroke="#332E57" stroke-width="2.5"/><path d="M132 17v10M127 22h10" stroke="#332E57" stroke-width="2.5" stroke-linecap="round"/></svg>'+
-  '<b>No managers or supervisors yet</b><span class="small muted">Invite the people who run your crews. They see hours and orders – never invoices or amounts.</span></div>';}
+  '<b>No managers or supervisors yet</b><span class="small muted">Invite the people who run your crews. They see hours and orders – invoices and amounts only if you turn them on.</span></div>';}
 function frPersonCard(p,k){var you=p.owner;
   return '<div class="fr-person fr-rise'+(you?' fr-me':'')+'" style="--fr-d:'+(k*60)+'ms" data-person="'+esc(p.username||p.email||p.id)+'">'+frAvatar(p.name,p.role)+
     '<div class="fr-pmain"><div class="fr-pname"><b>'+esc(p.name||'')+'</b>'+frBadge(p.role)+(you?'<span class="small muted">You</span>':'')+'</div>'+
     '<div class="fr-contact small muted">'+(p.email?frI('mail','fr-ic-sm')+'<span>'+esc(p.email)+'</span>':'')+(p.phone?frI('phone','fr-ic-sm')+'<span>'+esc(p.phone)+'</span>':'')+(!p.email&&!p.phone&&p.username?'<span>'+esc(p.username)+'</span>':'')+'</div>'+
-    (you?'<div class="fr-perms"><span class="fr-perm fr-on">'+frI('check')+'<span>Everything, incl. invoices</span></span></div>':'<div class="fr-perms">'+yn(p.perms.approve,'Approves time sheets')+yn(p.perms.order,'Orders crew')+yn(false,'Invoices & amounts')+'</div>')+'</div>'+
+    (you?'<div class="fr-perms"><span class="fr-perm fr-on">'+frI('check')+'<span>Everything, incl. invoices</span></span></div>':'<div class="fr-perms">'+yn(p.perms.approve,'Approves time sheets')+yn(p.perms.order,'Orders crew')+(FI_ON?yn(p.perms.invoices,'Invoices & amounts'):yn(false,'Invoices & amounts'))+'</div>')+'</div>'+
     (you?'':'<div class="fr-pact"><button type="button" class="small sec" data-act="frteamedit" data-id="'+esc(p.id)+'">Change</button><button type="button" class="small sec fr-danger" data-act="frteamrm" data-id="'+esc(p.id)+'">Remove</button></div>')+'</div>';}
 VIEWS['firm:team']=function(){var D=frTeamData(),P=D.people||[],I=(D.invites||[]).filter(function(i){return !i.used&&!i.revoked;}),me=frLogin();
   var x='<div class="fr-head fr-rise"><div class="fr-head-ic">'+frI('team')+'</div><div><h1>Team</h1><div class="muted fr-sub">Your managers and supervisors, each with their own login for <b>'+esc(frClient().name||'your farm')+'</b>.</div></div></div>';
-  x+='<div class="fr-sees fr-rise" style="--fr-d:60ms"><div class="fr-see">'+frI('clock')+'<span>Hours &amp; time sheets</span></div><div class="fr-see">'+frI('truck')+'<span>Crew orders</span></div><div class="fr-see fr-see-no">'+frI('shield')+'<span>No invoices, rates or amounts</span></div></div>';
+  x+='<div class="fr-sees fr-rise" style="--fr-d:60ms"><div class="fr-see">'+frI('clock')+'<span>Hours &amp; time sheets</span></div><div class="fr-see">'+frI('truck')+'<span>Crew orders</span></div><div class="fr-see fr-see-no">'+frI('shield')+'<span>'+(FI_ON?'Invoices &amp; amounts: off unless you turn them on per person':'No invoices, rates or amounts')+'</span></div></div>';
   x+='<div class="card fr-card" id="frteam"><div class="fr-card-h">'+frI('team')+'<h2>People</h2><span class="fr-count">'+(P.length+1)+'</span></div><div class="fr-people">'+
     frPersonCard({id:'me',owner:true,name:me.name||frClient().name,email:me.email||'',phone:me.phone||'',role:'owner'},0)+
     (D.loading?'<p class="muted">Loading…</p>':P.map(function(p,k){return frPersonCard(p,k+1);}).join(''))+'</div>'+(!D.loading&&!P.length?frEmpty():'')+'</div>';
@@ -159,7 +168,7 @@ VIEWS['firm:team']=function(){var D=frTeamData(),P=D.people||[],I=(D.invites||[]
     inp('name','Name','',{req:true})+inp('contact','Email or mobile phone','',{req:true})+'</div>'+
     '<div class="fr-roles" role="radiogroup" aria-label="Role"><label class="fr-role"><input type="radio" name="role" value="manager" checked><span class="fr-role-c">'+frI('manager')+'<b>Manager</b><span class="small muted">Approves time sheets, orders crew</span></span></label>'+
     '<label class="fr-role"><input type="radio" name="role" value="supervisor"><span class="fr-role-c">'+frI('supervisor')+'<b>Supervisor</b><span class="small muted">Orders crew, sees hours</span></span></label></div>'+
-    '<div class="fr-checks"><label class="chk"><input type="checkbox" name="approve" id="frapprove" checked> Can approve time sheets</label><label class="chk"><input type="checkbox" name="order" checked> Can order crew</label></div>'+
+    '<div class="fr-checks"><label class="chk"><input type="checkbox" name="approve" id="frapprove" checked> Can approve time sheets</label><label class="chk"><input type="checkbox" name="order" checked> Can order crew</label>'+(FI_ON?'<label class="chk fi-tog"><input type="checkbox" name="invoices" id="fiinv"'+(false?' checked':'')+'> <span>'+frI('shield','fr-ic-sm')+' <b>Invoices &amp; amounts</b><span class="small muted"> – view invoices, PDFs and totals. Off by default. Never mark paid or change rates.</span></span></label>':'')+'</div>'+
     '<div class="small muted fr-note">'+frI('shield','fr-ic-sm')+'<span>You get a one-time code and link to send yourself – the app sends nothing. The office checks the sign-up, usually the same day.</span></div><div class="row-end"><button id="frinvgo">Make invite</button></div></form></div>';
   return '<div class="fr-page">'+x+'</div>';};
 document.addEventListener('change',function(e){var t=e.target;if(t&&t.name==='role'&&t.form&&/^fr(invform|editform)$/.test(t.form.id)&&(t.type!=='radio'||t.checked)){var a=t.form.querySelector('[name=approve]');if(a)a.checked=t.value==='manager';}});
@@ -168,26 +177,26 @@ function rpc(name,args,ok){window.REG_SB.rpc(name,args).then(function(r){if(r.er
 FORMS.frteaminvite=function(f,d){if(!frMain())return denied('frteaminvite');var name=String(d.name||'').trim(),ct=String(d.contact||'').trim(),role=ROLES[d.role]?d.role:'manager';
   var em=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ct),ph=ct.replace(/\D/g,'').length>=10&&!/[a-z]/i.test(ct);
   if(name.length<2){toast('Enter their name.');return;}if(!em&&!ph){toast('Enter an email address or a mobile number (10 digits).');return;}
-  var c=frClient(),code=clGenCode(),id=uid('finv'),perms={approve:!!d.approve,order:!!d.order},url=clSignupUrl(code);
+  var c=frClient(),code=clGenCode(),id=uid('finv'),perms={approve:!!d.approve,order:!!d.order,invoices:FI_ON&&!!d.invoices},url=clSignupUrl(code);
   var show=function(exp){var msg='Hi '+name+', you are invited to UnScramble for '+(c.name||'our farm')+' as '+ROLES[role]+'. Sign up here: '+url+' (code '+code+').';
     modal('<div class="fr-modal"><div class="fr-mh">'+frI('send','fr-ic-lg')+'<div><h2>Invite ready for '+esc(name)+'</h2>'+frBadge(role)+'</div></div>'+
       '<div class="fr-code-card" id="frinvbox"><div class="fr-code-l">'+frI('key','fr-ic-sm')+'<span>One-time code · valid until '+esc(exp)+'</span></div><div class="fr-code" id="frinvcode">'+esc(code)+'</div>'+clCopyBtn(code,'Copy code','frcopycode')+
       '<div class="fr-code-l">'+frI('link','fr-ic-sm')+'<span>Sign-up link</span></div><div class="fr-url">'+esc(url)+'</div>'+clCopyBtn(url,'Copy link','frcopylink')+'</div>'+
       '<div class="fr-send">'+(em?'<a class="btn fr-sendbtn" id="frmail" href="mailto:'+esc(ct)+'?subject='+encodeURIComponent('Your UnScramble login')+'&body='+encodeURIComponent(msg)+'">'+frI('mail')+'<span>Open email to '+esc(ct)+'</span></a>':'<a class="btn fr-sendbtn" id="frsms" href="sms:'+esc(ct.replace(/[^\d+]/g,''))+'?&body='+encodeURIComponent(msg)+'">'+frI('phone')+'<span>Open text to '+esc(ct)+'</span></a>')+'</div>'+
-      '<div class="small muted fr-note">'+frI('shield','fr-ic-sm')+'<span>Shown once only. The app sends nothing – your own email or text app opens with the message ready. '+esc(name)+' sees crews, hours, time sheets and crew orders, <b>never invoices, rates or amounts</b>.</span></div><div class="row-end"><button class="sec" data-act="closeModal">Done</button></div></div>');};
-  if(LIVE){rpc('reg_farm_team_invite',{p_id:id,p_code_hash:clCodeHash(code),p_last4:code.slice(-4),p_days:14,p_role:role,p_name:name,p_contact:ct,p_approve:perms.approve,p_order:perms.order},function(){done();show(addDays(today(),14));});return;}
+      '<div class="small muted fr-note">'+frI('shield','fr-ic-sm')+'<span>Shown once only. The app sends nothing – your own email or text app opens with the message ready. '+esc(name)+' sees crews, hours, time sheets and crew orders'+(perms.invoices?', <b>plus invoices and amounts (view only)</b>.':', <b>no invoices, rates or amounts</b>.')+'</span></div><div class="row-end"><button class="sec" data-act="closeModal">Done</button></div></div>');};
+  if(LIVE){rpc('reg_farm_team_invite',Object.assign({p_id:id,p_code_hash:clCodeHash(code),p_last4:code.slice(-4),p_days:14,p_role:role,p_name:name,p_contact:ct,p_approve:perms.approve,p_order:perms.order},FI_ON?{p_invoices:perms.invoices}:{}),function(){done();show(addDays(today(),14));});return;}
   var i={id:id,clientId:c.id,codeHash:clCodeHash(code),last4:code.slice(-4),createdAt:new Date().toISOString(),createdBy:frLogin().name||c.name,expires:addDays(today(),14),days:14,usedBy:'',usedAt:'',revokedAt:'',
     byFarm:true,farmRole:role,farmPerms:perms,inviteName:name,inviteContact:ct};
   (DB.clientInvites=DB.clientInvites||[]).push(i);audit('Farm invited a team member',c.name,name+' · '+ROLES[role]+' · code ending '+i.last4);save();done();show(i.expires);};
 ACT.frteamedit=function(el){if(!frMain())return;var p=(frTeamData().people||[]).filter(function(x){return String(x.id)===el.dataset.id;})[0];if(!p)return;
   modal('<div class="fr-modal"><div class="fr-mh">'+frAvatar(p.name,p.role)+'<div><h2>Change '+esc(p.name||'')+'</h2>'+frBadge(p.role)+'</div></div><form data-form="frteamset" id="freditform"><input type="hidden" name="id" value="'+esc(p.id)+'">'+
     '<div class="fr-roles" role="radiogroup" aria-label="Role"><label class="fr-role"><input type="radio" name="role" value="manager"'+(p.role==='manager'?' checked':'')+'><span class="fr-role-c">'+frI('manager')+'<b>Manager</b></span></label><label class="fr-role"><input type="radio" name="role" value="supervisor"'+(p.role==='supervisor'?' checked':'')+'><span class="fr-role-c">'+frI('supervisor')+'<b>Supervisor</b></span></label></div>'+
-    '<div class="fr-checks"><label class="chk"><input type="checkbox" name="approve"'+(p.perms.approve?' checked':'')+'> Can approve time sheets</label><label class="chk"><input type="checkbox" name="order"'+(p.perms.order?' checked':'')+'> Can order crew</label></div>'+
+    '<div class="fr-checks"><label class="chk"><input type="checkbox" name="approve"'+(p.perms.approve?' checked':'')+'> Can approve time sheets</label><label class="chk"><input type="checkbox" name="order"'+(p.perms.order?' checked':'')+'> Can order crew</label>'+(FI_ON?'<label class="chk fi-tog"><input type="checkbox" name="invoices" id="fiinv"'+(p.perms.invoices?' checked':'')+'> <span>'+frI('shield','fr-ic-sm')+' <b>Invoices &amp; amounts</b><span class="small muted"> – view invoices, PDFs and totals. Off by default. Never mark paid or change rates.</span></span></label>':'')+'</div>'+
     '<div class="row-end"><button type="button" class="btn sec" data-act="closeModal">Cancel</button><button>Save</button></div></form></div>');};
-FORMS.frteamset=function(f,d){if(!frMain())return denied('frteamset');var role=ROLES[d.role]?d.role:'manager',ap=!!d.approve,or=!!d.order;
-  if(LIVE){rpc('reg_farm_team_set',{p_login:d.id,p_role:role,p_approve:ap,p_order:or},function(){closeModal();done('Saved.');});return;}
+FORMS.frteamset=function(f,d){if(!frMain())return denied('frteamset');var role=ROLES[d.role]?d.role:'manager',ap=!!d.approve,or=!!d.order,iv=FI_ON&&!!d.invoices;
+  if(LIVE){rpc('reg_farm_team_set',Object.assign({p_login:d.id,p_role:role,p_approve:ap,p_order:or},FI_ON?{p_invoices:iv}:{}),function(){closeModal();done('Saved.');});return;}
   var u=user(d.id),c=frClient();if(!u||u.loginOf!==c.id||!frRoleOf(u)){toast('Not one of your team.');return;}
-  u.farmRole=role;u.farmPerms={approve:ap,order:or};u.loginRole=ROLES[role];audit('Farm changed a team member',c.name,u.name+' · '+ROLES[role]+' · approve '+(ap?'yes':'no')+' · order '+(or?'yes':'no'));save();closeModal();done('Saved.');};
+  u.farmRole=role;u.farmPerms={approve:ap,order:or,invoices:iv};u.loginRole=ROLES[role];audit('Farm changed a team member',c.name,u.name+' · '+ROLES[role]+' · approve '+(ap?'yes':'no')+' · order '+(or?'yes':'no')+' · invoices '+(iv?'yes':'no'));save();closeModal();done('Saved.');};
 ACT.frteamrm=function(el){if(!frMain())return;var p=(frTeamData().people||[]).filter(function(x){return String(x.id)===el.dataset.id;})[0];if(!p)return;
   modal('<div class="fr-modal fr-rm"><div class="fr-rm-art">'+frI('remove','fr-ic-xl')+'</div><h2>Remove '+esc(p.name||'')+'?</h2><div class="fr-rm-b">'+frBadge(p.role)+'</div>'+
     '<div><ul class="fr-rm-list"><li>'+frI('x','fr-ic-sm')+'<span>Can\'t sign in to your farm any more – right away</span></li><li>'+frI('check','fr-ic-sm')+'<span>Past approvals and crew orders stay</span></li><li>'+frI('plus','fr-ic-sm')+'<span>You can invite them again any time</span></li></ul></div>'+
