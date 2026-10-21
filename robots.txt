@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /shift-tracker-test/
 Disallow: /shifts-secure/
 Disallow: /shifts-secure/register/
 

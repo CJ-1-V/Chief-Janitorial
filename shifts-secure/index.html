@@ -1,29 +1,37 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#332E57">
   <meta name="robots" content="noindex, nofollow">
-  <title>Shift Tracker — Chief Janitorial + Unscramble</title>
+  <meta name="theme-color" content="#332E57">
+  <title>Employee login — Chief Janitorial + UnScramble</title>
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="US">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/app.css">
+  <style>
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f6f5fb;color:#1d1b2e}
+    body{display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;min-height:100vh}
+    main{background:#fff;border-radius:18px;box-shadow:0 8px 30px rgba(51,46,87,.15);padding:28px 24px;max-width:420px;width:100%;text-align:center}
+    h1{font-size:22px;margin:0 0 6px;color:#332E57}p{margin:0 0 20px;color:#555;line-height:1.4}
+    a.btn{display:block;text-decoration:none;font-weight:700;font-size:19px;border-radius:12px;padding:16px 18px;margin:12px 0;min-height:52px;box-sizing:border-box}
+    a.us{background:#332E57;color:#fff}a.cj{background:#5956e9;color:#fff}
+    small{display:block;margin-top:18px;color:#777}
+  </style>
 </head>
 <body>
-  <div id="app"><div class="auth"><div class="auth-card"><p class="muted center">Loading…</p></div></div></div>
-  <script src="vendor/supabase.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/tz.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/employee.js"></script>
-  <script src="js/admin.js"></script>
+  <main>
+    <h1>Employee login</h1>
+    <p>Choose your company. Your login is the same for both.</p>
+    <a class="btn us" href="/shifts-secure/register/">UnScramble</a>
+    <a class="btn cj" href="/shifts-secure/cj/">Chief Janitorial</a>
+    <small>The old Shift Tracker has been retired. If you had it installed on your phone, remove it and install the app from the page you open above.</small>
+  </main>
+  <script>
+    // Retire the old Shift Tracker service worker and its caches so phones stop opening the old app.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { if (r.scope.indexOf('/shifts-secure/register') < 0 && r.scope.indexOf('/shifts-secure/cj') < 0) r.unregister(); }); });
+      if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { if (k.indexOf('st-static') === 0) caches.delete(k); }); });
+    }
+  </script>
 </body>
 </html>
