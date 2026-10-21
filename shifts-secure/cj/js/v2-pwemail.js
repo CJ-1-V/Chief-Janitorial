@@ -20,7 +20,7 @@
     if (FEAT.resetEmail == null) FEAT.resetEmail = true;
   }
 
-  var LOGIN_URL = 'https://www.chiefjanitorial.com/shifts-secure/register/';
+  var LOGIN_URL = 'https://www.chiefjanitorial.com/shifts-secure/cj/';
   var FROM = 'Chief Janitorial <admin@chiefjanitorial.com>';
   var CODE_MIN = 15, CODE_TRIES = 5, REQ_PER_HOUR = 3;
   function live() { return !!(window.REG_STORE && window.REG_STORE.mode === 'supabase'); }
