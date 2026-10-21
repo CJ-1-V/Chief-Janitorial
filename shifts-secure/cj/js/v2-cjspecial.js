@@ -16,7 +16,7 @@
 'use strict';
 (function () {
   if (typeof NAV === 'undefined' || typeof VIEWS === 'undefined') return;
-  var SP_TYPES = ['Deep clean', 'Glass / window cleaning', 'Trash removal', 'Painting', 'Site visit help', 'Other site maintenance'];
+  var SP_TYPES = ['Extra regular cleaning', 'Deep clean', 'Floor strip / recoat', 'Glass / window cleaning', 'Carpet cleaning', 'Washroom deep clean', 'Move-in / move-out clean', 'Trash removal', 'Painting', 'Site visit help', 'Other (describe below)'];   // calendar1 Oct 21 2026: the old one-off "Request cleaning" types folded in (owner)
   var SP_PILL = { Requested: 's-pend', Scheduled: 's-ok', Done: 's-test', Declined: 's-bad', Cancelled: 's-mut' };
   var SP_LABEL = { Requested: 'Requested – waiting for the office', Scheduled: 'Scheduled', Done: 'Done', Declined: 'Declined', Cancelled: 'Cancelled' };
   function spRate() { var r = +((DB.settings || {}).specialRate); return r > 0 ? r : 30; }
@@ -45,7 +45,7 @@
       inp('people', 'Number of people', d.people || 2, { type: 'number', req: true, extra: ' min="1" max="20" step="1" inputmode="numeric"' }) +
       inp('hoursPer', 'Estimated hours per person', d.hoursPer || 3, { type: 'number', req: true, extra: ' min="0.5" max="12" step="0.25"' }) +
       inp('date', 'Date', d.date || '', { type: 'date', req: true, extra: ' min="' + today() + '"' }) + inp('time', 'Start time', d.time || '09:00', { type: 'time', req: true, extra: ' step="900"' }) + '</div>' +
-      '<div><label>Notes</label><textarea name="note" placeholder="Rooms or areas, colours, access or alarm instructions, who to see on site">' + esc(d.note || '') + '</textarea><div class="hint">Required for “Other site maintenance” – tell us what you need.</div></div>' +
+      '<div><label>Notes</label><textarea name="note" placeholder="Rooms or areas, colours, access or alarm instructions, who to see on site">' + esc(d.note || '') + '</textarea><div class="hint">Required for “Other” – tell us what you need.</div></div>' +
       inp('contact', 'Who should we contact? (optional)', d.contact || '', { ph: 'Name and phone' }) +
       '<div class="spest" id="spest" aria-live="polite"><span>Estimate</span><b id="spesttext">' + esc(pe.text) + '</b><small>Rate ' + money(spRate()) + ' per person per hour. You are billed for the actual people and hours, on a separate line of your next invoice. Your regular cleaning invoice does not change.</small></div>' +
       '<div class="row"><button type="submit" id="crsend">Send order</button><button type="button" class="sec" data-act="crclose">Cancel</button></div>' +
@@ -84,7 +84,7 @@
     if (!(hp >= 0.5 && hp <= 12) || Math.round(hp * 4) !== hp * 4) { toast('Hours per person: 0.5 to 12, in quarter hours.'); return; }
     if (!d.date || d.date < today()) { toast('Please choose a date from today on.'); return; }
     if (!/^\d{2}:\d{2}$/.test(d.time || '')) { toast('Please choose a start time.'); return; }
-    if (d.kind === 'Other site maintenance' && !String(d.note || '').trim()) { toast('Please describe the job in Notes.'); return; }
+    if (/^Other/.test(d.kind || '') && !String(d.note || '').trim()) { toast('Please describe the job in Notes.'); return; }
     var rate = spRate(), e = spEst(people, hp, rate, ME);
     var r = { id: uid('cr'), no: spNo(), special: true, firmId: ME.id, firmName: ME.name, site: d.site, kind: d.kind, date: d.date, time: d.time, people: people, hoursPer: hp, rate: rate, estimate: e.sub, hstOn: e.on,
       note: String(d.note || '').trim().slice(0, 1000), contact: String(d.contact || '').trim().slice(0, 200), status: 'Requested', createdAt: new Date().toISOString(), history: [] };

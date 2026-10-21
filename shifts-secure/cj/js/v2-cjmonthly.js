@@ -30,17 +30,18 @@
   function jobsToBill(firm, m) { return (DB.cleanRequests || []).filter(function (r) { return r.firmId === firm.id && r.special && r.status === 'Done' && r.actual && !r.billedInv && (r.doneDate || '') <= mEnd(m); }); }
   function spLine(r) { return { id: r.id, no: r.no, kind: r.kind, site: r.site, date: r.doneDate, people: r.actual.people, hoursPer: r.actual.hoursPer, rate: r.actual.rate, amount: r.actual.amount }; }
   function spText(l) { return 'Special job ' + l.no + ' – ' + l.kind + ', ' + l.site + ', ' + l.date + ': ' + l.people + ' × ' + shH(l.hoursPer) + ' h × ' + money(l.rate); }
-  function siteLineLabel(l) { return l.site + ' – ' + l.name + ': regular cleaning, ' + l.month; }
+  function siteLineLabel(l) { return l.site + ' – Regular cleaning, ' + l.month; }   // calendar1 Oct 21: owner wording
   function calc(firm, m) {
     // golive2: switched-off sites (active === false, e.g. not started yet / on hold) are NOT billed
     var all = fSites(firm), off = all.filter(function (s) { return s.active === false; }).map(function (s) { return s.code; });
-    var S = all.filter(function (s) { return s.active !== false; }).map(function (s) { var a = amt(s); return { site: s.code, name: s.name, month: mLabel(m), base: a, amount: a === null ? 0 : a, unset: a === null, test: !!s.monthlyTest }; });
+    var S = all.filter(function (s) { return s.active !== false; }).map(function (s) { var a = amt(s), l = { site: s.code, name: s.name, month: mLabel(m), base: a, amount: a === null ? 0 : a, unset: a === null, test: !!s.monthlyTest }; if (typeof cjfIsFlat === 'function' && cjfIsFlat(s)) l.mode = 'flat_monthly'; return l; });  // flatmonthly1: flat lines tagged
     var J = jobsToBill(firm, m).map(spLine), on = hstOn(firm);
     var sub = r2(S.reduce(function (a, l) { return a + l.amount; }, 0) + J.reduce(function (a, l) { return a + l.amount; }, 0)), hst = on ? r2(sub * 0.15) : 0;
-    return { sites: S, jobs: J, sub: sub, hst: hst, total: r2(sub + hst), on: on, unset: S.filter(function (l) { return l.unset; }).map(function (l) { return l.site; }), inactive: off };
+    return { sites: S, jobs: J, sub: sub, hst: hst, total: r2(sub + hst), on: on, unset: S.filter(function (l) { return l.unset; }).map(function (l) { return l.site; }), inactive: off,
+      flat: S.some(function (l) { return l.mode === 'flat_monthly'; }), blocked: S.filter(function (l) { return l.mode === 'flat_monthly' && l.unset; }).map(function (l) { return l.site; }) };  // flatmonthly1
   }
   function invOfMonth(firm, m) { return clientInvs(firm).filter(function (i) { return i.periodStart === mStart(m) && !i.uploaded; })[0] || null; }
-  function recalc(i) { var on = i.hstOn !== undefined ? i.hstOn : i.hst > 0; i.amount = r2((i.siteLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0) + (i.specialLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0)); i.hst = on ? r2(i.amount * 0.15) : 0; i.total = r2(i.amount + i.hst); }
+  function recalc(i) { var on = i.hstOn !== undefined ? i.hstOn : i.hst > 0; i.amount = r2((i.siteLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0) + (i.specialLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0) + (i.extraLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0)); i.hst = on ? r2(i.amount * 0.15) : 0; i.total = r2(i.amount + i.hst); }
   window.cjmCalc = calc; window.cjmAmt = amt;
 
   /* ---------- office: monthly amount on Site regular hours ---------- */
@@ -110,9 +111,10 @@
     else { var C = calc(firm, m); S = C.sites; J = C.jobs; sub = C.sub; hst = C.hst; total = C.total; on = C.on; note = m === cur ? 'Estimate – your invoice is made after the month ends. Special jobs are added once they are done.' : 'Not invoiced yet.'; }
     x += S.map(function (l) {
       var val = l.unset && !(l.adjNote) ? '<span class="pill s-warn">Not set</span>' : money(l.amount) + (l.test ? ' <span class="pill s-test">TEST</span>' : '');
-      return row(esc(l.site) + ' – ' + esc(l.name), 'Regular cleaning · ' + esc(l.month) + (l.adjNote ? ' · adjusted: ' + esc(l.adjNote) : '') + (l.unset && !l.adjNote ? ' · the office has not set this amount yet' : ''), val, 'cjm-site');
+      return row(esc(l.site) + ' – ' + esc(l.name), (l.mode === 'flat_monthly' ? 'Flat monthly contract price · ' : 'Regular cleaning · ') + esc(l.month) + (l.adjNote ? ' · adjusted: ' + esc(l.adjNote) : '') + (l.unset && !l.adjNote ? ' · the office has not set this amount yet' : ''), val, 'cjm-site');
     }).join('');
     x += J.map(function (l) { return row('Special job ' + esc(l.no) + ' – ' + esc(l.kind), esc(l.site) + ' · ' + esc(shortDay(l.date)) + ' · ' + l.people + ' ' + (l.people === 1 ? 'person' : 'people') + ' × ' + shH(l.hoursPer) + ' h × ' + money(l.rate), money(l.amount), 'cjm-sp'); }).join('');
+    x += (inv && inv.siteLines ? inv.extraLines || [] : []).map(function (l) { return row(esc(l.desc), 'Extra work · ' + l.qty + ' × ' + money(l.unit), money(l.amount), 'cjm-sp cjf-extra'); }).join('');  // flatmonthly1
     if (!S.length && !J.length) x += '<p class="small muted">No sites set up yet.</p>';
     x += row('Subtotal', '', money(sub)) + row(on ? 'HST 15%' : 'HST (not charged)', '', money(hst)) + row('Total for ' + esc(mLabel(m)), '', money(total), 'grand');
     if (S.some(function (l) { return l.unset && !l.adjNote; })) x += '<div class="alert warn small" id="cjmunset">The total does not include sites marked <b>Not set</b>. The office will confirm those amounts.</div>';
@@ -156,13 +158,16 @@
       var firm = user(d.firmId); if (!firm || firm.type !== 'firm' || !/^\d{4}-\d{2}$/.test(d.month || '')) { toast('Pick a client and a month.'); return; }
       var m = d.month; if (invOfMonth(firm, m)) { toast('That month is already invoiced for this client.'); return; }
       var C = calc(firm, m); if (!C.sites.length && !C.jobs.length) { toast('This client has no sites yet.'); return; }
+      if (C.blocked && C.blocked.length) { if (typeof cjfBlocked === 'function') cjfBlocked(firm, m, C.blocked); else toast('No invoice made – price not set for ' + C.blocked.join(', ') + '.'); return; }  // flatmonthly1
       var c = CB(), n = (DB.clientInvoices || []).length + 1, num = function (k) { return 'CJ-' + today().slice(0, 4) + '-' + String(k).padStart(3, '0'); };
       while ((DB.clientInvoices || []).some(function (i) { return i.number === num(n); })) n++;
       var inv = { id: uid('ci'), firmId: firm.id, number: num(n), monthly: true, month: m, periodStart: mStart(m), periodEnd: mEnd(m), billHours: 0, siteLines: C.sites, specialLines: C.jobs, hstOn: C.on, amount: 0, hst: 0, total: 0, issued: today(), due: addDays(today(), c.netDays), interestPct: c.interestPct, paidAt: '' };
+      if (C.flat && typeof cjfDecorate === 'function') cjfDecorate(inv);  // flatmonthly1: draft, template terms, month-end date
       recalc(inv);
       (DB.clientInvoices = DB.clientInvoices || []).push(inv);
       jobsToBill(firm, m).forEach(function (r) { r.billedInv = inv.number; });
       audit('Created monthly client invoice', firm.name, inv.number + ' ' + mLabel(m) + ': ' + C.sites.length + ' site line(s)' + (C.jobs.length ? ', ' + C.jobs.length + ' special job(s)' : '') + ', ' + money(inv.total) + (C.unset.length ? ' – NOT SET: ' + C.unset.join(', ') : ''));
+      if (inv.draft) { save(); toast('Draft invoice ' + inv.number + ' made for ' + mLabel(m) + ' (' + money(inv.total) + '). Add extra lines if needed, then Finalise & send.'); render(); return; }  // flatmonthly1: the client is told at Finalise
       notify(firm.id, 'New invoice ' + inv.number + ' for ' + mLabel(m) + ': ' + money(inv.total) + ', due ' + inv.due + '.');
       save(); toast('Invoice ' + inv.number + ' created' + (C.inactive && C.inactive.length ? ' (not billed – switched off: ' + C.inactive.join(', ') + ')' : '') + (C.unset.length ? ' – WARNING: monthly amount not set for ' + C.unset.join(', ') + '. Use Adjust on that line.' : '.')); render();
     };
@@ -171,6 +176,7 @@
     var oid = invDoc;
     invDoc = function (i) {
       if (!CJ()) return oid(i);
+      if (i && i.flat && typeof cjfDoc === 'function') return cjfDoc(i);  // flatmonthly1: current CJ invoice template
       if (!i || !i.siteLines) { /* earlier / sample invoices: keep the totals, drop the hourly wording */
         return oid(i).filter(function (l) { return !(l[0] === 's' && /daily minimum|Daily minimum waived/i.test(l[1] || '')); }).map(function (l) { if (l[0] === 'r' && /^(Labour services|Regular cleaning) – billable hours/.test(l[1])) return ['r', 'Regular cleaning', l[2]]; return l; });
       }

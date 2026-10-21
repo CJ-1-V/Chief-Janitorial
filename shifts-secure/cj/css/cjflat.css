@@ -1,0 +1,17 @@
+/* cjflat.css – flatmonthly1 (Oct 19 2026, TEST COPY): Site billing settings, extra lines, draft invoices. */
+#cjfsites td { vertical-align: top; }
+#cjfsites tr.cjf-focus td { background: #f1f0fe; }
+.cjf-block { color: #9a3412; margin-top: 2px; }
+.cjf-modes { border: 1px solid #e3e1fb; border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; }
+.cjf-modes legend { font-weight: 600; padding: 0 4px; }
+.cjf-opt { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin: 6px 0; line-height: 1.35; }
+.cjf-opt input { margin-top: 3px; flex: none; width: auto; }
+.cjf-preview { background: #f1f0fe; border-radius: 8px; padding: 8px 10px; margin: 8px 0; font-size: 14px; }
+.cjf-preview.warn { background: #fff7e6; } .cjf-preview.bad { background: #fdecec; color: #9b1c1c; }
+.warn-text { color: #9a3412; margin-top: 4px; }
+.cjf-sum { background: #f7f7fb; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+tr.cjflines td { background: #fafaff; border-top: 0; }
+tr.cjflines .pill { margin-right: 4px; }
+#cjfxtable td, #cjfxtable th { white-space: normal; }
+@media (max-width: 600px) { tr.cjflines td button { margin-top: 4px; } .cjf-sum { font-size: 14px; } }
+.cjf-next { margin: 8px 0 10px; }

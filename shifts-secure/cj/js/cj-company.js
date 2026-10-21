@@ -5,6 +5,9 @@ window.CJ_COMPANY = {
   address: 'Unit I, 56 Burns Avenue, Charlottetown PE C1E 2G1',
   phone: '(902) 200-4888',
   taxNo: 'GST/HST 755653946 RT0001',
+  email: 'admin@chiefjanitorial.com',   // flatmonthly1 (Oct 19 2026): current invoice template contact + e-transfer address
+  phoneShort: '902-200-4888',
+  web: 'www.chiefjanitorial.com',
   hstRate: 0.15
 };
 /* invoice header lines in the invDoc line format: ['h', name] then small lines */

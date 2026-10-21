@@ -23,6 +23,10 @@
 
   var sb = window.supabase.createClient(C.url, C.key, { auth: { storageKey: C.authStorageKey, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
   window.REG_SB = sb;
+  // cj-golive (Oct 21 2026): extra stores (js/cj-live-store.js) plug in here: load(db, ctx) before the data is installed,
+  // flush(ctx) -> {failed, err} after the cleaning requests, baseline(ctx) whenever the saved state is taken.
+  var HOOKS = window.REG_HOOKS = window.REG_HOOKS || { load: [], flush: [], baseline: [] };
+  function hookCtx() { return { sb: sb, CO: CO, ROLE: ROLE, OFFICE: OFFICE, MY_ID: MY_ID }; }
 
   /* ---------- collections -> tables ---------- */
   var MAP = { users: 'reg_accounts', sites: 'reg_client_sites', docs: 'reg_documents', acceptances: 'reg_terms_acceptances', consents: 'reg_consents',
@@ -72,6 +76,7 @@
     if (coll === 'clientRecs' || coll === 'clientInvites') return !OFFICE;
     if (coll === 'time') return String(row.id || '').indexOf('st-') === 0 || ROLE === 'firm';
     if (coll === 'shifts') return ROLE === 'firm';
+    if (coll === 'sites') return CO === 'cj' && !OFFICE;    // cj-golive: only the office saves CJ sites (client photo-task choices go to cj_site_prefs)
     return false;
   }
   function authEmail(login) {
@@ -134,6 +139,7 @@
     BASE.__settings = JSON.stringify(settingsPayload());
     BASE.__banks = JSON.stringify((DB.settings && DB.settings.quizBanks) || {});
     crBaseline();
+    HOOKS.baseline.forEach(function (h) { try { h(hookCtx()); } catch (e) { console.warn('baseline hook', e); } });
   }
   /* ---------- golive2: typed columns (migration cj-sitehours-001) sent next to data ---------- */
   function num(v) { return v === '' || v == null || isNaN(+v) ? null : +v; }
@@ -142,12 +148,14 @@
       var o = {};
       if (Array.isArray(row.regHours) && row.regHours.length === 7) o.regular_hours = row.regHours.map(function (h) { return +h || 0; });
       if ('monthlyAmount' in row) o.monthly_amount = num(row.monthlyAmount);
+      if ('billingMode' in row) o.billing_mode = row.billingMode === 'flat_monthly' ? 'flat_monthly' : 'standard';  // flatmonthly1 – needs cj-flatmonthly-001.sql
       return o;
     }
     if (coll === 'clientInvoices') {
       var i = {};
       if (row.specialLines) i.special_lines = row.specialLines;
       if (row.siteLines) i.site_lines = row.siteLines;
+      if (row.extraLines) i.extra_lines = row.extraLines;  // flatmonthly1 – needs cj-flatmonthly-001.sql
       if (/^\d{4}-\d{2}$/.test(row.month || '')) i.invoice_month = row.month;
       if ('hstOn' in row) i.hst_on = row.hstOn == null ? null : !!row.hstOn;
       return i;
@@ -285,6 +293,7 @@
     if (typeof scopeDbToCompany === 'function') {
       try { scopeDbToCompany(db); } catch (e) { console.warn('company scope', e); }
     }
+    for (var hl = 0; hl < HOOKS.load.length; hl++) { try { await HOOKS.load[hl](db, hookCtx()); } catch (e) { console.warn('load hook', e); } }
     installDB(db);
     ME = user(s.me);
     if (ME) {
@@ -376,6 +385,7 @@
       });
       var crRes = await flushCleanRequests();               // golive2: first, so alerts / audit lines carry the real number
       if (crRes.failed) { failed += crRes.failed; firstErr = firstErr || crRes.err; }
+      for (var hf = 0; hf < HOOKS.flush.length; hf++) { var hr = await HOOKS.flush[hf](hookCtx()); if (hr && hr.failed) { failed += hr.failed; firstErr = firstErr || hr.err; } }
       for (var c in MAP) {
         if (SERVER_ONLY[c]) continue;
         var rows = rowsOf(c), seen = {}, ins = [], upd = [];

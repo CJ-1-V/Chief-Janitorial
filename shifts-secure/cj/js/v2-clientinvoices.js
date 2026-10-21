@@ -8,10 +8,11 @@ function invAllowed(i){return !!(i&&ME&&(ME.type==='admin'||(ME.type==='firm'&&i
 function invDenied(i){toast('Not allowed – you can only see your own invoices.');if(ME){audit('Blocked invoice access (not own invoice)',ME.name,i?i.number:'');save();}}
 function myInvoices(firm){return clientInvs(firm).slice().sort(function(a,b){return a.issued<b.issued?1:a.issued>b.issued?-1:a.number<b.number?1:-1;});}
 /* client-safe invoice content (shared by the screen view, print view and PDF) */
+function cjMonthName(d){var M=['January','February','March','April','May','June','July','August','September','October','November','December'];return d?M[+d.slice(5,7)-1]+' '+d.slice(0,4):'';}   /* calendar1 Oct 21 */
 function invDoc(i){var f=user(i.firmId),st=invPlain(i),it=clientInvInterest(i),c=CB();var L=[];
   cjCompanyHead(L);if(cjMockInv())L.push(['s','TEST VERSION – sample invoice made by the test app, not a real invoice']);L.push(['g']);
   L.push(['b','Invoice '+i.number]);L.push(['t','Bill to: '+(f?f.name:'')]);L.push(['t','Period: '+i.periodStart+' to '+i.periodEnd]);L.push(['t','Issued: '+i.issued+'    Due: '+i.due]);L.push(['t','Status: '+st.d]);L.push(['g']);
-  L.push(['r','Labour services – billable hours: '+(+i.billHours||0).toFixed(2)+' h',money(i.amount-(i.lateLines||[]).reduce(function(a,l){return a+l.amount;},0))]);
+  L.push(['r',(ME&&ME.type==='firm')?'Regular cleaning, '+cjMonthName(i.periodStart):'Labour services – billable hours: '+(+i.billHours||0).toFixed(2)+' h',money(i.amount-(i.lateLines||[]).reduce(function(a,l){return a+l.amount;},0))]);
   (i.lateLines||[]).forEach(function(l){L.push(['r','  '+l.date+' '+l.site+' – '+l.bill.toFixed(2)+' h ('+l.note+')',money(l.amount)]);});
   L.push(['r','Subtotal',money(i.amount)]);L.push(['r',i.hst?'HST 15%':'HST (not charged)',money(i.hst)]);L.push(['rb','Invoice total',money(i.total)]);
   if(it.amount&&!i.paidAt)L.push(['r','Interest on overdue amount ('+it.months+' month(s) × '+(i.interestPct!=null?i.interestPct:c.interestPct)+'%)',money(it.amount)]);
