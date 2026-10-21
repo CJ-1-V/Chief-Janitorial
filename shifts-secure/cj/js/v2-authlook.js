@@ -48,7 +48,7 @@
     title: 'One login for your work with UnScramble',
     sub: 'Registration, documents, agreements, clocking in and your hours – all behind one sign in.',
     steps: [['id', 'Register and upload your documents', 'Create an account, then add your ID, licence or permits. The office reviews them.'],
-            ['clock', 'Clock in at the farm', 'Pick your job for the shift. Missing papers never stop a clock-in; the office is told.'],
+            ['clock', 'Clock in at the farm', 'Pick your job for the shift and clock in and out from your phone.'],
             ['pay', 'Hours are approved and paid', 'The office checks the week, farms approve their timesheet, and hours go to payroll.']],
     chips: [['lock', 'Password-protected'], ['phone', 'Works on your phone'], ['doc', 'Documents kept private'], ['team', 'Subcontractor crews welcome']]
   };
