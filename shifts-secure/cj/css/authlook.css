@@ -58,11 +58,12 @@
   .auth-hero h2{font-size:15px;margin-bottom:8px}
   .auth-hero p.ah-sub{display:none}
   .ah-logo{display:none}
-  .ah-steps{grid-template-columns:repeat(3,1fr);gap:8px}
-  .ah-steps li{grid-template-columns:1fr;justify-items:center;text-align:center;padding:4px 2px}
+  .ah-steps{grid-template-columns:repeat(3,1fr);gap:6px;align-items:stretch}
+  .ah-steps li{grid-template-columns:1fr;grid-template-rows:auto 1fr;justify-items:center;align-items:start;text-align:center;padding:4px 2px;gap:8px}
   .ah-steps li+li{border-top:0}
+  .ah-steps li>div:last-child{display:flex;align-items:flex-start;justify-content:center;min-height:2.6em;width:100%}
   .ah-steps span{display:none}
-  .ah-steps b{font-size:12.5px;line-height:1.2}
+  .ah-steps b{font-size:12.5px;line-height:1.25;margin-top:0;max-width:11ch}
   .ah-chips{display:none}
 }
 @media(prefers-reduced-motion:reduce){.auth-shell .choice{transition:none}}

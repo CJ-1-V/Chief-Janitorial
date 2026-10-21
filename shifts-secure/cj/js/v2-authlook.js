@@ -41,7 +41,7 @@
     sub: 'One sign in for cleaners, subcontractors and client sites.',
     steps: [['id', 'Create your account', 'The office approves it before your first shift.'],
             ['clock', 'Clock in at your site', 'Tick the task list and add visit photos when they are needed.'],
-            ['check', 'Hours reviewed, clients invoiced', 'The office reviews the hours; clients see visit logs and one monthly invoice.']],
+            ['check', 'Reviewed and invoiced', 'The office reviews the hours; clients see visit logs and one monthly invoice.']],
     chips: [['lock', 'Secure sign in'], ['phone', 'Works on your phone'], ['camera', 'Visit photos'], ['calendar', 'Site calendar']]
   } : {
     logo: 'assets/unscramble-logo.svg', alt: 'UnScramble', tag: 'Clock, farms & compliance',
