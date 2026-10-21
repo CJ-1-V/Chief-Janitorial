@@ -24,10 +24,12 @@
     return '<div><label' + (req ? ' class="req"' : '') + '>' + LABEL + '</label><input type="text" name="pickup" value="' + esc_(val) + '"' +
       (req ? ' required' : '') + ' placeholder="' + esc_(PH) + '" autocomplete="street-address"><div class="hint">' + HINT + '</div></div>';
   }
-  /* make the phone field required and add the pickup field right after it */
-  function patchHtml(x, val) {
+  /* phone/email are locked (changed through "Request change") once a person has one on file – never block that person */
+  function phoneLocked() { try { return typeof clLocked === 'function' && typeof ME !== 'undefined' && ME && clLocked(ME); } catch (e) { return false; } }
+  /* make the phone field required (unless locked) and add the pickup field right after it */
+  function patchHtml(x, val, phoneReq) {
     x = String(x);
-    x = x.replace(/<label(?: class="")?>Phone(?: \(optional\))?<\/label>/, '<label class="req">Mobile phone</label>')
+    if (phoneReq) x = x.replace(/<label(?: class="")?>Phone(?: \(optional\))?<\/label>/, '<label class="req">Mobile phone</label>')
       .replace(/(<input type="tel" name="phone"[^>]*?)(?: required)?>/, function (m, a) { return a + ' required inputmode="tel" autocomplete="tel">'; })
       .replace(/You can also sign in with this number\./, 'Required – the office and your crew lead call or text this number. You can also sign in with it.')
       .replace(/Contact only\. SMS reminders only if you add a phone\./, 'Required – the office and your crew lead call or text this number.')
@@ -45,8 +47,8 @@
     else cut = endNoHint + '></div>'.length;
     return x.slice(0, cut) + pickupField(val, true) + x.slice(cut);
   }
-  function checkFields(d) {
-    if (!tenDigits(d.phone)) { toast('Please add a 10-digit mobile phone number – it is required.'); return false; }
+  function checkFields(d, phoneReq) {
+    if (phoneReq && !tenDigits(d.phone)) { toast('Please add a 10-digit mobile phone number – it is required.'); return false; }
     if (!addrOk(d.pickup)) { toast('Please add your pickup address – street and number, town and postal code.'); return false; }
     return true;
   }
@@ -57,14 +59,14 @@
     VIEWS.signupForm = function (h) {
       var x = _sf(h), t = String(h || '').split('/')[2];
       if (!NEED[t]) return x;
-      return patchHtml(x, '');
+      return patchHtml(x, '', true);
     };
   }
   if (typeof FORMS.signup === 'function') {
     var _su = FORMS.signup;
     FORMS.signup = function (f, d) {
       if (d && NEED[d.type]) {
-        if (!checkFields(d)) return;
+        if (!checkFields(d, true)) return;
         var name = d.name, addr = cleanAddr(d.pickup), tries = 0;
         /* the live sign-up is asynchronous: once the new account is loaded, store the address and save */
         var tm = setInterval(function () {
@@ -85,26 +87,26 @@
     VIEWS.profile = function () {
       var x = _pf();
       if (!(typeof ME !== 'undefined' && ME && NEED[ME.type])) return x;
-      return patchHtml(x, ME.pickupAddress || '');
+      return patchHtml(x, ME.pickupAddress || '', !phoneLocked());
     };
   }
   if (typeof FORMS.profile === 'function') {
     var _fp = FORMS.profile;
     FORMS.profile = function (f, d) {
-      if (typeof ME !== 'undefined' && ME && NEED[ME.type]) { if (!checkFields(d)) return; ME.pickupAddress = cleanAddr(d.pickup); }
+      if (typeof ME !== 'undefined' && ME && NEED[ME.type]) { if (!checkFields(d, !phoneLocked())) return; ME.pickupAddress = cleanAddr(d.pickup); }
       return _fp(f, d);
     };
   }
   ['worker:details', 'employee:details', 'worker:register', 'employee:register'].forEach(function (k) {
     if (typeof VIEWS[k] !== 'function') return;
     var o = VIEWS[k];
-    VIEWS[k] = function (h) { var x = o(h); if (typeof ME !== 'undefined' && ME && NEED[ME.type] && String(x).indexOf('name="phone"') >= 0 && String(x).indexOf('name="pickup"') < 0) x = patchHtml(x, ME.pickupAddress || ''); return x; };
+    VIEWS[k] = function (h) { var x = o(h); if (typeof ME !== 'undefined' && ME && NEED[ME.type] && String(x).indexOf('name="phone"') >= 0 && String(x).indexOf('name="pickup"') < 0) x = patchHtml(x, ME.pickupAddress || '', !phoneLocked()); return x; };
   });
   ['regWorker', 'regEmp'].forEach(function (k) {
     if (typeof FORMS[k] !== 'function') return;
     var o = FORMS[k];
     FORMS[k] = function (f, d) {
-      if (typeof ME !== 'undefined' && ME && NEED[ME.type] && d && 'pickup' in d) { if (!checkFields(d)) return; ME.pickupAddress = cleanAddr(d.pickup); }
+      if (typeof ME !== 'undefined' && ME && NEED[ME.type] && d && 'pickup' in d) { if (!checkFields(d, !phoneLocked())) return; ME.pickupAddress = cleanAddr(d.pickup); }
       return o(f, d);
     };
   });
