@@ -3,3 +3,14 @@
 .obk-sec{margin-top:18px}.obk-sec>h2{display:flex;align-items:center;gap:8px}
 #obkwait .ordcard{border-left:4px solid #e0b84a}
 @media (max-width:520px){.obk-bar label{min-width:46%}}
+/* crewone3 – farm boxes like All hours + green new marking */
+.obk-box{position:relative}
+.obk-box.obk-hasnew{border-color:#2e9d57;border-left-color:#1f8a47;box-shadow:0 0 0 2px #2e9d5733}
+.obk-badge{position:absolute;top:6px;right:6px;background:#1f8a47;color:#fff;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;letter-spacing:.02em}
+.obk-badge.inl{position:static;display:inline-block;margin-right:6px}
+.obk-newtot{display:inline-block;vertical-align:middle;background:#1f8a47;color:#fff;font-size:14px;font-weight:700;border-radius:999px;padding:3px 10px;margin-left:8px}
+.obk-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.obk-head h1{margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.obk-acts{margin-top:8px;gap:6px;flex-wrap:wrap}
+#obkassignbox .obk-p{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+#obkassignbox fieldset{border:1px solid #e0ddef;border-radius:10px;padding:6px 10px;margin:8px 0}.obk-grp{margin:6px 0}
+.obk-box.obk-hasnew{padding-top:28px!important}
