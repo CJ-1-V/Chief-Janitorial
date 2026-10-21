@@ -66,10 +66,10 @@
   .ah-steps span{display:none}
   .ah-steps b{font-size:12.5px;line-height:1.25;margin-top:0;max-width:11ch}
   .ah-chips{display:none}
-  /* signed-out top bar (no name / Sign out block): keep it on one line on phones. Signed-in bars keep their own wrapping. */
-  header.top:not(:has(.who)){flex-wrap:nowrap}
-  header.top:not(:has(.who)) .ush-x{display:none}
-  header.top:not(:has(.who)) .ush-who{margin-left:auto;flex-wrap:nowrap}
-  header.top:not(:has(.who))>div{min-width:0}
+  /* signed-out top bar (no Sign out button): keep it on one line on phones. Signed-in bars keep their own wrapping. */
+  header.top:not(:has([data-act=logout])){flex-wrap:nowrap}
+  header.top:not(:has([data-act=logout])) .ush-x{display:none}
+  header.top:not(:has([data-act=logout])) .ush-who{margin-left:auto;flex-wrap:nowrap}
+  header.top:not(:has([data-act=logout]))>div{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.auth-shell .choice{transition:none}}
