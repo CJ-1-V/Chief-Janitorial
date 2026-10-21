@@ -113,6 +113,7 @@
     if (/Failed to fetch|NetworkError|network/i.test(m)) return 'No connection. Check your internet and try again.';
     return m.replace(/^.*?ERROR:\s*/, '') || 'Something went wrong.';
   }
+  window.REG_FRIENDLY = friendly;
   function busy(on, msg) {
     var el = document.getElementById('reg-busy');
     if (on) { if (!el) { el = document.createElement('div'); el.id = 'reg-busy'; el.className = 'toast'; el.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9999'; document.body.appendChild(el); } el.textContent = msg || 'Working…'; }
@@ -251,6 +252,24 @@
   /* ---------- saving: only what changed, in the background ---------- */
   save = function () { if (SUSPEND || !SIGNED_IN || !ME) return true; clearTimeout(TIMER); TIMER = setTimeout(flush, 300); return true; };
   window.REG_FLUSH = function () { clearTimeout(TIMER); return flush(); };
+  /* subinv1 (Oct 21 2026): per-row save result, so a screen can say "saved" only after the server really took the row.
+     'saved' = the server has exactly this row; {error} = the server refused it; 'pending' = not sent yet / still sending. */
+  var ROWFAIL = {};
+  window.REG_SAVE_STATE = function (c, k) {
+    if (ROWFAIL[c + '|' + k]) return { error: ROWFAIL[c + '|' + k] };
+    var r = (rowsOf(c) || []).filter(function (x) { return rowKey(c, x) === k; })[0];
+    if (BASE[c] && BASE[c][k] !== undefined && (!r || BASE[c][k] === JSON.stringify(payload(c, r)))) return 'saved';
+    return 'pending';
+  };
+  /* send now and wait for the answer for one row (retries while another save is still running) */
+  window.REG_SAVE_ROW = async function (c, k) {
+    for (var n = 0; n < 40; n++) {
+      if (!BUSY) { clearTimeout(TIMER); await flush(); }
+      var st = window.REG_SAVE_STATE(c, k); if (st !== 'pending') return st;
+      await new Promise(function (r) { setTimeout(r, 250); });
+    }
+    return { error: { message: 'No answer from the server – check your connection.' } };
+  };
 
   function walkFiles(obj, fn, path) {
     if (!obj || typeof obj !== 'object') return;
@@ -307,7 +326,7 @@
   async function flush() {
     if (BUSY) { AGAIN = true; return; }
     if (!SIGNED_IN || !ME || HOLD) return;
-    BUSY = true; var failed = 0, firstErr = null, invFail = [];
+    BUSY = true; var failed = 0, firstErr = null, invFail = [], rowFail = [];
     try {
       // keep the Shift Tracker clock reminders current (informational only – never blocks clocking)
       (OFFICE ? DB.users.filter(function (u) { return u.type === 'worker' || u.type === 'employee'; }) : (ME.type === 'worker' || ME.type === 'employee') ? [ME] : []).forEach(function (u) {
@@ -337,7 +356,7 @@
               var q1 = sb.from(MAP[c]).insert({ id: ins[j].k, data: JSON.parse(ins[j].pl) });
               var one = await (RET ? q1.select('id,data') : q1);
               if (one.error && one.error.code === '23505' && !INSERT_ONLY[c]) { upd.push(ins[j]); continue; }
-              if (one.error) { if (!(INSERT_ONLY[c] && one.error.code === '23505')) { failed++; firstErr = firstErr || one.error; if (c === 'clientInvoices') invFail.push({ no: ins[j].r.number || ins[j].k, err: one.error, isNew: 1 }); } continue; }
+              if (one.error) { if (!(INSERT_ONLY[c] && one.error.code === '23505')) { failed++; firstErr = firstErr || one.error; ROWFAIL[c + '|' + ins[j].k] = one.error; rowFail.push({ c: c, r: ins[j].r, err: one.error }); if (c === 'clientInvoices') invFail.push({ no: ins[j].r.number || ins[j].k, err: one.error, isNew: 1 }); } continue; }
               accept(c, ins[j], one.data && one.data[0]);
             }
           } else ins.forEach(function (x) { accept(c, x, (res.data || []).filter(function (y) { return y.id === x.k; })[0]); });
@@ -346,7 +365,7 @@
           var x = upd[u2], q;
           if (c === 'users') q = await sb.rpc('reg_account_save', { p_id: x.k, p_data: JSON.parse(x.pl) });
           else q = await sb.from(MAP[c]).update({ data: JSON.parse(x.pl) }).eq('id', x.k).select('id,data');
-          if (q.error || (c !== 'users' && !(q.data || []).length)) { failed++; firstErr = firstErr || q.error || { message: 'Not allowed for your account.' }; if (c === 'clientInvoices') invFail.push({ no: x.r.number || x.k, err: q.error || { message: 'Not allowed for your account.' } }); continue; }
+          if (q.error || (c !== 'users' && !(q.data || []).length)) { failed++; firstErr = firstErr || q.error || { message: 'Not allowed for your account.' }; ROWFAIL[c + '|' + x.k] = q.error || { message: 'Not allowed for your account.' }; rowFail.push({ c: c, r: x.r, err: ROWFAIL[c + '|' + x.k] }); if (c === 'clientInvoices') invFail.push({ no: x.r.number || x.k, err: q.error || { message: 'Not allowed for your account.' } }); continue; }
           accept(c, x, c === 'users' ? { id: x.k, data: q.data } : q.data[0]);
         }
         if (!NEVER_DELETE[c]) {
@@ -384,7 +403,22 @@
       refresh();
       failed -= invFail.length;           // the invoice modal already told them; other refusals still get the usual note
     }
-    if (failed) {
+    /* subinv1: a crew member (sub, sub worker, employee, tester) whose own entry was refused gets a clear "NOT saved" box and the
+       real saved state, never a success message left on screen. The invoice submit screen checks its own row (REG_SAVE_ROW). */
+    var CREW_COLL = { invoices: 'Invoice', time: 'Hours', docs: 'Document', shifts: 'Shift', records: 'Records request', feedback: 'Feedback', privacyReq: 'Privacy request', convReq: 'Request', docBypass: 'Clock note' };
+    var quiet = rowFail.filter(function (f) { return window.REG_QUIET_FAIL && window.REG_QUIET_FAIL[f.c + '|' + rowKey(f.c, f.r)]; }).length; failed -= quiet;   // that screen shows its own error
+    var mine = !OFFICE ? rowFail.filter(function (f) { return CREW_COLL[f.c] && !(window.REG_QUIET_FAIL && window.REG_QUIET_FAIL[f.c + '|' + rowKey(f.c, f.r)]); }) : [];
+    if (mine.length) {
+      try {
+        var esc2 = function (t) { return String(t == null ? '' : t).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); };
+        modal('<h2>Not saved</h2><div class="alert danger" id="crewsavefail"><p><b>The server did not accept ' + (mine.length > 1 ? 'these changes' : 'this change') + '. It was NOT saved.</b></p><ul>' +
+          mine.map(function (f) { return '<li><b>' + CREW_COLL[f.c] + '</b>' + (f.r.number ? ' ' + esc2(f.r.number) : f.r.date ? ' ' + esc2(f.r.date) : '') + ': ' + esc2(friendly(f.err)) + '</li>'; }).join('') +
+          '</ul><p class="small">The page is reloaded so you see what is really saved. Please try again, or tell the office the message above.</p></div><div class="row-end"><button type="button" data-act="closeModal">OK</button></div>');
+      } catch (e) { toast('NOT saved: ' + friendly(mine[0].err)); }
+      try { console.error('[subinv1] save refused', mine.map(function (f) { return { c: f.c, err: f.err }; })); } catch (e) {}
+      refresh(); failed -= mine.length;
+    }
+    if (failed > 0) {
       var msg = friendly(firstErr);
       warnOnce(msg, 'Some changes were not saved: ' + msg);
       if (Date.now() - LAST_REFRESH > 60000) refresh();   // show the real saved state again
@@ -392,6 +426,7 @@
     if (AGAIN) { AGAIN = false; flush(); }
   }
   function accept(c, x, srv) {
+    delete ROWFAIL[c + '|' + x.k];
     if (srv && srv.data) {
       if (c === 'crewOrders' && srv.data.no && x.r.no !== srv.data.no) x.r.no = srv.data.no;          // server-given order number
       if (c === 'users') { ['approved', 'accountApproved', 'active', 'suspended', 'subId', 'type', 'crewLead', 'jobRole'].forEach(function (f) { if (f in srv.data) x.r[f] = srv.data[f]; }); }
