@@ -43,6 +43,7 @@
     trainConfirms: 'reg_training_confirmations', clientInvoices: 'reg_client_invoices', crewOrders: 'reg_crew_orders', docBypass: 'reg_doc_bypass',
     changes: 'reg_time_proposals',
     timeVoided: 'reg_time_voided', payExports: 'reg_pay_exports' };                // 016i manual timesheets (office only, insert-only)
+  if (window.REG_STORE && window.REG_STORE.farmSites) MAP.farmPlaces = 'reg_farm_places';          // 026a farmsites1: a farm's saved ordering sites
   var INSERT_ONLY = { acceptances: 1, consents: 1, firmSigs: 1, audit: 1, events: 1, logins: 1, timeVoided: 1, payExports: 1 };          // history: never changed or removed
   var NEVER_DELETE = { notes: 1, audit: 1, events: 1, logins: 1, acceptances: 1, consents: 1, firmSigs: 1, quizAttempts: 1, docBypass: 1,
     changes: 1, crewOrders: 1, farmRates: 1, users: 1, timeVoided: 1, payExports: 1 };                                                      // the app trims these lists locally
@@ -80,6 +81,7 @@
     return d;
   }
   function skipRow(coll, row) {
+    if (row && row.teamStub) return true;                   // farmroles1: money-free stand-ins from reg_farm_team_client(), never saved
     if (coll === 'users') return row.type === 'admin' || row.employerView || row.crewView || row.anonymous
       || !!row.preloaded                                   // saved as 'clientRecs' (reg_clients)
       || (ROLE === 'firm' && !!MY_ID && row.id !== MY_ID);  // a farm login only ever saves its own account (the client record is office-edited)
@@ -201,6 +203,18 @@
     /* loginblank1 (Oct 14 2026): the company filter dropped client accounts whose industry is not 'farm' (e.g. cleaning)
        – including the person signing in – so ME was empty and they were signed out with no message. Always keep your own row. */
     if (myRow && !(db.users || []).some(function (u) { return u && String(u.id) === String(s.me); })) db.users.push(myRow);
+    /* farmroles1 (025a): a farm manager / supervisor can't read the farm's own account row (it may hold billing fields) – the server
+       gives a money-free copy instead, so the app still knows the farm's name, code and sites. */
+    if (window.REG_STORE.farmRoles && myRow && myRow.type === 'firm' && myRow.loginOf && /^(manager|supervisor)$/.test(myRow.farmRole || '')
+        && !(db.users || []).some(function (u) { return u && String(u.id) === String(myRow.loginOf); })) {
+      try { var fc = await sb.rpc('reg_farm_team_client'); if (!fc.error && fc.data && fc.data.id) {
+        var st = fc.data; db.firmSigs = (db.firmSigs || []).concat(st.sigs || []); db.farmRates = (db.farmRates || []).concat(st.rates || []);
+        delete st.sigs; delete st.rates; st.profile = {}; st.roles = []; st.orientations = []; db.users.push(st); } } catch (e) { console.warn('farm team client', e); }
+    }
+    /* farmsites1 (026a): saved ordering sites – RLS returns only this farm's own (office: all) */
+    if (MAP.farmPlaces) {
+      try { var fp = await sb.from('reg_farm_places').select('id,data'); if (!fp.error) db.farmPlaces = (fp.data || []).map(function (r) { return Object.assign({}, r.data, { id: r.id }); }); else console.warn('farm places', fp.error); } catch (e) { console.warn('farm places', e); }
+    }
     installDB(db);
     ME = user(s.me);
     var blk = ME ? blockedReason(ME) : (OFFICE ? '' : 'We found your sign-in, but could not open your UnScramble profile. Please contact the UnScramble office so they can fix your account.');

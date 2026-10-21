@@ -1,0 +1,6 @@
+/* topfix1: farm tab labels ran into each other at phone width ("Time sheetsCrew orders"). Let them wrap to two short lines, centred, inside their own column. */
+@media(max-width:640px){
+  nav.fh-tabs a.fh-tab{white-space:normal;text-align:center;line-height:1.15;overflow:hidden}
+  nav.fh-tabs a.fh-tab span{display:block;max-width:100%;overflow-wrap:break-word;hyphens:none}
+}
+@media(max-width:400px){nav.fh-tabs a.fh-tab{font-size:11px;padding:8px 1px 6px}}

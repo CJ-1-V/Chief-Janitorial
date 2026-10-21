@@ -1,0 +1,52 @@
+/* farmsites1 – Sites + saved-site picks + Crew coming change. Reuses the Team rev b pieces (fr-entry, fr-card, fr-head …) */
+.fs-ic{width:20px;height:20px}
+.fs-addbtn{width:auto!important;min-width:0;display:inline-flex;align-items:center;gap:5px}
+.fs-list{display:flex;flex-direction:column;gap:10px}
+.fs-place{display:flex;align-items:flex-start;gap:12px;padding:12px;border:1px solid var(--bd);border-radius:10px;background:#fff;transition:box-shadow .2s,border-color .2s}
+.fs-place:hover{border-color:#d8d3ea;box-shadow:0 2px 10px rgba(51,46,87,.08)}
+.fs-pinb{width:24px;height:24px;border-radius:7px;background:var(--gl);color:#8a5a12;display:inline-flex;align-items:center;justify-content:center}.fs-pinb .fr-ic{width:15px;height:15px}
+.fs-notes{display:flex;gap:6px;align-items:flex-start;margin-top:6px;color:#5b5677;background:#faf9fd;border-radius:8px;padding:5px 8px}.fs-notes .fr-ic{margin-top:2px;color:var(--g)}
+.fs-gmlink,.fs-gm{display:inline-flex;align-items:center;gap:5px;margin-top:6px;color:var(--p);font-weight:600;text-decoration:none}.fs-gmlink:hover,.fs-gm:hover{text-decoration:underline}
+.fs-map{position:relative;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#ece9f6,#f7f6fb);border:1px solid #e1ddf0;z-index:0}
+.fs-thumb{width:120px;height:88px;flex:none}
+.fs-mini{width:130px;height:96px;flex:none}
+.fs-edit{height:260px;margin:8px 0 4px}
+.fs-nomap{display:flex;align-items:center;justify-content:center;color:#7a7596;font-size:12px;text-align:center;padding:6px}.fs-nomap span{display:inline-flex;gap:4px;align-items:center}
+.fs-map .leaflet-control-attribution{font-size:9px}
+.fs-srch{display:flex;gap:8px;align-items:stretch}.fs-srch input{flex:1;min-width:0}.fs-srch button{width:auto;min-width:0;flex:none;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.fs-res{display:flex;flex-direction:column;gap:4px;margin:6px 0;animation:fh-up .25s ease both}
+.fs-hit{display:flex;gap:8px;align-items:flex-start;text-align:left;width:100%;min-width:0;background:#fff;color:#222;border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font-weight:500;font-size:13px}
+.fs-hit:hover{background:var(--pl);border-color:#d8d3ea}.fs-hit .fr-ic{color:var(--g);margin-top:2px}
+.fs-pinrow{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;margin-bottom:8px}
+.fs-pinst{display:inline-flex;gap:5px;align-items:center}.fs-pinst.ok{color:var(--ok)}
+.fs-modal .fs-map{touch-action:pan-y}
+/* quick picks */
+.fs-pick{margin:10px 0 6px;padding:10px 12px;border:1px solid #e1ddf0;border-radius:12px;background:#fbfaff}
+.fs-pick>label{display:flex;align-items:center;gap:6px;color:var(--p);font-weight:700}
+.fs-chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.fs-chip{display:inline-flex;align-items:center;gap:6px;width:auto;min-width:0;max-width:100%;padding:7px 12px;border-radius:999px;border:1.5px solid #d8d3ea;background:#fff;color:var(--p);font-weight:600;font-size:13.5px;transition:background .15s,border-color .15s,transform .15s}
+.fs-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fs-chip:hover{background:var(--pl)}.fs-chip.on{background:var(--p);border-color:var(--p);color:#fff}.fs-chip.on .fr-ic{color:var(--g)}.fs-chip:active{transform:scale(.97)}
+.fs-prev{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:10px;animation:fh-up .3s ease both}
+.fs-prev-tx{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}.fs-prev-tx b{color:var(--p)}
+.fs-pick-none{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}.fs-pick-none button{width:auto}
+.of-dplace .fs-dname{display:inline-flex;align-items:center;gap:4px}.of-dplace .fr-ic{color:var(--g)}
+/* rule banner in the Change box */
+.fs-rule{display:flex;gap:10px;align-items:flex-start;background:var(--okl);color:#1b5e36;border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13.5px;animation:fh-up .3s ease both}
+.fs-rule>.fr-ic{flex:none;margin-top:1px}.fs-rule-more{display:block;margin-top:4px;color:#5b5677}.fs-rule-more .fr-ic{display:inline-block;vertical-align:-2px;margin-right:3px}
+.fs-rule-late{background:var(--warnl);color:#7a4f12}.fs-rule-pend{background:var(--pl);color:var(--p)}
+/* Crew coming */
+#fhcoming.fs-tap[data-fstap]{cursor:pointer}
+#fhcoming.fs-tap[data-fstap]:hover{box-shadow:0 4px 16px rgba(51,46,87,.12)}
+.fs-cc{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border-top:1px solid #eeecf5}
+.fs-cc-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.fs-cc-tx b{color:var(--p)}
+.fs-olist{display:flex;flex-direction:column;gap:10px}
+.fs-ord{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--bd);border-radius:10px}
+.fs-ord-d{display:flex;flex-direction:column;align-items:center;min-width:78px;background:var(--pl);border-radius:10px;padding:6px 8px;color:var(--p);text-align:center}
+.fs-late{display:flex;gap:4px;align-items:center;color:var(--warn);margin-top:4px}
+@media (max-width:520px){.fs-place{flex-wrap:wrap}.fs-thumb{width:100%;height:120px}.fs-place .fr-pact{padding-left:0}
+  .fs-prev{flex-direction:column}.fs-mini{width:100%;height:120px}.fs-edit{height:220px}
+  .fs-srch{flex-direction:column}.fs-srch button{width:100%;justify-content:center}
+  .fs-cc{flex-wrap:wrap}.fs-cc-tx{flex-basis:calc(100% - 52px)}.fs-cc button{width:100%}
+  .fs-ord{flex-wrap:wrap}.fs-ord .fr-pact{width:100%;padding-left:0}.fs-ord .fr-pact button{flex:1}}
+@media (prefers-reduced-motion:reduce){.fs-res,.fs-prev,.fs-rule{animation:none}}
