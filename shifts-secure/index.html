@@ -1,29 +1,77 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#332E57">
   <meta name="robots" content="noindex, nofollow">
-  <title>Shift Tracker — Chief Janitorial + Unscramble</title>
+  <meta name="theme-color" content="#332E57">
+  <title>Employee login — Chief Janitorial + UnScramble</title>
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="icon" href="icons/icon-192.png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="US">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/app.css">
+  <style>
+    :root{--us:#332E57;--us2:#4a4380;--gold:#D9A03C;--cj:#5956e9;--cj2:#4a47d4;--ink:#1d1b2e;--mut:#5d6072;--bg:#f4f4f9}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    body{display:flex;align-items:center;justify-content:center;padding:22px 16px;min-height:100vh}
+    main{width:100%;max-width:880px}
+    header{text-align:center;margin-bottom:22px}
+    header h1{font-size:26px;margin:0 0 6px}
+    header p{margin:0;color:var(--mut);font-size:15px}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    a.co{display:block;text-decoration:none;color:#fff;border-radius:20px;padding:24px 22px 20px;position:relative;overflow:hidden;min-height:250px;box-shadow:0 12px 34px rgba(0,0,0,.16);transition:transform .15s,box-shadow .15s}
+    a.co:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(0,0,0,.2)}
+    a.co::after{content:"";position:absolute;right:-70px;bottom:-80px;width:220px;height:220px;border-radius:50%;background:#fff;opacity:.1}
+    a.us{background:linear-gradient(160deg,var(--us),var(--us2))}
+    a.cj{background:linear-gradient(160deg,var(--cj),var(--cj2))}
+    a.co .logo{display:inline-flex;align-items:center;background:#fff;border-radius:12px;padding:8px 12px;margin-bottom:16px}
+    a.co .logo img{height:44px;max-width:180px;object-fit:contain;display:block}
+    a.co h2{margin:0 0 4px;font-size:22px;color:#fff}
+    a.co p{margin:0 0 16px;font-size:14px;opacity:.9;line-height:1.4}
+    a.co .go{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:16px;background:#fff;border-radius:10px;padding:11px 16px;color:var(--us)}
+    a.cj .go{color:var(--cj)}
+    a.co .go svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 10px}
+    .step{background:#fff;border:1px solid #e6e4ef;border-radius:14px;padding:14px 14px 12px;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center}
+    .step .ic{width:44px;height:44px;border-radius:12px;background:#ece9f6;display:flex;align-items:center;justify-content:center}
+    .step .ic svg{width:24px;height:24px;stroke:var(--us);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .step b{display:block;font-size:14px}.step span{font-size:12.5px;color:var(--mut);line-height:1.35}
+    footer{text-align:center;color:var(--mut);font-size:12.5px;margin-top:14px;line-height:1.5}
+    @media(max-width:700px){.cards,.steps{grid-template-columns:1fr}a.co{min-height:0}header h1{font-size:22px}.steps{gap:8px}}
+    @media(prefers-reduced-motion:reduce){a.co{transition:none}}
+  </style>
 </head>
 <body>
-  <div id="app"><div class="auth"><div class="auth-card"><p class="muted center">Loading…</p></div></div></div>
-  <script src="vendor/supabase.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/tz.js"></script>
-  <script src="js/core.js"></script>
-  <script src="js/employee.js"></script>
-  <script src="js/admin.js"></script>
+  <main>
+    <header>
+      <h1>Employee login</h1>
+      <p>Choose your company. The same login works in both apps.</p>
+    </header>
+    <div class="cards">
+      <a class="co us" href="/shifts-secure/register/">
+        <span class="logo"><img src="assets/unscramble-logo.svg" alt="UnScramble"></span>
+        <h2>UnScramble</h2>
+        <p>Farm workers, employees, subcontractor crews and farm clients. Registration, documents, clock and timesheets.</p>
+        <span class="go">Open UnScramble <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="co cj" href="/shifts-secure/cj/">
+        <span class="logo"><img src="cj/assets/cj_Logo.png" alt="Chief Janitorial"></span>
+        <h2>Chief Janitorial</h2>
+        <p>Cleaners, subcontractors and client sites. Clock in, task lists, visit photos and monthly invoices.</p>
+        <span class="go">Open Chief Janitorial <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div><div><b>One password</b><span>Email, phone number or username – the same in both apps.</span></div></div>
+      <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg></div><div><b>Add it to your phone</b><span>Open the app, then use “Add to Home Screen” for one-tap clock-in.</span></div></div>
+      <div class="step"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div><div><b>Private by default</b><span>You see only your own hours, documents and sites.</span></div></div>
+    </div>
+    <footer>The old Shift Tracker at this address has been retired. If it is still installed on your phone, remove it and add the new app from the page you open above.<br>Chief Janitorial Inc. · UnScramble – The HR Company Inc.</footer>
+  </main>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { if (r.scope.indexOf('/shifts-secure/register') < 0 && r.scope.indexOf('/shifts-secure/cj') < 0) r.unregister(); }); });
+      if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { if (k.indexOf('st-static') === 0) caches.delete(k); }); });
+    }
+  </script>
 </body>
 </html>
