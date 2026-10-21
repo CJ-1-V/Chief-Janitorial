@@ -18,7 +18,7 @@ function tz(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'loca
 function stamp(){var d=new Date();return {iso:d.toISOString(),local:isoLocal(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()),tz:tz()};}
 function fmtStamp(s){if(!s)return '';var d=new Date(s);return isoLocal(d)+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
 function money(n){n=Number(n)||0;return '$'+n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
-function deviceInfo(){var ua=navigator.userAgent;var m=/Mobile|Android|iPhone/.test(ua)?'Phone':'Computer';return m+' – '+(ua.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/)||['browser'])[0]+' (IP not available in local test)';}
+function deviceInfo(){var ua=navigator.userAgent;var m=/Mobile|Android|iPhone/.test(ua)?'Phone':'Computer';return m+' – '+(ua.match(/(Chrome|Firefox|Safari|Edg)\/[\d.]+/)||['browser'])[0];}
 function last(s,n){s=String(s||'');return s?('•••'+s.slice(-n)):'';}
 function hashPw(pw){ /* TEST ONLY – simple hash, not real security */
   var h1=0xdeadbeef^7,h2=0x41c6ce57^7,str='us-test-salt:'+pw;
@@ -94,12 +94,12 @@ function save(){
 function resetData(){localStorage.removeItem(STORE_KEY);sessionStorage.removeItem('us-test-me');DB=seedData();save();}
 function user(id){for(var i=0;i<DB.users.length;i++)if(DB.users[i].id===id)return DB.users[i];return null;}
 function users(type){return DB.users.filter(function(u){return !type||u.type===type;});}
-function audit(action,target,detail){DB.audit.unshift({at:new Date().toISOString(),actor:ME?ME.name+' ('+(ME.username||ME.email)+')':'system',action:action,target:target||'',detail:detail||''});if(DB.audit.length>800)DB.audit.length=800;}
+function audit(action,target,detail){DB.audit.unshift({at:new Date().toISOString(),actor:ME?ME.name+(ME.username||ME.email||ME.phone?' ('+(ME.username||ME.email||ME.phone)+')':''):'system',action:action,target:target||'',detail:detail||''});if(DB.audit.length>800)DB.audit.length=800;}
 function notify(toIds,text,key){ /* simulated outbox: email + push, SMS only if phone on file */
   (Array.isArray(toIds)?toIds:[toIds]).forEach(function(to){
     if(key&&DB.notes.some(function(n){return n.key===key+'|'+to;}))return;
     var u=to==='admin'?null:user(to);var ch='Email + push';if(u&&u.phone)ch+=' + SMS';
-    DB.notes.unshift({id:uid('n'),key:key?key+'|'+to:null,to:to,toLabel:to==='admin'?'UnScramble admin ('+ADMIN_EMAIL+')':(u?u.name+' <'+(u.email||u.username)+'>':to),text:text,channel:to==='admin'?'Email':ch,at:new Date().toISOString(),simDate:today(),read:false});
+    DB.notes.unshift({id:uid('n'),key:key?key+'|'+to:null,to:to,toLabel:to==='admin'?'UnScramble admin ('+ADMIN_EMAIL+')':(u?u.name+(u.email||u.username||u.phone?' <'+(u.email||u.username||u.phone)+'>':' (no email on file)'):to),text:text,channel:to==='admin'?'Email':ch,at:new Date().toISOString(),simDate:today(),read:false});
   });
   if(DB.notes.length>600)DB.notes.length=600;
 }
