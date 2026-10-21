@@ -1,0 +1,65 @@
+/* authlook1 (Oct 21 2026) – visual layer for the signed-out screens (sign in, forgot password, create account).
+   Loaded by js/v2-authlook.js. Colours come only from the app's own variables (--p, --p2, --pl, --g, --gl),
+   so UnScramble stays navy + gold and Chief Janitorial stays indigo. Forms are not touched. */
+
+.auth-shell{max-width:1040px;margin:18px auto 8px;padding:0 14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);gap:22px;align-items:start}
+.auth-shell .login-wrap{margin:0 auto;max-width:460px;width:100%}
+.auth-shell .login-wrap .card{box-shadow:0 10px 32px rgba(0,0,0,.10)}
+
+/* hero panel */
+.auth-hero{position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(160deg,var(--p) 0%,var(--p2) 100%);color:#fff;padding:28px 26px 22px;min-height:420px;box-shadow:0 12px 36px rgba(0,0,0,.18)}
+.auth-hero::before{content:"";position:absolute;right:-90px;top:-90px;width:260px;height:260px;border-radius:50%;background:var(--g);opacity:.22}
+.auth-hero::after{content:"";position:absolute;left:-60px;bottom:-110px;width:220px;height:220px;border-radius:50%;background:#fff;opacity:.08}
+.auth-hero>*{position:relative}
+.ah-logo{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.ah-logo img{height:44px;max-width:190px;object-fit:contain;background:#fff;border-radius:10px;padding:5px 8px}
+.ah-logo span{font-size:13px;opacity:.85;letter-spacing:.2px}
+.auth-hero h2{margin:0 0 6px;color:#fff;font-size:26px;line-height:1.15;font-weight:800}
+.auth-hero p.ah-sub{margin:0 0 20px;font-size:15px;line-height:1.45;opacity:.92;max-width:38ch}
+
+/* step infographic */
+.ah-steps{list-style:none;margin:0;padding:0;display:grid;gap:0;position:relative}
+.ah-steps li{display:grid;grid-template-columns:46px 1fr;gap:12px;align-items:start;padding:8px 0}
+.ah-steps li+li{border-top:1px dashed rgba(255,255,255,.22)}
+.ah-ic{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.ah-ic svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ah-ic i{position:absolute;right:-6px;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--g);color:var(--p);font:800 11px/20px -apple-system,"Segoe UI",Roboto,Arial,sans-serif;text-align:center;font-style:normal}
+.cj-app .ah-ic i{background:#fff;color:var(--p)}
+.ah-steps b{display:block;font-size:15px;margin-top:2px}
+.ah-steps span{display:block;font-size:13px;opacity:.85;line-height:1.4}
+
+/* fact chips */
+.ah-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.ah-chips span{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:5px 11px;font-size:12.5px}
+.ah-chips svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* sign-in card: small heading icon, roomier controls */
+.auth-shell .login-wrap h1{display:flex;align-items:center;gap:10px}
+.cj-app .auth-shell .login-wrap h1{justify-content:center}
+.auth-shell .login-wrap h1::before{content:"";flex:0 0 34px;width:34px;height:34px;border-radius:10px;background:var(--pl) center/20px no-repeat}
+.auth-shell .login-wrap .logo-big{display:none}
+.auth-shell form[data-form=login] button[type=submit]{min-width:140px;padding:11px 18px;font-size:15.5px;border-radius:9px}
+.auth-shell a.btn[href="#/signup"]{width:100%;text-align:center;padding:11px 14px;border-radius:9px}
+
+/* create-account choices: icon tile + text */
+.auth-shell .choice{display:grid;grid-template-columns:48px minmax(0,1fr);gap:12px;align-items:start;padding:13px 14px;border-radius:12px;transition:border-color .15s,box-shadow .15s,transform .15s}
+.auth-shell .choice:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-1px)}
+.auth-shell .choice::before{content:"";width:48px;height:48px;border-radius:12px;background:var(--pl) center/26px no-repeat}
+.auth-shell .choice .ch-tx{display:block;min-width:0;line-height:1.4}
+.auth-shell .choice[href="#/signup/tester"]::before{background-color:var(--gl)}
+
+/* phone */
+@media(max-width:860px){
+  .auth-shell{grid-template-columns:1fr;gap:14px;margin-top:10px}
+  .auth-hero{min-height:0;padding:18px 16px 14px;border-radius:14px}
+  .auth-hero h2{font-size:20px}
+  .auth-hero p.ah-sub{font-size:13.5px;margin-bottom:10px}
+  .ah-logo{display:none}
+  .ah-steps{grid-template-columns:repeat(3,1fr);gap:8px}
+  .ah-steps li{grid-template-columns:1fr;justify-items:center;text-align:center;padding:4px 2px}
+  .ah-steps li+li{border-top:0}
+  .ah-steps span{display:none}
+  .ah-steps b{font-size:12.5px;line-height:1.2}
+  .ah-chips{display:none}
+}
+@media(prefers-reduced-motion:reduce){.auth-shell .choice{transition:none}}
