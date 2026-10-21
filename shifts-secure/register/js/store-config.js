@@ -19,6 +19,8 @@ window.REG_STORE = {
   farmEditWindow: { until: '2026-10-31', days: 30, after: 'week' },  // farms change hours: up to 'until' = any day in the last 'days' days; after = current week (Mon-Sun) only
   farmSites: true,                                  // 026a farmsites1: saved farm sites + direct crew reductions (3 h rule) – set true only AFTER migration 026a
   farmRoles: true,                                  // 025a farmroles1: farm managers / supervisors (no invoices, rates or amounts) – set true only AFTER migration 025a
+  famInv: false,                                     // 027a faminv1: per person "Invoices & amounts" for farm managers / supervisors – set true only AFTER migration 027a
+  homeBoxes: true,                                   // homebox1: farm Home = Crew coming + Order crew + a grid of boxes (front end only; false = the old Home)
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',

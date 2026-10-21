@@ -208,7 +208,7 @@
     if (window.REG_STORE.farmRoles && myRow && myRow.type === 'firm' && myRow.loginOf && /^(manager|supervisor)$/.test(myRow.farmRole || '')
         && !(db.users || []).some(function (u) { return u && String(u.id) === String(myRow.loginOf); })) {
       try { var fc = await sb.rpc('reg_farm_team_client'); if (!fc.error && fc.data && fc.data.id) {
-        var st = fc.data; db.firmSigs = (db.firmSigs || []).concat(st.sigs || []); db.farmRates = (db.farmRates || []).concat(st.rates || []);
+        var st = fc.data; db.firmSigs = (db.firmSigs || []).concat(st.sigs || []); db.farmRates = (db.farmRates || []).concat((st.rates || []).filter(function (r) { return !(db.farmRates || []).some(function (x) { return x && r && String(x.id) === String(r.id); }); }));   // faminv1: a person with Invoices & amounts on already reads the real rates
         delete st.sigs; delete st.rates; st.profile = {}; st.roles = []; st.orientations = []; db.users.push(st); } } catch (e) { console.warn('farm team client', e); }
     }
     /* farmsites1 (026a): saved ordering sites – RLS returns only this farm's own (office: all) */

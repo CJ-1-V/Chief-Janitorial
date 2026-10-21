@@ -1,0 +1,74 @@
+/* homebox1 – farm Home: Crew coming (people graphics) + Order crew + a grid of boxes. Theme: --p purple #332E57, gold #D9A03C. */
+.hb-off{display:none!important}
+.hb-home .hometop{display:flex;flex-direction:column}
+/* order crew: one big button under the crew card */
+.hb-order{display:block!important;width:100%!important;max-width:none!important;flex:1 1 100%;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}
+.hb-order .fh-orderbtn.hb-orderbig{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;font-size:18px;font-weight:700;border-radius:14px;box-shadow:0 6px 18px rgba(51,46,87,.22);transition:transform .15s,box-shadow .2s}
+.hb-order .fh-orderbtn.hb-orderbig:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(51,46,87,.28)}
+.hb-order .fh-orderbtn.hb-orderbig:active{transform:translateY(1px)}
+/* crew coming – people */
+.hb-coming .fh-tomorrow.hb-hl{position:relative;border-radius:12px}
+.hb-tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--p,#332E57);border-radius:999px;padding:2px 8px;margin:0 6px 4px 0;align-self:flex-start}
+.hb-tag.on{background:#D9A03C}
+.fh-tomorrow.hb-hl>.hb-tag{position:absolute;top:-9px;left:10px;margin:0}
+.hb-ppl{margin:8px 0 2px}
+.hb-pl{display:flex;flex-wrap:wrap;gap:3px;align-items:flex-end}
+.hb-pw{display:inline-flex;width:16px;height:22px;opacity:0;transform:translateY(6px);animation:hbUp .35s ease forwards;animation-delay:calc(var(--hb-i,0)*35ms)}
+.hb-p{width:100%;height:100%}
+.hb-pw.ok .hb-p{fill:#332E57;stroke:#332E57;stroke-width:1}
+.hb-pw.pend .hb-p{fill:#fff;stroke:#D9A03C;stroke-width:1.6}
+.hb-more{font-weight:700;color:var(--p,#332E57);font-size:13px;margin-left:4px;align-self:center}
+.hb-today{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 12px;padding:8px 10px;border-radius:10px;background:#fbf1de;border:1px solid #f0d9a8}
+.hb-today b{font-size:18px}
+.hb-mini{display:inline-flex;gap:2px}.hb-mini .hb-pw{width:11px;height:15px}
+.hb-key{display:inline-flex;align-items:center;gap:4px}.hb-key .hb-pw{width:10px;height:14px;opacity:1;transform:none;animation:none}
+.hb-jic{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;margin-right:4px}
+.hb-coming .fh-day{position:relative;padding-bottom:22px!important}
+.hb-bar{position:absolute;left:22%;right:22%;bottom:5px;height:12px;border-radius:3px;background:rgba(51,46,87,.08);overflow:hidden}
+.hb-bar i{position:absolute;left:0;right:0;bottom:0;height:var(--hb-h,0%);background:currentColor;opacity:.55;border-radius:3px;transform-origin:bottom;animation:hbGrow .5s ease}
+.fh-day.ok .hb-bar i{color:#332E57}.fh-day.pend .hb-bar i{color:#D9A03C}
+/* the grid */
+.hb-grid-wrap{margin:16px 0 8px}
+.hb-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:700px){.hb-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}}
+@media(min-width:1100px){.hb-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.hb-box{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0;width:100%;min-height:118px;margin:0;padding:14px 12px 12px;text-align:left;
+  background:#fff;color:inherit;border:1px solid var(--bd,#e3e0ee);border-radius:14px;box-shadow:0 1px 2px rgba(51,46,87,.06);cursor:pointer;font:inherit;
+  opacity:0;transform:translateY(8px);animation:hbUp .35s ease forwards;animation-delay:var(--hb-d,0ms);transition:box-shadow .2s,border-color .2s,transform .15s}
+.hb-box:hover{border-color:#cfc9e4;box-shadow:0 8px 20px rgba(51,46,87,.12);transform:translateY(-2px)}
+.hb-box:active{transform:translateY(0)}
+.hb-box:focus-visible{outline:3px solid #D9A03C;outline-offset:2px}
+.hb-bic{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:12px;background:#ece9f6;color:#332E57}
+.hb-ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hb-bt{display:flex;flex-direction:column;gap:2px;min-width:0;width:100%}
+.hb-bt b{font-size:15px;color:#332E57}
+.hb-bs{font-size:12.5px;line-height:1.3;color:var(--mut,#6b6785);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hb-chev{position:absolute;top:14px;right:10px;width:18px;height:18px;color:#a8a3c2}
+#hb-inv .hb-bic,#hb-agr .hb-bic{background:#fbf1de;color:#a8741c}
+/* a section opened from a box */
+.hb-back{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.hb-back button{display:inline-flex;align-items:center;gap:4px;width:auto}
+.hb-back button .hb-ic{width:16px;height:16px}
+.hb-st{display:flex;align-items:center;gap:8px;margin:0;font-size:22px;min-width:0}
+.hb-st .hb-ic{width:24px;height:24px;color:#332E57}
+.hb-sec{animation:hbUp .3s ease}
+@keyframes hbUp{to{opacity:1;transform:none}}
+@keyframes hbGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@media(max-width:400px){.hb-box{padding:12px 10px 10px;min-height:110px}.hb-bt b{font-size:14px}.hb-bic{width:36px;height:36px}}
+@media(prefers-reduced-motion:reduce){.hb-box,.hb-pw,.hb-sec,.hb-bar i{animation:none;opacity:1;transform:none}}
+
+/* crew-day-tap */
+.hb-coming .fh-day.hb-tap{cursor:pointer;transition:transform .12s,box-shadow .2s,border-color .2s}
+.hb-coming .fh-day.hb-tap:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(51,46,87,.14)}
+.hb-coming .fh-day.hb-tap:active{transform:translateY(1px) scale(.98)}
+.hb-coming .fh-day.hb-tap:focus-visible{outline:3px solid #D9A03C;outline-offset:2px}
+.hb-coming .fh-day.hb-empty{opacity:1!important;border-style:dashed!important}
+.hb-coming .fh-day.hb-empty .hb-bar{display:none}
+.hb-plus{position:absolute;bottom:4px;left:50%;margin-left:-8px;width:16px;height:16px;line-height:15px;border-radius:50%;background:#332E57;color:#fff;font-size:13px;font-weight:700;text-align:center}
+.hb-dayacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.hb-dayacts button{width:auto}
+/* faminv1: "Invoices & amounts" toggle in Team invite / Change */
+.fr-checks label.chk.fi-tog{display:flex!important;align-items:flex-start;gap:10px;flex:1 1 100%;width:100%;margin-top:6px;padding:10px 12px;border:1px solid #f0d9a8;border-radius:10px;background:#fffaf0;font-weight:400}
+.fi-tog>input{flex:0 0 auto;margin-top:3px}
+.fi-tog>span{display:block;min-width:0;line-height:1.35}
+.fi-tog>span .fr-ic{vertical-align:-3px;color:#a8741c}
+.fi-tog>span .small{display:inline}
