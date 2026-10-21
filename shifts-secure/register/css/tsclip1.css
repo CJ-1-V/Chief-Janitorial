@@ -1,0 +1,14 @@
+/* tsclip1: on phones app.css sets overflow-wrap:anywhere on every table cell (table:not(.stack) td). Buttons inherit it, so the
+   time sheet "Change" button's min-content width collapsed to one letter and the 7-column table squeezed it into "Ch/ang/e"
+   (times broke too: "07:0/0"). Buttons, times and numbers now keep whole words; the time sheet table gets a little tighter. */
+@media(max-width:700px){
+  table:not(.stack) td button,table:not(.stack) td .btn,table:not(.stack) td a.btn{overflow-wrap:normal;word-break:normal;white-space:nowrap}
+  table.ts-t td,table.ts-t th{overflow-wrap:normal;word-break:normal}
+  table.ts-t td:first-child{overflow-wrap:anywhere}
+  table.ts-t{font-size:13px}
+  table.ts-t td.acts{padding-right:0;text-align:right}
+  table.ts-t td.acts button{width:auto;min-width:0;padding:5px 8px}
+  table.ts-t td,table.ts-t th{padding:4px 3px}
+  /* an all-empty Status column just eats width on a phone */
+  table.ts-t:not(:has(td:nth-child(6):not(:empty))) :is(th,td):nth-child(6){display:none}
+}
