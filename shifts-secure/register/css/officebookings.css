@@ -14,3 +14,6 @@
 #obkassignbox .obk-p{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
 #obkassignbox fieldset{border:1px solid #e0ddef;border-radius:10px;padding:6px 10px;margin:8px 0}.obk-grp{margin:6px 0}
 .obk-box.obk-hasnew{padding-top:28px!important}
+
+/* crewone4 */
+#obkassignbox .obk-grp summary{font-weight:700;padding:6px 0}#obkassignbox .obk-g-subw{margin-left:14px;border-left:3px solid #e0ddef;padding-left:8px}#obkassignbox .obk-here{font-size:.8em;background:#e7f5ec;color:#1f8a47;border-radius:8px;padding:1px 6px}
