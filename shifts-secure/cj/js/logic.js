@@ -27,7 +27,7 @@ function acceptedCurrent(u,key){
 function requiredTerms(u){var out=[];for(var k in TERMS_DEF)if(TERMS_DEF[k].types.indexOf(u.type)>=0)out.push(k);return out;}
 function missingTerms(u){return requiredTerms(u).filter(function(k){return !acceptedCurrent(u,k);});}
 function subOf(u){return u&&u.subId?user(u.subId):null;}
-function employerName(u){if(u.type==='employee')return 'Chief Janitorial Inc.';var s=subOf(u);return s?(s.company.legalName||s.name):'(not linked)';}
+function employerName(u){if(u.type==='employee')return 'Chief Janitorial Inc.';var s=subOf(u);return s?((s.company&&s.company.legalName)||s.name):'(not linked)';}
 function safetyExpiry(u){return u.safetyAck&&u.safetyAck.date?addDays(u.safetyAck.date,365):null;}
 function hasRole(u,r){return (u.roles||[]).indexOf(r)>=0;}
 

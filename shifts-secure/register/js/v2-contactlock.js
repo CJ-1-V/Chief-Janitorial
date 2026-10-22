@@ -142,7 +142,9 @@
           /* pass through – wrap by temporarily relaxing: call after patching check */
         }
       }
-      if (CL_TYPES[d.type] && (d.type === 'sub' || d.type === 'employee') && !String(d.email || '').trim()) {
+      /* signupfix1: on the live site the real sign-up (store-supabase selfSignup) handles phone-only accounts */
+      var LIVE_STORE = !!(window.REG_STORE && window.REG_STORE.mode === 'supabase');
+      if (!LIVE_STORE && CL_TYPES[d.type] && (d.type === 'sub' || d.type === 'employee') && !String(d.email || '').trim()) {
         /* Old FORMS.signup bails if !d.email for sub/employee. Call a patched path. */
         if (!d.username && !d.email && !loginDigits(d.phone)) { toast(NEED_MSG); return; }
         if (d.pw.length < 6) { toast('That password is too short.'); return; }
