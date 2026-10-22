@@ -43,7 +43,7 @@
     modal('<div class="pwreset" data-step="confirm"><h2>Reset password for '+esc(u.name)+'?</h2>'+
       '<p>The app will make <b>one</b> temporary password for you to give to '+esc(u.name)+'.</p>'+
       '<ul class="small"><li>Their current password stops working right away.</li><li>They must choose a new password when they next sign in.</li></ul>'+
-      '<div class="row pwreset-actions"><button type="button" data-act="pwresetyes" data-id="'+u.id+'">Yes, reset password</button><button type="button" class="sec" data-act="person" data-id="'+u.id+'">Cancel</button></div></div>');};
+      '<div class="row pwreset-actions"><button type="button" data-act="pwresetyes" data-id="'+esc(u.id)+'">Yes, reset password</button><button type="button" class="sec" data-act="person" data-id="'+esc(u.id)+'">Cancel</button></div></div>');};
 
   /* Step 2: make the password (server in live mode, here in the test copy) and show it once */
   ACT.pwresetyes=function(el){var id=el.dataset.id,u=user(id),why=refuse(u);if(why){toast(why);return;}

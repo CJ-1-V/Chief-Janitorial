@@ -210,10 +210,10 @@
     return 'Scheduled';
   }
   function chip(v, big) {
-    return '<button type="button" class="calchip c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + v.date + '"><b>' + esc(v.site) + '</b>' + (big ? '<span>' + (v.start ? t12(v.start) + ' · ' : '') + amt(v) + '</span><em>' + esc(label(v)) + '</em>' : (v.start && cls(v) !== 'off' ? '<span>' + t12(v.start) + '</span>' : '')) + '</button>';
+    return '<button type="button" class="calchip c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '"><b>' + esc(v.site) + '</b>' + (big ? '<span>' + (v.start ? t12(v.start) + ' · ' : '') + amt(v) + '</span><em>' + esc(label(v)) + '</em>' : (v.start && cls(v) !== 'off' ? '<span>' + t12(v.start) + '</span>' : '')) + '</button>';
   }
   function agendaRow(v) {
-    return '<button type="button" class="calrow c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + v.date + '"><span class="calbar"></span><span class="caltime">' + (v.start ? t12(v.start) : '–') + '<small>' + (isCl() ? '' : hh(v.hours) + ' h') + '</small></span>' +
+    return '<button type="button" class="calrow c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '"><span class="calbar"></span><span class="caltime">' + (v.start ? t12(v.start) : '–') + '<small>' + (isCl() ? '' : hh(v.hours) + ' h') + '</small></span>' +
       '<span class="calwhat"><b>' + esc(v.site) + ' · ' + (v.wax ? 'Waxing' : isCl() ? 'Regular cleaning' : esc(v.name)) + '</b><small>' + esc(label(v)) + (v.crew && ME.type !== 'firm' ? '' : '') + '</small></span><span class="calgo">›</span></button>';
   }
   function header(title) {
@@ -229,7 +229,7 @@
     for (var i = 0; i < 42; i++) {
       var d = addDays(start, i), l = by[d] || [], out = d.slice(0, 7) !== first.slice(0, 7);
       if (i === 35 && out) break;
-      g += '<button type="button" class="calcell' + (out ? ' out' : '') + (d === today() ? ' today' : '') + (d === ST.sel ? ' sel' : '') + '" data-act="calday" data-date="' + d + '" data-n="' + l.length + '"><span class="calnum">' + parseD(d).getDate() + '</span>' +
+      g += '<button type="button" class="calcell' + (out ? ' out' : '') + (d === today() ? ' today' : '') + (d === ST.sel ? ' sel' : '') + '" data-act="calday" data-date="' + d + '" data-n="' + esc(l.length) + '"><span class="calnum">' + parseD(d).getDate() + '</span>' +
         '<span class="caldots">' + l.slice(0, 4).map(function (v) { return '<i class="c-' + cls(v) + '"></i>'; }).join('') + '</span>' +
         '<span class="calchips">' + l.slice(0, 3).map(function (v) { return '<em class="c-' + cls(v) + '">' + esc(v.site) + '</em>'; }).join('') + (l.length > 3 ? '<em class="more">+' + (l.length - 3) + '</em>' : '') + '</span></button>';
     }
@@ -256,7 +256,7 @@
     for (var h = h0; h < h1; h++) x += '<div class="calhr" style="top:' + ((h - h0) * px) + 'px"><span>' + t12(pad(h % 24) + ':00') + '</span></div>';
     if (d === today()) { var n = new Date(), nm = n.getHours() + n.getMinutes() / 60; if (nm >= h0 && nm <= h1) x += '<div class="calnow" style="top:' + ((nm - h0) * px) + 'px"></div>'; }
     var lanes = timed.filter(function (v) { return cls(v) !== 'off' && v.status !== 'moved'; });
-    lanes.forEach(function (v, i) { var a = +v.start.slice(0, 2) + (+v.start.slice(3, 5)) / 60; x += '<button type="button" class="calev c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + v.date + '" style="top:' + ((a - h0) * px) + 'px;height:' + Math.max(28, v.hours * px - 4) + 'px;left:calc(64px + ' + (i % 3) * 4 + '%)"><b>' + esc(v.site) + ' · ' + (v.wax ? 'Waxing' : isCl() ? 'Regular cleaning' : esc(v.name)) + '</b><span>' + t12(v.start) + (v.wax ? ' · Waxing' : isCl() ? ' · Regular cleaning' : ' – ' + t12(addH(v.start, v.hours)) + ' · ' + hh(v.hours) + ' h') + (v.movedFrom ? ' · moved from ' + dShort(v.movedFrom) : '') + (v.pending ? ' · request pending' : '') + '</span></button>'; });
+    lanes.forEach(function (v, i) { var a = +v.start.slice(0, 2) + (+v.start.slice(3, 5)) / 60; x += '<button type="button" class="calev c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '" style="top:' + ((a - h0) * px) + 'px;height:' + Math.max(28, v.hours * px - 4) + 'px;left:calc(64px + ' + (i % 3) * 4 + '%)"><b>' + esc(v.site) + ' · ' + (v.wax ? 'Waxing' : isCl() ? 'Regular cleaning' : esc(v.name)) + '</b><span>' + t12(v.start) + (v.wax ? ' · Waxing' : isCl() ? ' · Regular cleaning' : ' – ' + t12(addH(v.start, v.hours)) + ' · ' + hh(v.hours) + ' h') + (v.movedFrom ? ' · moved from ' + dShort(v.movedFrom) : '') + (v.pending ? ' · request pending' : '') + '</span></button>'; });
     if (!l.length) x += '<p class="muted calempty" style="position:absolute;top:40%;left:0;right:0;text-align:center">No cleaning scheduled.</p>';
     return x + '</div></div>';
   }
@@ -271,7 +271,7 @@
     var filt = '';
     if (ME.type === 'admin' || mySites().length > 1) filt = '<div class="calfilter"><label class="small muted" for="calsite">Site</label><select id="calsite" data-calsite="1"><option value="">All ' + (ME.type === 'admin' ? 'sites' : 'my sites') + ' (' + mySites().length + ')</option>' + mySites().map(function (s) { return '<option value="' + esc(s.code) + '"' + (ST.site === s.code ? ' selected' : '') + '>' + esc(s.code + ' – ' + s.name) + '</option>'; }).join('') + '</select></div>';
     var body = ST.view === 'month' ? monthView() : ST.view === 'week' ? weekView() : dayView();
-    return '<div class="card calwrap cal-' + ST.view + '" id="calwrap" data-view="' + ST.view + '">' + header(title) + filt + '<div class="calbody" id="calbody">' + body + '</div>' + legend() + (opts.foot || '') + '</div>';
+    return '<div class="card calwrap cal-' + esc(ST.view) + '" id="calwrap" data-view="' + esc(ST.view) + '">' + header(title) + filt + '<div class="calbody" id="calbody">' + body + '</div>' + legend() + (opts.foot || '') + '</div>';
   }
   window.calendarHtml = calendar;
   function testTag() { return window.REG_STORE && window.REG_STORE.mode === 'mock' ? '<span class="caltest">TEST data</span>' : ''; }
@@ -279,7 +279,7 @@
   /* ---------- client home: infographics + calendar ---------- */
   function ring(parts, total, center, sub) {
     var R = 42, C = 2 * Math.PI * R, off = 0, segs = '';
-    parts.forEach(function (p) { if (!p.n || !total) return; var len = C * p.n / total; segs += '<circle r="' + R + '" cx="50" cy="50" fill="none" stroke="' + p.c + '" stroke-width="12" stroke-dasharray="' + Math.max(0, len - 1.5).toFixed(2) + ' ' + (C - Math.max(0, len - 1.5)).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 50 50)"/>'; off += len; });
+    parts.forEach(function (p) { if (!p.n || !total) return; var len = C * p.n / total; segs += '<circle r="' + R + '" cx="50" cy="50" fill="none" stroke="' + esc(p.c) + '" stroke-width="12" stroke-dasharray="' + Math.max(0, len - 1.5).toFixed(2) + ' ' + (C - Math.max(0, len - 1.5)).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 50 50)"/>'; off += len; });
     return '<svg viewBox="0 0 100 100" class="calring" role="img" aria-label="' + esc(center + ' ' + sub) + '"><circle r="' + R + '" cx="50" cy="50" fill="none" stroke="#eef1f5" stroke-width="12"/>' + segs + '<text x="50" y="49" text-anchor="middle" class="rn">' + esc(center) + '</text><text x="50" y="63" text-anchor="middle" class="rs">' + esc(sub) + '</text></svg>';
   }
   function clientDash() {
@@ -315,9 +315,9 @@
   function inbox(compact) {
     var l = reqs(), pend = l.filter(function (r) { return r.status === 'pending'; }), rest = l.filter(function (r) { return r.status !== 'pending'; }).slice(0, compact ? 5 : 40);
     var row = function (r) {
-      return '<div class="calreq st-' + r.status + '" data-req="' + esc(r.no) + '"><div class="calreq-h"><b>' + esc(r.no) + '</b> <span class="pill ' + (r.status === 'approved' ? 's-ok' : r.status === 'declined' ? 's-bad' : 's-pend') + '">' + r.status + (r.auto ? ' · applied automatically' : '') + '</span><span class="small muted"> ' + esc(r.firmName) + ' · by ' + esc(r.createdBy || r.firmName) + ' · ' + fmtStamp(r.createdAt) + '</span></div>' +
+      return '<div class="calreq st-' + esc(r.status) + '" data-req="' + esc(r.no) + '"><div class="calreq-h"><b>' + esc(r.no) + '</b> <span class="pill ' + (r.status === 'approved' ? 's-ok' : r.status === 'declined' ? 's-bad' : 's-pend') + '">' + esc(r.status) + (r.auto ? ' · applied automatically' : '') + '</span><span class="small muted"> ' + esc(r.firmName) + ' · by ' + esc(r.createdBy || r.firmName) + ' · ' + fmtStamp(r.createdAt) + '</span></div>' +
         '<div>' + esc(desc(r)) + '</div>' + (r.note ? '<div class="small muted">Client note: ' + esc(r.note) + '</div>' : '') + (r.officeNote ? '<div class="small">Office note: ' + esc(r.officeNote) + '</div>' : '') +
-        (r.status === 'pending' && canManage() ? '<div class="row calreq-a"><input type="text" maxlength="300" placeholder="Note to the client (optional)" id="calnote-' + r.id + '"><button type="button" class="small" data-act="caldecide" data-id="' + r.id + '" data-ok="1">Approve</button><button type="button" class="small sec" data-act="caldecide" data-id="' + r.id + '" data-ok="0">Decline</button></div>' : '') + '</div>';
+        (r.status === 'pending' && canManage() ? '<div class="row calreq-a"><input type="text" maxlength="300" placeholder="Note to the client (optional)" id="calnote-' + esc(r.id) + '"><button type="button" class="small" data-act="caldecide" data-id="' + esc(r.id) + '" data-ok="1">Approve</button><button type="button" class="small sec" data-act="caldecide" data-id="' + esc(r.id) + '" data-ok="0">Decline</button></div>' : '') + '</div>';
     };
     return '<div class="card calinbox" id="calinbox"><h2>Calendar requests <span class="pill ' + (pend.length ? 's-pend' : 's-ok') + '">' + pend.length + ' waiting</span></h2>' +
       (canManage() ? '<label class="calsw"><input type="checkbox" data-calauto="1"' + (auto() ? ' checked' : '') + '> Cancellations and “no cleaners” dates with ' + LEAD + '+ days’ notice apply right away (office is notified). Date changes always wait for approval.</label>' : '<p class="small muted">Read-only: only the owner, admin or operations can decide requests.</p>') +
@@ -346,19 +346,19 @@
     if (firm) {
       if (v.status === 'scheduled' && !v.pending && v.date >= today()) {
         if (!leadOk(v.date)) h += '<p class="calmsg bad" id="callead">' + esc(leadMsg()) + '</p>';
-        else h += '<div class="calacts"><button type="button" data-act="calform" data-k="change" data-id="' + esc(v.id) + '" data-date="' + v.date + '">Request a different date or time</button><button type="button" class="sec" data-act="calform" data-k="cancel" data-id="' + esc(v.id) + '" data-date="' + v.date + '">Request cancellation</button><button type="button" class="sec" data-act="calblock" data-from="' + v.date + '">No cleaners on these dates…</button></div>';
+        else h += '<div class="calacts"><button type="button" data-act="calform" data-k="change" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '">Request a different date or time</button><button type="button" class="sec" data-act="calform" data-k="cancel" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '">Request cancellation</button><button type="button" class="sec" data-act="calblock" data-from="' + esc(v.date) + '">No cleaners on these dates…</button></div>';
       }
     } else if (ME.type === 'admin' && canManage() && v.date >= today()) {
       var o = ovFor(v.site, v.orig);
-      h += '<form class="calform" onsubmit="return false"><div class="calfacts2"><label>Move to<input type="date" id="calmvdate" value="' + v.date + '"></label><label>Start<input type="time" id="calmvtime" value="' + esc(v.start) + '"></label></div><label>Note (optional)<input type="text" id="calofnote" maxlength="300"></label>' +
-        '<div class="calacts">' + (o ? '<button type="button" data-act="caloff" data-t="restore" data-site="' + esc(v.site) + '" data-date="' + v.orig + '">Restore the regular visit</button>' : '') + (v.status === 'scheduled' ? '<button type="button" data-act="caloff" data-t="move" data-site="' + esc(v.site) + '" data-date="' + v.orig + '">Move visit</button><button type="button" class="danger" data-act="caloff" data-t="cancel" data-site="' + esc(v.site) + '" data-date="' + v.orig + '">Cancel visit</button>' : '') + '</div></form>';
+      h += '<form class="calform" onsubmit="return false"><div class="calfacts2"><label>Move to<input type="date" id="calmvdate" value="' + esc(v.date) + '"></label><label>Start<input type="time" id="calmvtime" value="' + esc(v.start) + '"></label></div><label>Note (optional)<input type="text" id="calofnote" maxlength="300"></label>' +
+        '<div class="calacts">' + (o ? '<button type="button" data-act="caloff" data-t="restore" data-site="' + esc(v.site) + '" data-date="' + esc(v.orig) + '">Restore the regular visit</button>' : '') + (v.status === 'scheduled' ? '<button type="button" data-act="caloff" data-t="move" data-site="' + esc(v.site) + '" data-date="' + esc(v.orig) + '">Move visit</button><button type="button" class="danger" data-act="caloff" data-t="cancel" data-site="' + esc(v.site) + '" data-date="' + esc(v.orig) + '">Cancel visit</button>' : '') + '</div></form>';
     }
     return h + '</div>';
   }
   function sheetForm(v, k) {
     var min = addDays(today(), LEAD);
     return '<div class="calsheet" id="calsheet"><h2>' + (k === 'cancel' ? 'Request cancellation' : 'Request a different date or time') + '</h2><p class="small muted">' + esc(v.site) + ' · ' + dLong(v.date) + (v.start ? ' · ' + t12(v.start) : '') + '</p>' +
-      '<form data-form="calreq" id="calreqform"><input type="hidden" name="kind" value="' + k + '"><input type="hidden" name="site" value="' + esc(v.site) + '"><input type="hidden" name="date" value="' + v.orig + '">' +
+      '<form data-form="calreq" id="calreqform"><input type="hidden" name="kind" value="' + k + '"><input type="hidden" name="site" value="' + esc(v.site) + '"><input type="hidden" name="date" value="' + esc(v.orig) + '">' +
       (k === 'change' ? '<div class="calfacts2"><label>New date<input type="date" name="newDate" min="' + min + '" value="" required data-callead="1"></label><label>Start time<input type="time" name="newStart" value="' + esc(v.start) + '"></label></div>' : '') +
       '<label>Note to the office (optional)<textarea name="note" maxlength="300" placeholder="' + (k === 'cancel' ? 'e.g. store closed for inventory' : 'e.g. floors being waxed that night') + '"></textarea></label>' +
       '<p class="calmsg bad" id="callead" hidden></p>' + (k === 'cancel' ? '<p class="calmsg info" id="calpricenote">Your monthly price stays the same.</p>' : '') +

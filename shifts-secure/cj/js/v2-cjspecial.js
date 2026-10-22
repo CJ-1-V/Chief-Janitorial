@@ -171,7 +171,7 @@
     var oh = clientInvoicesHtml;
     clientInvoicesHtml = function (firm, office) {
       var x = oh(firm, office);
-      (DB.clientInvoices || []).forEach(function (i) { if (!i.specialLines || !i.specialLines.length || (firm && i.firmId !== firm.id)) return; x = x.replace(new RegExp('(<tr data-inv="' + i.number + '">[\\s\\S]*?</tr>)'), '$1<tr class="splines"><td colspan="' + (office ? 12 : 10) + '" class="small">Special jobs on this invoice (separate line): ' + i.specialLines.map(function (l) { return esc(spLineText(l) + ' = ' + money(l.amount)); }).join('; ') + '</td></tr>'); });
+      (DB.clientInvoices || []).forEach(function (i) { if (!i.specialLines || !i.specialLines.length || (firm && i.firmId !== firm.id)) return; x = x.replace(new RegExp('(<tr data-inv="' + esc(i.number) + '">[\\s\\S]*?</tr>)'), '$1<tr class="splines"><td colspan="' + (office ? 12 : 10) + '" class="small">Special jobs on this invoice (separate line): ' + i.specialLines.map(function (l) { return esc(spLineText(l) + ' = ' + money(l.amount)); }).join('; ') + '</td></tr>'); });
       return x;
     };
   }

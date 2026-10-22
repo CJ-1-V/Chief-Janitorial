@@ -35,7 +35,7 @@ function pastHoursCard(firm){var r=pastHoursRange(),rows=pastHoursRows(firm,r.fr
   PAGE_STATE.phData={firm:firm,rows:rows,from:r.from,to:r.to,tot:tot};
   var x='<div id="pasthours" class="card"><h2 style="margin-top:0">Past hours – people worked per day</h2>'+
   '<p class="small muted">Pick any dates. Shows how many people worked at each of your sites per day and the hours. Counts only – no names.</p>'+
-  '<form data-form="pasthrs" class="row"><div><label>From</label><input type="date" name="from" value="'+r.from+'" max="'+today()+'"></div><div><label>To</label><input type="date" name="to" value="'+r.to+'" max="'+today()+'"></div>'+
+  '<form data-form="pasthrs" class="row"><div><label>From</label><input type="date" name="from" value="'+esc(r.from)+'" max="'+today()+'"></div><div><label>To</label><input type="date" name="to" value="'+esc(r.to)+'" max="'+today()+'"></div>'+
   '<div style="align-self:flex-end"><button class="small">Show past hours</button> <button class="small sec" data-act="phlast4">Last 4 weeks</button></div></form>';
   if(rows.err)x+='<p class="small bad">Could not load the past timesheets just now. Please refresh the page and try again.</p>';
   if(!rows.length&&rows.loading)return x+'<p class="muted">Loading past hours…</p></div>';

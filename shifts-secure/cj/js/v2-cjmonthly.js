@@ -216,7 +216,7 @@
         }).join('');
         var extra = '<tr class="cjmlines"><td colspan="12" class="small"><b>' + esc(mLabel(i.month || i.periodStart.slice(0, 7))) + ' – site lines:</b> ' + cells +
           (i.siteLines.some(function (l) { return l.unset && !l.adjNote; }) ? '<div class="cjm-warn">⚠ Monthly amount not set for ' + esc(i.siteLines.filter(function (l) { return l.unset && !l.adjNote; }).map(function (l) { return l.site; }).join(', ')) + ' – use Adjust to enter the amount for this invoice (and set it in Site hours &amp; monthly amounts for next month).</div>' : '') + '</td></tr>';
-        x = x.replace(new RegExp('(<tr data-inv="' + i.number + '">[\\s\\S]*?</tr>)'), function (row) { return row + extra; });
+        x = x.replace(new RegExp('(<tr data-inv="' + esc(i.number) + '">[\\s\\S]*?</tr>)'), function (row) { return row + extra; });
       });
       return x;
     };

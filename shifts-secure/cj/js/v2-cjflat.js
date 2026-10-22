@@ -110,7 +110,7 @@
           '<button type="button" class="small sec" data-act="cjfx" data-id="' + esc(i.id) + '">' + (i.draft ? 'Extra lines' : 'See extra lines') + '</button> ' +
           '<button type="button" class="small sec" data-act="civview" data-id="' + esc(i.id) + '">Preview</button> ' +
           (i.draft ? '<button type="button" class="small" data-act="cjffin" data-id="' + esc(i.id) + '">Finalise &amp; send</button>' : '') + '</td></tr>';
-        x = x.replace(new RegExp('(<tr data-inv="' + i.number + '">[\\s\\S]*?</tr>(?:<tr class="cjmlines">[\\s\\S]*?</tr>)?)'), function (all) {
+        x = x.replace(new RegExp('(<tr data-inv="' + esc(i.number) + '">[\\s\\S]*?</tr>(?:<tr class="cjmlines">[\\s\\S]*?</tr>)?)'), function (all) {
           if (i.draft) all = all.replace(/<button class="small sec" data-act="clientinvpaid"[^>]*>Mark paid<\/button>/, '');
           return all + row;
         });

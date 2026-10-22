@@ -55,7 +55,7 @@
 
   function hero(kind) {
     var h = '<aside class="auth-hero" aria-label="How it works">' +
-      '<div class="ah-logo"><img src="' + CO.logo + '" alt="' + CO.alt + '"><span>' + CO.tag + '</span></div>' +
+      '<div class="ah-logo"><img src="' + esc(CO.logo) + '" alt="' + esc(CO.alt) + '"><span>' + CO.tag + '</span></div>' +
       '<h2>' + CO.title + '</h2><p class="ah-sub">' + CO.sub + '</p><ol class="ah-steps">';
     CO.steps.forEach(function (s, n) {
       h += '<li><div class="ah-ic">' + svg(s[0]) + '<i>' + (n + 1) + '</i></div><div><b>' + s[1] + '</b><span>' + s[2] + '</span></div></li>';
