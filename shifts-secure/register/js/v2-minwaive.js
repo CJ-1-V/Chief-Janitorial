@@ -23,7 +23,7 @@ function mwR2(n){return Math.round((Number(n)||0)*100)/100;}
 
 /* ---------- farm view (and the office preview of it): small note on waived days + minimum hours line ---------- */
 (function(){var op=firmPage;firmPage=function(firm){var x=op(firm),D=PAGE_STATE.frData,R=D&&D.R;if(!R)return x;
-  (R.waivedDays||[]).forEach(function(d){var n=' <span class="mw-note" data-mw="'+d+'">'+MW_TXT.farmNote+'</span>';
+  (R.waivedDays||[]).forEach(function(d){var n=' <span class="mw-note" data-mw="'+esc(d)+'">'+MW_TXT.farmNote+'</span>';
     x=x.split('<tr><td>'+shortDay(d)).join('<tr class="mw-waived"><td>'+shortDay(d)+n).split('<div class="dc-head"><b>'+shortDay(d)).join('<div class="dc-head mw-waived"><b>'+shortDay(d)+n);});
   if(R.waivedDays&&R.waivedDays.length)x=x.replace(/(<div class="trow"><span>Billable hours<\/span><b>[^<]*<\/b><\/div>)/,'$1<div class="mw-totnote small" id="mwtotnote"><span class="mw-note">'+(R.waivedDays.length===1&&mwOneDay(D)?MW_TXT.farmNote:'Minimum waived: '+R.waivedDays.map(shortDay).join(', '))+'</span></div>');
   if(R.tot.topUp>0)x=x.replace(/(<div class="trow"><span>Billable hours<\/span><b>[^<]*<\/b><\/div>)/,'$1<div class="trow mw-topup" id="mwtopup"><span class="small muted">includes '+R.tot.topUp.toFixed(2)+' h added for the '+CB().minHours+'-hour daily minimum</span><b></b></div>');
