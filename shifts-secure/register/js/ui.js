@@ -36,7 +36,7 @@ function downloadText(name,text,mime){var a=document.createElement('a');a.href=U
 function csvRow(a){return a.map(function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');}
 function showFile(name,type,data,label){
   var url=dataToBlobUrl(data);
-  modal('<h2>'+esc(label||name)+'</h2>'+(/^image\//.test(type)?'<img src="'+url+'" style="max-width:100%;border:1px solid #ddd">':/pdf/.test(type)?'<iframe src="'+url+'" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>':'<p>Preview not available for this file type.</p>')+'<p><a class="btn sec" href="'+url+'" download="'+esc(name)+'">Download '+esc(name)+'</a></p>');
+  modal('<h2>'+esc(label||name)+'</h2>'+(/^image\//.test(type)?'<img src="'+esc(url)+'" style="max-width:100%;border:1px solid #ddd">':/pdf/.test(type)?'<iframe src="'+esc(url)+'" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>':'<p>Preview not available for this file type.</p>')+'<p><a class="btn sec" href="'+url+'" download="'+esc(name)+'">Download '+esc(name)+'</a></p>');
 }
 ACT.viewdoc=function(el){var d=DB.docs.filter(function(x){return x.id===el.dataset.id;})[0];if(!d)return;var u=user(d.userId);
   if(!canSeeDoc(d)){toast('You do not have access to this document.');return;}

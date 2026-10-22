@@ -458,7 +458,7 @@
     sb.storage.from(C.bucket).download(data.slice(3)).then(function (r) {
       if (r.error) { modal('<h2>' + esc(label || name) + '</h2><div class="alert bad">You do not have access to this file, or it is no longer available.</div>'); return; }
       var url = URL.createObjectURL(r.data);
-      modal('<h2>' + esc(label || name) + '</h2>' + (/^image\//.test(type) ? '<img src="' + url + '" style="max-width:100%;border:1px solid #ddd">' : /pdf/.test(type) ? '<iframe src="' + url + '" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>' : '<p>Preview not available for this file type.</p>') + '<p><a class="btn sec" href="' + url + '" download="' + esc(name) + '">Download ' + esc(name) + '</a></p>');
+      modal('<h2>' + esc(label || name) + '</h2>' + (/^image\//.test(type) ? '<img src="' + esc(url) + '" style="max-width:100%;border:1px solid #ddd">' : /pdf/.test(type) ? '<iframe src="' + esc(url) + '" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>' : '<p>Preview not available for this file type.</p>') + '<p><a class="btn sec" href="' + url + '" download="' + esc(name) + '">Download ' + esc(name) + '</a></p>');
     });
   };
 
@@ -517,10 +517,12 @@
   ACT.logout = function () { if (ME) { audit('Signed out', ME.name); } window.REG_FLUSH().then(signOutLocal); };
   async function signOutLocal(msg) {
     SIGNED_IN = false; ME = null; sessionStorage.removeItem('us-test-me');
-    /* signout-clean1: forget office-only quiz answers and downloaded files */
+    /* signout-clean1: forget office-only quiz answers, downloaded files, pending saves and cached keys */
+    try { clearTimeout(TIMER); } catch (e) {} TIMER = null; AGAIN = false; LAST_REFRESH = 0; WARNED = {};
     try { var QBx = window.QUIZ_BANK; if (QBx) Object.keys(QBx).forEach(function (b) { (Array.isArray(QBx[b]) ? QBx[b] : []).forEach(function (q) { if (q && typeof q === 'object') delete q.ans; }); }); } catch (e) {}
     try { Object.keys(FILES).forEach(function (k) { try { if (String(FILES[k]).indexOf('blob:') === 0) URL.revokeObjectURL(FILES[k]); } catch (x) {} delete FILES[k]; }); } catch (e) {}
     try { await sb.auth.signOut(); } catch (e) {}
+    try { localStorage.removeItem(STORE_KEY); if (C.authStorageKey) ['', '-code-verifier', '-user'].forEach(function (sx) { localStorage.removeItem(C.authStorageKey + sx); }); } catch (e) {}
     await loadPublic(); if (msg) PAGE_STATE.loginMsg = msg; go('#/');
   }
   // the idle timer (security.js) clears ME after 30 minutes: also end the real session and wipe the data from memory
