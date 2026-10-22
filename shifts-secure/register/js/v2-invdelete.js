@@ -150,7 +150,7 @@ function decorate(){if(!owner()||!CFG('invDelete'))return;var app=document.getEl
     var h=c.querySelector('h2');if(h)h.insertAdjacentHTML('afterend','<p class="small id-dellink"><button class="small sec" data-act="iddeleted" data-firm="'+E(fid)+'">Deleted invoices ('+n+')</button></p>');});}
 /* tag each row with its invoice id (numbers can repeat across farms for uploaded past invoices) */
 if(typeof clientInvoicesHtml==='function'){var och=clientInvoicesHtml;clientInvoicesHtml=function(firm,office){var x=och.apply(this,arguments);try{if(!office||!firm)return x;
-  act().filter(function(i){return i.firmId===firm.id;}).forEach(function(i){x=x.split('<tr data-inv="'+i.number+'">').join('<tr data-inv="'+i.number+'" data-invid="'+i.id+'">');});}catch(e){}return x;};}
+  act().filter(function(i){return i.firmId===firm.id;}).forEach(function(i){x=x.split('<tr data-inv="'+esc(i.number)+'">').join('<tr data-inv="'+esc(i.number)+'" data-invid="'+esc(i.id)+'">');});}catch(e){}return x;};}
 new MutationObserver(function(){try{decorate();}catch(e){}}).observe(document.documentElement,{childList:true,subtree:true});
 (function(){var ov=ACT.civview;if(!ov)return;ACT.civview=function(el){var r=ov.apply(this,arguments);try{var i=byId(el.dataset.id),m=document.querySelector('#modal .modal');
   if(i&&m&&owner()&&!isDel(i)&&!m.querySelector('.id-delbtn')){var d=document.createElement('div');d.className='row-end id-viewdel no-print';d.innerHTML='<button class="small danger-ghost id-delbtn" data-act="iddel" data-id="'+E(i.id)+'">🗑 Delete this invoice</button>';m.appendChild(d);}}catch(e){}return r;};})();
@@ -164,7 +164,7 @@ function topCard(f){var L=act().filter(function(i){return i.firmId===f.id;}).sli
    (CFG('invDelete')?'<button class="small sec" data-act="iddeleted" data-firm="'+E(f.id)+'">Deleted invoices ('+nd+')</button>':'')+'</div></div>'+
    (L.length?'<div class="tw"><table class="id-ttab" id="idtoptable"><tr><th>Invoice #</th><th>Period</th><th class="r">Total</th><th>Status</th><th></th></tr>'+L.map(function(i){var s=typeof clientInvStatus==='function'?clientInvStatus(i):{t:statusTxt(i),c:''};
      var pay=typeof window.irPayable==='function'?window.irPayable(i):true;if(i.revOf&&waiting(i))s={t:'Waiting for farm',c:'s-pend'};else if(i.revOf&&i.revStatus==='withdrawn')s={t:'Withdrawn',c:'s-mut'};else if(!pay)s={t:'Replaced',c:'s-mut'};
-     return '<tr data-inv="'+E(i.number)+'" data-invid="'+E(i.id)+'"><td><b>'+E(i.number)+'</b>'+(i.uploaded?' <span class="small muted">uploaded</span>':'')+'</td><td class="small">'+E(i.periodStart||'–')+' – '+E(i.periodEnd||'–')+'</td><td class="r">'+money2(i.total)+'</td><td><span class="pill '+s.c+'">'+E(s.t)+'</span></td>'+
+     return '<tr data-inv="'+E(i.number)+'" data-invid="'+E(i.id)+'"><td><b>'+E(i.number)+'</b>'+(i.uploaded?' <span class="small muted">uploaded</span>':'')+'</td><td class="small">'+E(i.periodStart||'–')+' – '+E(i.periodEnd||'–')+'</td><td class="r">'+money2(i.total)+'</td><td><span class="pill '+esc(s.c)+'">'+E(s.t)+'</span></td>'+
        '<td class="id-acts"><button class="small sec" data-act="civview" data-id="'+E(i.id)+'">View</button></td></tr>';}).join('')+'</table></div>':'<p class="small muted">No invoices for this farm yet.</p>')+'</div>';}
 if(VIEWS['admin:people']){var opp=VIEWS['admin:people'];VIEWS['admin:people']=function(){var s=st();
   if(s&&s.tab==='log'){var u=user(s.id);if(u)return logPage(u);}

@@ -18,7 +18,7 @@ function docStatus(d,onDate){
   if(ex&&daysBetween(today(),ex)<=30&&!onDate)return {s:'Expiring soon',c:'s-warn',ex:ex};
   return {s:'Valid',c:'s-ok',ex:ex};
 }
-function pill(st){return '<span class="pill '+st.c+'">'+esc(st.s)+'</span>';}
+function pill(st){return '<span class="pill '+esc(st.c)+'">'+esc(st.s)+'</span>';}
 function termsCurrent(key){return DB.settings.terms[key];}
 function acceptedCurrent(u,key){
   var cur=termsCurrent(key);if(!cur)return true;

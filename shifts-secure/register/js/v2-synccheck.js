@@ -45,7 +45,7 @@ function full(){return (window.vsAllTime?window.vsAllTime():DB.time)||[];}
 function shOf(id){if(!id)return null;for(var i=0;i<(DB.shifts||[]).length;i++)if(DB.shifts[i].id===id)return DB.shifts[i];return null;}
 function siteOfT(t){if(t.site)return t.site;var s=shOf(t.shiftId);return s?s.site:'';}
 function isRm(t){return !!(t&&t.removed);}
-function waiting(t){return t.lateEntry==='pending'||t.lateEntry==='rejected';}
+function waiting(t){return t.lateEntry==='rejected';} /* manualfix1: waiting (pending) entries count everywhere; only turned-down ones stay out */
 function realUser(id){var u=user(id);return u&&u.type!=='tester'?u:null;}
 function isCrew(s){return !!(s&&s.kind==='crew');}
 /* a counted / open / removed entry that "takes the place" of a crew booking */
@@ -66,9 +66,9 @@ function hideWaiting(){var h=[];(DB.time||[]).forEach(function(t){if(waiting(t)&
 /* billable allocation per worker-day, worked out on the FINAL rows (same maths as v2-clientbilling.js) */
 function realloc(firm,rows){if(typeof billDay!=='function'||typeof CB!=='function')return rows;var c=CB(),g={};
   rows.forEach(function(r){var k=r.uid+'|'+r.date;(g[k]=g[k]||[]).push(r);});
-  Object.keys(g).forEach(function(k){var l=g[k],sum=l.reduce(function(a,r){return a+r.hours;},0),missed=l.some(function(r){return r.breakMissed;}),w=typeof minWaiver==='function'&&!!minWaiver(firm.id,l[0].date),day=billDay(sum,missed,w);
+  Object.keys(g).forEach(function(k){var l=g[k],sum=l.reduce(function(a,r){return a+r.hours;},0),missed=l.some(function(r){return r.breakMissed;}),w=typeof minWaiver==='function'&&!!minWaiver(firm.id,l[0].date),day=billDay(sum,missed,w,dayBreakH(l,sum,missed,c.breakMin));
     l.forEach(function(r){r.bill=r.hours;r.brkDed=0;r.minTopUp=0;r.waived=w;r.dayHours=sum;r.dayBill=day;r.dayShifts=l.length;});
-    var ded=breakHoursFor(sum,missed,c.breakMin),left=ded;l.slice().sort(function(a,b){return b.hours-a.hours;}).forEach(function(r){if(left<=0)return;var t=Math.min(left,r.bill);r.brkDed=Math.round(t*10000)/10000;r.bill-=t;left-=t;});
+    var ded=dayBreakH(l,sum,missed,c.breakMin),left=ded;l.slice().sort(function(a,b){return b.hours-a.hours;}).forEach(function(r){if(left<=0)return;var t=Math.min(left,r.bill);r.brkDed=Math.round(t*10000)/10000;r.bill-=t;left-=t;});
     var top=day-(sum-ded);if(top>1e-9){var last=l[l.length-1];last.minTopUp=Math.round(top*10000)/10000;last.bill+=top;}});return rows;}
 (function(){var o=window.firmRows;if(typeof o!=='function')return;window.firmRows=function(firm,from,to){var un=linkUnlinked(),rows;try{rows=o.apply(this,arguments);}finally{un();}
   var k=rmUnlinkedKeys();rows=rows.filter(function(r){return !k[r.key];});return realloc(firm,rows);};})();
@@ -92,7 +92,7 @@ if(window.officeInfo&&typeof officeInfo.hoursBetween==='function'){var ohb=offic
 if(typeof window.eiStats==='function'){var oes=window.eiStats;window.eiStats=function(){return withVirt(oes,this,arguments);};}
 /* My shifts total: a sub worker's shift that waits for the office is listed ("Waiting for office") but not counted yet – same as the
    farm and the subcontractor (company employees keep the existing rule: a late missed shift is paid while it waits) */
-(function(){var o=window.efSum;if(typeof o!=='function')return;window.efSum=function(list){return o.call(this,(list||[]).filter(function(i){if(!(i&&i.k==='t'&&i.t&&i.t.lateEntry==='pending'))return true;var u=user(i.t.userId);return !!(u&&u.type==='employee');}));};})();
+(function(){var o=window.efSum;if(typeof o!=='function')return;window.efSum=function(list){return o.call(this,list||[]);};})();
 /* virtual rows: labelled, no remove button (the office removes scheduled crew hours on All hours) */
 (function(){var o=window.efRow;if(typeof o!=='function')return;window.efRow=function(i){
   if(i&&i.k==='t'&&i.t&&i.t._scV){var x=o.apply(this,arguments);x=x.replace(/<button[^>]*data-act="vsself"[^>]*>[^<]*<\/button>/g,'');var at=x.lastIndexOf('</div><div class="ef-h">');
@@ -176,7 +176,7 @@ function remover(t){if(!isRm(t))return '';if(t.removedSrc==='office'||t.removedS
   var s=PAGE_STATE.vsh||{},to=s.to||today(),from=s.from||addDays(to,-13);
   /* the counting total follows the one rule (scheduled crew once; unlinked entry replaces it; worker / sub entries waiting for the office not counted) */
   var tot=0,V=virtualCrew();full().concat(V).forEach(function(t){if(t.test||!t.out||isRm(t)||t.date<from||t.date>to)return;var u=realUser(t.userId);if(!u)return;
-    if(t.lateEntry==='rejected')return;if(t.lateEntry==='pending'&&u.type!=='employee')return;var w=hrs(t['in'],t.out);tot+=w-unpaidBreak(w,t);});
+    if(t.lateEntry==='rejected')return;var w=hrs(t['in'],t.out);tot+=w-unpaidBreak(w,t);});
   x=x.replace(/(id="vshtot">)[^<]*/,'$1'+tot.toFixed(2));
   x=x.replace(/<div class="alert warn small" id="vsinvflags">[\s\S]*?<\/ul><\/div>/,'');var fh=flagHtml();if(fh)x=x.replace('<h1>All hours</h1>','<h1>All hours</h1>'+fh);
   /* removed-by labels per row */
@@ -198,7 +198,7 @@ function relabelRemoved(x,forSub){return x.replace(/<div class="ef-row vs-rmrow"
   x=x.replace('<th>Worker</th><th>Site</th><th>Day</th><th>Time</th><th>Hours</th><th></th>','<th>Worker</th><th>Site</th><th>Day</th><th>Time</th><th>Paid hours</th><th></th>').replace('<th>Worker</th><th>Site</th><th>Day</th><th>Time</th><th>Hours</th><th>Status</th>','<th>Worker</th><th>Site</th><th>Day</th><th>Time</th><th>Paid hours</th><th>Status</th>');
   /* shifts the subcontractor added that still wait for the office: listed, not counted */
   var st=PAGE_STATE.wh||{},to=st.to||today(),from=st.from||addDays(to,-29),W=full().filter(function(t){if(t.test||isRm(t)||t.lateEntry!=='pending'||t.date<from||t.date>to)return false;var w=user(t.userId);return w&&(w.id===ME.id||w.subId===ME.id);});
-  if(W.length){var h='<h2>Waiting for office <span class="small muted">– not counted yet</span></h2><div class="tw"><table id="scwait"><tr><th>Day</th><th>Site</th><th>Worker</th><th>Start – finish</th><th>Hours worked</th><th>Status</th></tr>'+W.map(function(t){var w=user(t.userId);return '<tr><td>'+E(shortDay(t.date))+'</td><td>'+E(siteOfT(t))+'</td><td>'+E(w?w.name:'')+'</td><td>'+E(t['in']+' – '+t.out)+'</td><td>'+hrs(t['in'],t.out).toFixed(2)+'</td><td><span class="pill s-pend">Waiting for office</span></td></tr>';}).join('')+'</table></div>';
+  if(W.length){var h='<h2>Waiting for office <span class="small muted">– counted now; the office can still change or remove them</span></h2><div class="tw"><table id="scwait"><tr><th>Day</th><th>Site</th><th>Worker</th><th>Start – finish</th><th>Hours worked</th><th>Status</th></tr>'+W.map(function(t){var w=user(t.userId);return '<tr><td>'+E(shortDay(t.date))+'</td><td>'+E(siteOfT(t))+'</td><td>'+E(w?w.name:'')+'</td><td>'+E(t['in']+' – '+t.out)+'</td><td>'+hrs(t['in'],t.out).toFixed(2)+'</td><td><span class="pill s-pend">Waiting for office</span></td></tr>';}).join('')+'</table></div>';
     var k=x.indexOf('<div class="card vs-sec" id="vsSubRemoved">');if(k<0)k=x.indexOf('<div class="card" id="vssubcard">');x=k<0?x+h:x.slice(0,k)+h+x.slice(k);}
   }catch(e){}return x;};})();
 /* subcontractor / worker removal: the same "issued invoice = really on it" check as everywhere */
@@ -241,7 +241,7 @@ if(typeof ADMIN_ONLY_ACT!=='undefined')ADMIN_ONLY_ACT.push('schourscsv','scpaycs
 (function(){var o=VIEWS['admin:allhours'];if(typeof o!=='function')return;VIEWS['admin:allhours']=function(){var x=o.apply(this,arguments),c=PAGE_STATE.scx||{};try{
   var farms=users('firm').filter(function(f){return firmCodes(f).length;}),people=(DB.users||[]).filter(function(u){return u.type==='employee'||u.type==='worker'||u.type==='sub';}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
   var box='<form data-form="scxf" class="row card" id="scexport"><b>Download hours (CSV)</b><div><label>Farm / client</label><select name="farm"><option value="">All</option>'+farms.map(function(f){return '<option value="'+E(f.id)+'"'+(c.farm===f.id?' selected':'')+'>'+E(OH()?'Farm '+fcode(f):f.name)+'</option>';}).join('')+'</select></div>'+
-    '<div><label>Person</label><select name="person"><option value="">All</option>'+people.map(function(u){return '<option value="'+E(u.id)+'"'+(c.person===u.id?' selected':'')+'>'+E(u.name)+'</option>';}).join('')+'</select></div><label class="inline"><input type="checkbox" name="removed" value="1"'+(c.removed?' checked':'')+'> <span>Include removed rows</span></label>'+
+    '<div><label>Person</label><select name="person"><option value="">All</option>'+people.map(function(u){return '<option value="'+E(u.id)+'"'+(c.person===u.id?' selected':'')+'>'+E(typeof personLabel==='function'?personLabel(u):u.name)+'</option>';}).join('')+'</select></div><label class="inline"><input type="checkbox" name="removed" value="1"'+(c.removed?' checked':'')+'> <span>Include removed rows</span></label>'+
     '<div style="align-self:flex-end"><button class="small sec">Use these filters</button> <button type="button" class="small" data-act="schourscsv" id="schourscsv">Download CSV</button></div><p class="small muted" style="flex-basis:100%;margin:0">Uses the From / To dates above. Every row has its status (Counts, Waiting for office, Not approved, Removed).</p></form>';
   var k=x.indexOf('<div class="row mt-filters">');x=k<0?x+box:x.slice(0,k)+box+x.slice(k);}catch(e){}return x;};})();
 (function(){var o=VIEWS['admin:payroll'];if(typeof o!=='function')return;VIEWS['admin:payroll']=function(){var x=o.apply(this,arguments);if(x.indexOf('scpaycsv')>=0)return x;
@@ -249,12 +249,12 @@ if(typeof ADMIN_ONLY_ACT!=='undefined')ADMIN_ONLY_ACT.push('schourscsv','scpaycs
   var k=x.indexOf('<div class="tw"><table id="paytable">');return k<0?x+b:x.slice(0,k)+b+x.slice(k);};})();
 
 /* ---------- 8. words: one break rule text everywhere + plain words (text only – the maths is unchanged) ---------- */
-function brkTxt(){return typeof breakRuleText==='function'?breakRuleText():'30 min unpaid break over 5 h, 60 min at 8 h or more';}
+function brkTxt(){return typeof breakRuleText==='function'?breakRuleText():'30 min unpaid break over 5 h';}
 var WORDS=[
-  [/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more[^.]*\./g,function(){return 'Billable hours = hours worked minus the unpaid break (none up to 5 h, 30 min over 5 h, 60 min at 8 h or more; none if the break was missed).';}],
-  [/the 30-minute break is deducted only if it was taken/g,function(){return 'the unpaid break (30 min over 5 h, 60 min at 8 h or more) is taken off only if it was taken';}],
+  [/Billable hours = hours worked minus a 30-minute unpaid break on shifts of 5 hours or more[^.]*\./g,function(){return 'Billable hours = hours worked minus the unpaid break (none up to 5 h, 30 min over 5 h, or the break actually given; none if the break was missed).';}],
+  [/the 30-minute break is deducted only if it was taken/g,function(){return 'the unpaid break (30 min over 5 h) is taken off only if it was taken';}],
   [/Everyone took their 30-minute break/g,function(){return 'Everyone took their break';}],
-  [/I took my 30-minute break/g,function(){return 'I took my break (30 min over 5 h, 60 min at 8 h or more)';}],
+  [/I took my 30-minute break/g,function(){return 'I took my break (30 min over 5 h)';}],
   [/whether the 30-minute break was taken/g,function(){return 'whether the break was taken ('+brkTxt()+')';}],
   [/unpaid break on shifts of 5 h or more/g,function(){return 'unpaid break ('+brkTxt()+')';}],
   [/Tick this if your break was missed or cut short\. You will be paid for it, and the office is told\./g,function(){return 'You will be paid for the break. The office is told.';}],

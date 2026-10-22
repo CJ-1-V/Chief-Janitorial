@@ -75,6 +75,6 @@ var oForm=FORMS.invact;FORMS.invact=function(f,d){var i=DB.invoices.filter(funct
   return oForm(f,d);};
 /* office list: show the estimate until the real holdback is set */
 var oList=VIEWS['admin:invoicesadmin'];VIEWS['admin:invoicesadmin']=function(){var x=oList();
-  DB.invoices.forEach(function(i){if(i.test||hasReal(i)||!i.holdbackEst)return;var a='data-act="showinv" data-id="'+i.id+'">'+esc(i.number)+'</a>';x=x.replace(a,a+' <span class="pill s-warn">holdback to set (est. '+money(i.holdbackEst)+')</span>');});
+  DB.invoices.forEach(function(i){if(i.test||hasReal(i)||!i.holdbackEst)return;var a='data-act="showinv" data-id="'+esc(i.id)+'">'+esc(i.number)+'</a>';x=x.replace(a,a+' <span class="pill s-warn">holdback to set (est. '+money(i.holdbackEst)+')</span>');});
   return x;};
 })();

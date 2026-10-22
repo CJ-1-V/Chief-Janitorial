@@ -2,7 +2,7 @@
    Daily work → All hours → open a farm: every shift row gets, right below Status,
    1) a Job picker (default General Labour; the positions are the farm rate roles already in the app: FARM_RATE_ROLES, plus the farm's own
       "Other role" when its Rate Schedule has one), and
-   2) a Break picker: Normal rule (default: none up to 5 h, 30 min unpaid over 5 h, 1 h unpaid at 8 h+), 15, 30 or 60 min (this shift only).
+   2) a Break picker: Normal rule (default: none up to 5 h, 30 min unpaid over 5 h – manualfix1 dropped the 1 h at 8 h+ tier), 15, 30 or 60 min (this shift only).
    Billing: each shift is billed at THAT farm's signed rate for the marked job on that date. If the farm has no rate for that job the
    shift is billed at the farm's General Labour rate and flagged in red on the row and on the invoice line ("no rate set").
    The invoice gets one line per job (hours × rate = amount; overtime line if the farm has an OT rate); subtotal/HST/total = sum of lines.

@@ -517,6 +517,9 @@
   ACT.logout = function () { if (ME) { audit('Signed out', ME.name); } window.REG_FLUSH().then(signOutLocal); };
   async function signOutLocal(msg) {
     SIGNED_IN = false; ME = null; sessionStorage.removeItem('us-test-me');
+    /* signout-clean1: forget office-only quiz answers and downloaded files */
+    try { var QBx = window.QUIZ_BANK; if (QBx) Object.keys(QBx).forEach(function (b) { (Array.isArray(QBx[b]) ? QBx[b] : []).forEach(function (q) { if (q && typeof q === 'object') delete q.ans; }); }); } catch (e) {}
+    try { Object.keys(FILES).forEach(function (k) { try { if (String(FILES[k]).indexOf('blob:') === 0) URL.revokeObjectURL(FILES[k]); } catch (x) {} delete FILES[k]; }); } catch (e) {}
     try { await sb.auth.signOut(); } catch (e) {}
     await loadPublic(); if (msg) PAGE_STATE.loginMsg = msg; go('#/');
   }

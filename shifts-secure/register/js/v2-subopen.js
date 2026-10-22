@@ -99,7 +99,7 @@ if(VIEWS['sub:crews']){var _vc=VIEWS['sub:crews'];VIEWS['sub:crews']=function(){
 
 /* =============== hours helpers (paid hours like My shifts) =============== */
 function paidH(t){if(!t||!t.out||!t['in'])return 0;var w=hrs(t['in'],t.out);return Math.max(0,w-(typeof unpaidBreak==='function'?unpaidBreak(w,t):0));}
-function counts(t){return !t.test&&!!t.out&&t.lateEntry!=='pending'&&t.lateEntry!=='rejected';}
+function counts(t){return !t.test&&!!t.out&&t.lateEntry!=='rejected';}
 function crewOf(s){return users('worker').filter(function(w){return w.subId===s.id;});}
 function underSub(t,s,ids){return t.subId===s.id||ids[t.userId];}
 function subHours(s,from,to,onlyUser){var ids={};crewOf(s).forEach(function(w){ids[w.id]=1;});ids[s.id]=1;var r={crew:0,own:0,by:{},sites:{},open:0,openOwn:false};
@@ -136,7 +136,7 @@ function compRing(s){var R=requirements(s).filter(function(r){return r.st.s!=='O
 function heroHtml(s){var st=compStatus(s),T=today(),ws=weekStart(T),wk=subHours(s,ws,addDays(ws,6)),p14=subHours(s,addDays(T,-13),T),R=readiness(s),cr=compRing(s),
     sites=Object.keys(p14.sites).sort(),due=typeof invoiceDue==='function'?invoiceDue(s):null;
   var x='<section class="so-hero" id="soHero" aria-label="Company overview"><div class="so-banner"><div class="so-bt"><span class="so-kicker">Subcontractor dashboard</span><h1>'+E(coName(s))+'</h1>'+
-    (due?'<span class="so-sub">30-day period '+E(shortDay(due.periodStart).replace(/^\w+ /,''))+' – '+E(shortDay(due.periodEnd).replace(/^\w+ /,''))+'</span>':'')+'</div><span class="so-status so-st-'+st.c+'" id="soStatus">'+E(st.t)+'</span></div>'+
+    (due?'<span class="so-sub">30-day period '+E(shortDay(due.periodStart).replace(/^\w+ /,''))+' – '+E(shortDay(due.periodEnd).replace(/^\w+ /,''))+'</span>':'')+'</div><span class="so-status so-st-'+esc(st.c)+'" id="soStatus">'+E(st.t)+'</span></div>'+
     '<div class="so-kpis">'+
       '<a class="so-kpi" href="#/workers" id="soKCrew"><span class="so-kl">Crew size</span><b>'+R.n+'</b><small>'+R.c.ready+' can clock in'+(R.c.confirm?' · '+R.c.confirm+' to confirm':'')+'</small></a>'+
       '<a class="so-kpi so-kh" href="#/workerhours" id="soKHours"><span class="so-kl">Hours this week</span><b>'+f2(wk.total)+'</b><small>'+(wk.own?'crew '+fs(wk.crew)+' · you '+fs(wk.own):'paid hours, approved')+'</small>'+weekBars(s)+'</a>'+

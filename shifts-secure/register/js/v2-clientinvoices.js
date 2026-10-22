@@ -40,11 +40,11 @@ function invFileName(i){var f=user(i.firmId);return 'Invoice-'+i.number+'-'+Stri
 
 VIEWS['firm:invoices']=function(){var l=myInvoices(ME);
   var x='<h1>My invoices</h1><p class="small muted">All your invoices, newest first. Tap one to see it or download a PDF.</p>'+
-  (l.length?'<div id="myinvlist">'+l.map(function(i){var st=invPlain(i);return '<div class="invcard" data-inv="'+esc(i.number)+'"><button class="invopen" data-act="civview" data-id="'+i.id+'"><span class="ih"><b>'+esc(i.number)+'</b><span class="pill '+st.c+'">'+st.t+'</span></span><span class="small">'+esc(i.periodStart)+' – '+esc(i.periodEnd)+'</span><span class="it">'+money(i.total)+'</span></button><button class="small sec" data-act="civpdf" data-id="'+i.id+'">Download PDF</button></div>';}).join('')+'</div>':'<p class="muted" id="myinvlist">No invoices yet.</p>');
+  (l.length?'<div id="myinvlist">'+l.map(function(i){var st=invPlain(i);return '<div class="invcard" data-inv="'+esc(i.number)+'"><button class="invopen" data-act="civview" data-id="'+esc(i.id)+'"><span class="ih"><b>'+esc(i.number)+'</b><span class="pill '+esc(st.c)+'">'+st.t+'</span></span><span class="small">'+esc(i.periodStart)+' – '+esc(i.periodEnd)+'</span><span class="it">'+money(i.total)+'</span></button><button class="small sec" data-act="civpdf" data-id="'+esc(i.id)+'">Download PDF</button></div>';}).join('')+'</div>':'<p class="muted" id="myinvlist">No invoices yet.</p>');
   return clientWord(x,ME);};
 NAV.firm.splice(NAV.firm.length-1,0,['#/invoices','My invoices']);
 ACT.civview=function(el){var i=invById(el.dataset.id);if(!invAllowed(i)){invDenied(i);return;}audit('Viewed client invoice',user(i.firmId).name,i.number);save();
-  modal(invHtml(i)+'<p class="row"><button data-act="civpdf" data-id="'+i.id+'">Download PDF</button><button class="sec" data-act="civprint" data-id="'+i.id+'">Print</button></p>');};
+  modal(invHtml(i)+'<p class="row"><button data-act="civpdf" data-id="'+esc(i.id)+'">Download PDF</button><button class="sec" data-act="civprint" data-id="'+esc(i.id)+'">Print</button></p>');};
 ACT.civpdf=function(el){var i=invById(el.dataset.id);if(!invAllowed(i)){invDenied(i);return;}var pdf=invPdf(i),name=invFileName(i);
   var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([pdf],{type:'application/pdf'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},100);
   PAGE_STATE.lastDownload={name:name,size:pdf.length,pdf:pdf};audit('Downloaded client invoice PDF',user(i.firmId).name,i.number);save();toast('PDF downloaded: '+name);};
