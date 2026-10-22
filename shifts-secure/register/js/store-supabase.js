@@ -552,7 +552,15 @@
   ACT.toggle2fa = ACT.my2fa = function () { toast('2-step sign-in will be added with the login service later (owner decision).'); };
 
   /* ---------- sign up (self) ---------- */
+  /* pickup1: "Text me sign-in codes" consent changed in My profile -> auth user_metadata only (no phone auth, no SMS) */
+  window.REG_SMS_UPDATE = async function (meta) { try { var r = await sb.auth.updateUser({ data: meta }); if (r.error) console.warn('[pickup1] sms consent metadata', r.error.message); } catch (e) {} };
+  /* pickup1: tell v2-pickup.js how sign-up ended (new account id, or null = failed) so its address backup is kept or dropped */
   async function selfSignup(d, kind, extra) {
+    var res = { id: null };
+    try { await selfSignup0(d, kind, extra, res); }
+    finally { try { if (window.REG_PICKUP_SIGNUP_DONE) window.REG_PICKUP_SIGNUP_DONE(res.id); } catch (e) {} }
+  }
+  async function selfSignup0(d, kind, extra, res) {
     var L = signupLogin(d); if (!L) { toast('Enter an email, a 10-digit phone number or a username to sign in with.'); return; }
     if (d.pw !== d.pw2) { toast('Passwords do not match.'); return; }
     var chk = pwCheck(d.pw, d); if (!chk.ok) { toast('Password needs: ' + chk.msgs.join(', ') + '.'); return; }
@@ -560,8 +568,12 @@
     busy(true, 'Creating your account…');
     try {
       var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
-        full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null } } });
+        full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null,
+        app: 'us', pickup_address: (window.REG_PICKUP_ADDR ? window.REG_PICKUP_ADDR(d) : null),   /* pickup1 */
+        sms_consent: !!d.smsConsent, sms_consent_at: d.smsConsent ? new Date().toISOString() : null,
+        phone_e164: (digits(d.phone).slice(-10).length === 10 ? '+1' + digits(d.phone).slice(-10) : null) } } });
       if (r.error) { toast(friendly(r.error)); return; }
+      if (r.data && r.data.user && r.data.user.id) res.id = r.data.user.id;
       if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
       SIGNED_IN = true;
       if (!(await loadSnapshot())) { toast('Account created, but it is not ready yet. Please contact the office.'); return; }
