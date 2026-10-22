@@ -14,7 +14,7 @@ var MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 function lab(d){var p=d.split('-');return MN[+p[1]-1]+' '+(+p[2]);}
 function apply(card){var tb=card.querySelector('#mtlist');if(!tb)return;var s=S(),from=s.from||wk0(today()),to=addDays(from,6);
   var rows=[].slice.call(tb.querySelectorAll('tr[data-id]')),ppl={},sites={},n=0,h=0;
-  rows.forEach(function(tr){var c=tr.cells,who=c[0]?c[0].querySelector('b')?c[0].querySelector('b').textContent:c[0].textContent:'',site=c[1]?c[1].textContent.split(' – ')[0].trim():'',d=c[2]?c[2].textContent.trim():'';
+  rows.forEach(function(tr){var c=tr.cells,who=c[0]?(c[0].querySelector('b')?c[0].querySelector('b').textContent+(c[0].querySelector('.muted')&&c[0].querySelector('.muted').textContent?' · '+c[0].querySelector('.muted').textContent:''):c[0].textContent):'',site=c[1]?c[1].textContent.split(' – ')[0].trim():'',d=c[2]?c[2].textContent.trim():'';
     tr.dataset.mtwDate=d;if(d>=from&&d<=to){ppl[who]=1;sites[site]=1;}
     var keep=d>=from&&d<=to&&(!s.who||s.who===who)&&(!s.site||s.site===site);tr.style.display=keep?'':'none';
     if(keep){n++;var ph=c[5]?parseFloat(c[5].textContent):0;if(!tr.classList.contains('mt-void')&&!/voided/i.test(tr.innerText))h+=ph||0;}});

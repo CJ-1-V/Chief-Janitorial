@@ -302,7 +302,7 @@
           var row = document.createElement('div');
           row.className = 'row pwreset-actions';
           var can = !!realEmail(u);
-          row.innerHTML = '<button type="button" data-act="pwemail" data-id="' + u.id + '"' + (can ? '' : ' disabled title="No real email on this account"') +
+          row.innerHTML = '<button type="button" data-act="pwemail" data-id="' + esc(u.id) + '"' + (can ? '' : ' disabled title="No real email on this account"') +
             '>Email the temporary password</button>' +
             (can ? '' : '<span class="small muted">No email on file – use Copy, or ask them for an email first.</span>');
           var note = m.querySelector('.tpw-note');
@@ -319,7 +319,7 @@
       var em = realEmail(u);
       if (!em) { toast('This person has no valid email. Use Copy instead.'); return; }
       var m = officeTempEmail(u, t.pw);
-      modal('<div class="pwreset addperson-result" data-step="email" id="pwemailprev" data-id="' + u.id + '">' +
+      modal('<div class="pwreset addperson-result" data-step="email" id="pwemailprev" data-id="' + esc(u.id) + '">' +
         '<h2>Email the temporary password to ' + esc(u.name) + '?</h2>' +
         '<h3>Exactly what will be sent</h3>' + emailHtml(m, 'pwtempmail') +
         (t.sentAt
@@ -328,9 +328,9 @@
           : '<div class="alert warn small">Nothing has been sent yet. The email goes out only when you click <b>Send email</b>.' +
             (live() ? '' : ' (TEST: it goes to "Outbox (test)" – never really sent.)') + '</div>') +
         '<div class="row pwreset-actions ap-actions">' +
-        '<button type="button" data-act="pwemailsend" data-id="' + u.id + '"' + (t.sentAt ? ' disabled' : '') + '>' +
+        '<button type="button" data-act="pwemailsend" data-id="' + esc(u.id) + '"' + (t.sentAt ? ' disabled' : '') + '>' +
         (t.sentAt ? 'Sent ✓' : 'Send email') + '</button>' +
-        '<button type="button" class="sec" data-act="pwemailback" data-id="' + u.id + '">Back</button>' +
+        '<button type="button" class="sec" data-act="pwemailback" data-id="' + esc(u.id) + '">Back</button>' +
         '<button type="button" class="sec" data-act="closeModal">Done</button></div>' +
         '<div class="small muted">The temporary password is shown only in this preview (kept in memory briefly, never saved). Password is never written to the audit log.</div></div>');
     };

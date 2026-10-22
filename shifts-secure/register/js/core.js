@@ -12,6 +12,46 @@ function isoLocal(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.ge
    Workers, subcontractors and farms keep the check. Server side already lets reg_office_write() through (reg_time_manual_guard returns early). */
 function officeAnyTime(){try{if(typeof ME==='undefined'||!ME||ME.type!=='admin')return false;var r=ME.officeRoles||(ME.officeRole?[ME.officeRole]:null);if(!r||!r.length)return true;
   return r.some(function(x){return ['owner','admin','ops','payroll','billing'].indexOf(String(x))>=0;});}catch(e){return false;}}
+/* ===== manualfix1 (owner Oct 21 2026): ONE shared hours rule set for EVERY hours entry / edit path (UnScramble only) =====
+   Break rule: none up to 5 h; the usual break (BREAK_MIN, 30 min) unpaid over 5 h – for ALL farms. The old 60 min at 8 h or more tier is
+   DROPPED; hours saved before the change (HR.isOld) keep the old tier so hours already saved, paid and invoiced do not change.
+   Chosen break: an entry may store brkMin (minutes actually given: 0, 15, 30, 45, 60 or custom) and brkAt (break start "HH:MM", optional).
+   Pay / billing use brkMin when set; otherwise breakMissed → 0; otherwise the rule. Validation: quarter-hour times, start ≠ finish,
+   at most MAX_SHIFT_H, break 0–180 min and shorter than the shift, break start inside the shift (warning), less break than the rule
+   (warning, allowed), and no finish in the future – except the office (officeAnyTime), which may enter hours at any time. */
+var HR={RULE30_AT:'2026-10-22T02:37:00Z',RULE30_DAY:'2026-10-21',SHORT_OVER:5,OLD_LONG_AT:8,OLD_LONG_MIN:60,CHOICES:[0,15,30,45,60],
+  usual:function(){return (typeof BREAK_MIN!=='undefined'&&BREAK_MIN!=null&&!isNaN(+BREAK_MIN))?+BREAK_MIN:30;},
+  worked:function(a,b){if(!a||!b||typeof hrs!=='function')return 0;var w=hrs(a,b);if(!w&&a>b)w=hrs(a,'24:00')+hrs('00:00',b);return w;},
+  /* old 60-min tier only for hours saved before the change (owner Oct 21 2026 10:37 PM ET): saved time when known, else shift date before Oct 21 */
+  isOld:function(x){if(!x)return false;if(typeof x==='object'){var m=x.made||x.addedAt||x.manualAt||x.realIn||'';if(m)return String(m)<HR.RULE30_AT;x=x.date;}return !!x&&String(x)<HR.RULE30_DAY;},
+  ruleMin:function(h,x,usual){var u=(usual==null||usual==='')?HR.usual():(+usual||0);if(!(h>HR.SHORT_OVER+1e-9))return 0;
+    if(HR.isOld(x)&&h>=HR.OLD_LONG_AT-1e-9)return Math.max(HR.OLD_LONG_MIN,u);return u;},
+  hasChoice:function(t){return !!t&&t.brkMin!==undefined&&t.brkMin!==null&&t.brkMin!==''&&!isNaN(+t.brkMin);},
+  brkMinOf:function(t,h){if(!t)return 0;if(h==null)h=HR.worked(t['in'],t.out);if(HR.hasChoice(t))return Math.min(Math.max(0,+t.brkMin),Math.round(h*60));
+    if(t.breakMissed)return 0;return HR.ruleMin(h,t);},
+  paid:function(t){var h=HR.worked(t['in'],t.out);return Math.max(0,h-HR.brkMinOf(t,h)/60);},
+  label:function(t){var h=HR.worked(t['in'],t.out),m=HR.brkMinOf(t,h);return (m?m+' min':'none')+(t&&t.brkAt&&m?' from '+t.brkAt:'');},
+  /* d: {date,in,out,brkMin?,brkAt?}; opt: {office:bool, exceptFuture:bool}. Returns {E:[errors],W:[warnings]} */
+  validate:function(d,opt){opt=opt||{};var E=[],W=[],a=d['in'],b=d.out;
+    if(d.date!==undefined&&!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E.push('Pick the shift date.');
+    var q=function(v){return /^\d{2}:\d{2}$/.test(v||'')&&(+v.slice(3))%15===0;};
+    if(!a||!b)E.push('Enter a start and a finish time.');else if(!q(a)||!q(b))E.push('Use quarter-hour times (:00, :15, :30, :45).');
+    else if(typeof spanErr==='function'&&spanErr(a,b))E.push(spanErr(a,b));
+    var office=opt.office!=null?opt.office:officeAnyTime();
+    if(!E.length&&!office&&d.date){if(d.date>today())E.push('The date cannot be in the future.');
+      else if(typeof hmMsLocal==='function'&&hmMsLocal(d.date,a)+HR.worked(a,b)*3600000>Date.now())E.push('This shift would end in the future. Hours can only be added after they are worked.');}
+    if(!E.length){var h=HR.worked(a,b),has=d.brkMin!==undefined&&d.brkMin!==null&&d.brkMin!=='';
+      if(has){var m=+d.brkMin;if(isNaN(m)||m<0||m>180||Math.floor(m)!==m)E.push('Break given: whole minutes from 0 to 180.');else if(m>0&&m/60>=h)E.push('The break must be shorter than the shift.');
+        else if(m<HR.ruleMin(h,opt.entry||{made:new Date().toISOString()}))W.push('Less break than the usual rule ('+HR.ruleMin(h,opt.entry||{made:new Date().toISOString()})+' min for a '+(Math.round(h*100)/100)+' h shift).');}
+      if(d.brkAt){if(!/^\d{2}:\d{2}$/.test(d.brkAt))E.push('Break started at: use a time like 12:00.');
+        else{var off=(function(){var s=+a.slice(0,2)*60+ +a.slice(3),x=+d.brkAt.slice(0,2)*60+ +d.brkAt.slice(3);if(x<s)x+=1440;return (x-s)/60;})();if(off>=h)W.push('The break start is outside the shift times.');}}}
+    return {E:E,W:W};}};
+window.HR=HR;
+/* manualfix1: tell people with the same (or nearly the same) name apart in pickers – employer and phone last 4 (no full numbers) */
+function personKey(n){return String(n||'').toLowerCase().replace(/[^a-z]/g,'');}
+function personLabel(u){if(!u)return '';var k=personKey(u.name),dup=(DB.users||[]).some(function(x){return x!==u&&x.id!==u.id&&(x.type==='employee'||x.type==='worker'||x.type==='sub')&&personKey(x.name)===k;});if(!dup)return u.name;
+  var who=u.type==='employee'?'UnScramble employee':u.type==='sub'?'Subcontractor':(typeof employerName==='function'?employerName(u):'');var ph=String(u.phone||'').replace(/\D/g,'');
+  return u.name+' · '+(who||u.type)+(ph.length>=4?' · phone …'+ph.slice(-4):'')+(u.active===false?' · switched off':'');}
 function realToday(){return isoLocal(new Date());}
 function today(){return (DB&&DB.settings.simDate)||realToday();}
 function parseD(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}

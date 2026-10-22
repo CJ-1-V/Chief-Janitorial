@@ -61,7 +61,7 @@ function boxes(m){var f=firm(),B=[],main=!lim();
   add('profile','user','Profile','Your details and password','#/profile');
   return B;}
 function grid(B){return '<section class="hb-grid-wrap" id="hbgrid" aria-label="More"><div class="hb-grid">'+B.map(function(b,i){
-  return '<button type="button" class="hb-box" data-act="hbopen" data-k="'+b.k+'"'+(b.go?' data-go="'+b.go+'"':'')+' style="--hb-d:'+(i*40)+'ms" id="hb-'+b.k+'"><span class="hb-bic">'+I(b.ic)+'</span><span class="hb-bt"><b>'+esc(b.t)+'</b><span class="hb-bs">'+esc(b.s)+'</span></span>'+I('chev','hb-chev')+'</button>';}).join('')+'</div></section>';}
+  return '<button type="button" class="hb-box" data-act="hbopen" data-k="'+esc(b.k)+'"'+(b.go?' data-go="'+esc(b.go)+'"':'')+' style="--hb-d:'+(i*40)+'ms" id="hb-'+esc(b.k)+'"><span class="hb-bic">'+I(b.ic)+'</span><span class="hb-bt"><b>'+esc(b.t)+'</b><span class="hb-bs">'+esc(b.s)+'</span></span>'+I('chev','hb-chev')+'</button>';}).join('')+'</div></section>';}
 
 /* ---------- Crew coming: people graphics ---------- */
 function jobIc(t){t=String(t||'').toLowerCase();return /pick|harvest/.test(t)?'pick':/pack|grad|sort/.test(t)?'box':/driv|truck/.test(t)?'truck':/lead|super|foreman/.test(t)?'lead':/gen|lab|help/.test(t)?'user':'tool';}

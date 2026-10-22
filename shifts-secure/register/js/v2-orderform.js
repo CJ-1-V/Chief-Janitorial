@@ -185,7 +185,7 @@ ACT.coedit=function(el){var o=ordById(el.dataset.id);if(!o||o.firmId!==ME.id){to
   var f=(o.pending&&o.pending.kind==='change'&&o.pending.fields)||o.cur||(o.pending&&o.pending.fields)||o.req,late=hoursBefore(o.cur||f)<orderCutoffH();
   modal(clientWord('<h2>Change order</h2><p class="small">'+esc(o.no)+' · '+esc(siteName(f.site))+'</p>'+(o.cur?'<p class="small">Confirmed now: <b>'+esc(ofSchedText(o.cur))+' · '+ordTime(o.cur)+' · '+esc(ofCrewLine(ME,o.cur))+'</b>. This stays until the office says yes to your change.</p>':'')+
   (late?'<div class="alert warn small latewarn"><b>Late change:</b> this starts in less than '+orderCutoffH()+' hours. You can still change it, but late changes may be charged per your agreement.</div>':'')+
-  '<form data-form="crewOrderEdit" class="of-f of-edit"><input type="hidden" name="id" value="'+o.id+'">'+ofSchedBlock(f,{edit:true})+'<div class="grid2">'+qSel('start','Start time',f.start,{req:true})+'</div>'+ofCrewBlock(ME,f,{id:'ofn-e'})+ofAddrBlock(f,{id:'ofaddr-e'})+
+  '<form data-form="crewOrderEdit" class="of-f of-edit"><input type="hidden" name="id" value="'+esc(o.id)+'">'+ofSchedBlock(f,{edit:true})+'<div class="grid2">'+qSel('start','Start time',f.start,{req:true})+'</div>'+ofCrewBlock(ME,f,{id:'ofn-e'})+ofAddrBlock(f,{id:'ofaddr-e'})+
   '<details class="more"><summary>More options</summary><div class="grid2">'+qSel('end','Finish time (optional)',f.end||'',{blank:'– not set –',hint:'Earlier than the start = next day.'})+inp('hours','…or hours (optional)',f.hours&&!f.end?f.hours:'',{type:'number',extra:' min="0.25" max="16" step="0.25"'})+'</div><label>Note (optional)</label><textarea name="note">'+esc(f.note||'')+'</textarea></details><p><button>Send change</button></p></form>',ME));
   };
 

@@ -42,7 +42,9 @@ function step1(d,err){var none=d.brk==='none',ph=paid(d['in'],d.out,none);
     '<p><b>'+E(siteLabel(d.site))+'</b> · '+E(d.date)+'</p><p class="ds-times"><b>'+E(span(d['in'],d.out))+'</b> · '+E(brkTxt(d['in'],d.out,none))+' · <b>'+h2(ph)+' h</b> each</p>'+
     (d.fromName?'<p class="small muted">Copied from: '+E(d.fromName)+'</p>':'')+
     '<p class="small ds-hint">The new shifts have <b>no person yet</b>. They show in red. They count for the farm (hours and invoice) now. Tap “Assign person” later.</p>'+
-    '<form data-form="dsnext" id="dsform">'+['site','date','in','out','brk','fromName'].map(function(k){return '<input type="hidden" name="'+k+'" value="'+E(d[k]||'')+'">';}).join('')+
+    '<form data-form="dsnext" id="dsform">'+['site','date','brk','fromName'].map(function(k){return '<input type="hidden" name="'+k+'" value="'+E(d[k]||'')+'">';}).join('')+
+    /* manualfix1: start / finish (and break, added by v2-hoursrules.js) can be changed here */
+    '<div class="grid2"><div><label class="req" for="dsin">Start</label><input type="time" step="900" id="dsin" name="in" required value="'+E(d['in']||'')+'"></div><div><label class="req" for="dsout">Finish</label><input type="time" step="900" id="dsout" name="out" required value="'+E(d.out||'')+'"></div></div>'+
     '<div class="grid2"><div><label class="req" for="dsn">How many shifts?</label><input type="number" id="dsn" name="n" min="1" max="30" step="1" required value="'+E(d.n||1)+'" inputmode="numeric"></div>'+
     '<div><label for="dspre">Nickname (optional)</label><input type="text" id="dspre" name="pre" maxlength="50" value="'+E(d.pre||'')+'" placeholder="e.g. Extra → Extra 1, Extra 2"></div></div>'+
     (err?'<div class="alert bad small" id="dserr">'+E(err)+'</div>':'')+
@@ -67,9 +69,11 @@ ACT.dsrow=function(el){if(!can()){toast('Only the Owner, an Admin or Payroll (bi
   if(m){var sh=(DB.shifts||[]).filter(function(s){return s.id===m[1];})[0];if(!sh)return;var u=user(m[2]);t={site:sh.site,date:sh.date,'in':sh.start,out:sh.end,breakMissed:false,nm:u?u.name:''};}
   else{var x=byId(k.slice(2));if(!x||!x.out)return;var u2=x.unassigned?null:user(x.userId);t={site:siteOf(x),date:x.date,'in':x['in'],out:x.out,breakMissed:!!x.breakMissed,nm:x.unassigned?'Unassigned'+(x.uaNick?': '+x.uaNick:''):(u2?u2.name:'')};}
   step1({site:t.site,date:t.date,'in':t['in'],out:t.out,brk:t.breakMissed?'none':'taken',fromName:t.nm+' ('+span(t['in'],t.out)+')',n:1});};
-ACT.dsbar=function(el){if(!can())return;var s=el.dataset.site,d=el.dataset.date;var T=(DB.time||[]).filter(function(t){return !t.removed&&!t.test&&t.out&&t.date===d&&siteOf(t)===s;});
-  var c={},best=null;T.forEach(function(t){var k=t['in']+'|'+t.out+'|'+(t.breakMissed?1:0);c[k]=(c[k]||0)+1;if(!best||c[k]>c[best])best=k;});var p=(best||'07:00|15:00|0').split('|');
-  step1({site:s,date:d,'in':p[0],out:p[1],brk:p[2]==='1'?'none':'taken',n:1});};
+/* manualfix1: prefilled from the LAST entry for that farm (any of its sites, newest date / start), not a fixed 07:00–15:00 */
+ACT.dsbar=function(el){if(!can())return;var s=el.dataset.site,d=el.dataset.date,f=farmOf(s),codes=f?(DB.sites||[]).filter(function(x){return x.firmId===f.id;}).map(function(x){return x.code;}):[s];
+  var T=(DB.time||[]).filter(function(t){return !t.removed&&!t.test&&t.out&&t['in']&&codes.indexOf(siteOf(t))>=0;}).sort(function(a,b){var x=(a.date+a['in']+(a.addedAt||a.manualAt||'')),y=(b.date+b['in']+(b.addedAt||b.manualAt||''));return x<y?1:x>y?-1:0;});
+  var L=T[0];if(!L){step1({site:s,date:d,'in':'','out':'',brk:'taken',n:1});return;}
+  step1({site:s,date:d,'in':L['in'],out:L.out,brk:(HR.hasChoice(L)?+L.brkMin===0:L.breakMissed)?'none':'taken',brkMin:HR.hasChoice(L)?L.brkMin:'',brkAt:L.brkAt||'',fromName:'last entry for this farm ('+L.date+' '+span(L['in'],L.out)+')',n:1});};
 ACT.dsform=function(el){var f=el.closest('form');if(!f)return;var d=dataOf(f);step1({site:d.site,date:d.date,'in':d['in'],out:d.out,brk:d.brk,n:+((f.querySelector('#dsfn')||{}).value)||1,pre:(f.querySelector('#dsfpre')||{}).value||''});};
 ADMIN_ONLY_ACT.push('dsrow','dsbar','dsform','dsback');ADMIN_ONLY_FORM.push('dsnext','dsok');
 /* decorate */

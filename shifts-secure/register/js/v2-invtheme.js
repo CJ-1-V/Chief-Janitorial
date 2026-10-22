@@ -154,9 +154,9 @@ invFileName=function(i){return String(i.number||'invoice').replace(/[^A-Za-z0-9.
 /* ---------- view (status stays outside the invoice) + print ---------- */
 (function(){var pv=ACT.civview;ACT.civview=function(el){var i=invById(el.dataset.id);if(!i||i.uploaded)return pv(el);if(!invAllowed(i)){invDenied(i);return;}
   audit('Viewed client invoice',user(i.firmId).name,i.number);save();var st=invPlain(i),it=clientInvInterest(i),c=CB();
-  modal(invtHtml(i)+'<div class="invt-status card small"><span class="pill '+st.c+'">'+esc(st.t)+'</span> '+esc(st.d)+
+  modal(invtHtml(i)+'<div class="invt-status card small"><span class="pill '+esc(st.c)+'">'+esc(st.t)+'</span> '+esc(st.d)+
     (it.amount&&!i.paidAt?' · interest on the overdue amount '+money(it.amount)+' ('+it.months+' month(s) × '+(i.interestPct!=null?i.interestPct:c.interestPct)+'%)':'')+
-    ' · <b>Now owing '+money(i.paidAt?0:i.total+it.amount)+'</b></div><p class="row"><button data-act="civpdf" data-id="'+i.id+'">Download PDF</button><button class="sec" data-act="civprint" data-id="'+i.id+'">Print</button></p>');};})();
+    ' · <b>Now owing '+money(i.paidAt?0:i.total+it.amount)+'</b></div><p class="row"><button data-act="civpdf" data-id="'+esc(i.id)+'">Download PDF</button><button class="sec" data-act="civprint" data-id="'+esc(i.id)+'">Print</button></p>');};})();
 (function(){var pp=ACT.civprint;ACT.civprint=function(el){var i=invById(el.dataset.id);if(!i||i.uploaded)return pp(el);if(!invAllowed(i)){invDenied(i);return;}
   var w=window.open('','_blank');if(!w){toast('Pop-up blocked – use Download PDF instead.');return;}
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(i.number)+'</title><style>@page{size:letter;margin:0.6in 0.75in}html,body{margin:0;background:#fff}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+INVT_CSS+'.usinv{max-width:none;padding:0;font-size:13px}</style></head><body>'+invtHtml(i)+'</body></html>');

@@ -33,15 +33,15 @@
       subPass:s?tempActive(s):false,unlinked:hard.some(function(m){return /^Not linked to an employer/.test(m);})};}
   window.subwloginWhy=why;
   function box(u){var w=why(u);if(!w)return '';
-    if(w.ready)return '<div class="alert ok small swl-box" id="swl-'+u.id+'"><b>⏱ Can clock in: yes.</b> Missing documents don\'t stop clock-in (they show as a reminder).</div>';
-    var s=w.s,sn=s?employerName(u):'',x='<div class="alert warn small swl-box" id="swl-'+u.id+'"><b>⏱ Can\'t clock in yet.</b>';
+    if(w.ready)return '<div class="alert ok small swl-box" id="swl-'+esc(u.id)+'"><b>⏱ Can clock in: yes.</b> Missing documents don\'t stop clock-in (they show as a reminder).</div>';
+    var s=w.s,sn=s?employerName(u):'',x='<div class="alert warn small swl-box" id="swl-'+esc(u.id)+'"><b>⏱ Can\'t clock in yet.</b>';
     if(u.accountApproved===false)x+='<div>The account is waiting for office approval.</div>';
     if(w.own.length)x+='<div class="swl-h">'+esc(u.name)+'\'s own items:</div><ul>'+w.own.map(function(m){return '<li>'+esc(m)+'</li>';}).join('')+'</ul>';
     if(w.unlinked)x+='<div>Not linked to a subcontractor (employer).</div>';
     if(s&&w.emp.length){x+='<div class="swl-h">Held up by the employer, <b>'+esc(sn)+'</b>'+(u.type==='worker'&&tempActive(u)?' – '+esc(u.name)+'\'s own 14-day pass does not cover the employer\'s papers':'')+':</div><ul>'+
         w.emp.map(function(m){var cov=PASS_OK.test(m);return '<li>'+esc(plain(m))+(cov?' <span class="muted">– a company 14-day pass covers this</span>':' <span class="swl-np">– a pass can\'t cover this</span>')+'</li>';}).join('')+'</ul>';
       if(w.noPass.some(function(m){return /accepted the current agreement/.test(m);}))x+='<div class="swl-tip">The company\'s contact must sign in and accept the agreement. If they don\'t have their login, open the company and use <b>Send login details again</b> (or Reset password).</div>';
-      x+='<div class="row swl-act">'+(!w.subPass&&w.passFix.length?'<button type="button" class="small" data-act="passmodal" data-id="'+s.id+'">Give '+esc(sn)+' a 14-day pass</button>':'')+'<button type="button" class="small sec" data-act="person" data-id="'+s.id+'">Open '+esc(sn)+'</button></div>';}
+      x+='<div class="row swl-act">'+(!w.subPass&&w.passFix.length?'<button type="button" class="small" data-act="passmodal" data-id="'+esc(s.id)+'">Give '+esc(sn)+' a 14-day pass</button>':'')+'<button type="button" class="small sec" data-act="person" data-id="'+esc(s.id)+'">Open '+esc(sn)+'</button></div>';}
     return x+'</div>';}
   window.subwloginBox=box;
   /* office: worker / employee card */

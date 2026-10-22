@@ -102,16 +102,16 @@ function compliance(){var bl=typeof blockedList==='function'?blockedList():[],bs
 /* ---------------- drawing ---------------- */
 function aria(s){return E(String(s).replace(/<[^>]+>/g,''));}
 function empty(msg){return '<div class="oi-empty">'+E(msg)+'</div>';}
-function legend(series,vals){return '<ul class="oi-legend">'+series.map(function(s){return '<li><i style="background:'+s.color+'"></i>'+E(s.label)+(vals?' <b>'+E(vals[s.key])+'</b>':'')+'</li>';}).join('')+'</ul>';}
+function legend(series,vals){return '<ul class="oi-legend">'+series.map(function(s){return '<li><i style="background:'+esc(s.color)+'"></i>'+E(s.label)+(vals?' <b>'+E(vals[s.key])+'</b>':'')+'</li>';}).join('')+'</ul>';}
 /* vertical (stacked) bars. cols:[{label,sub,vals:{key:n},cls}] */
 function vbars(o){var cols=o.cols,series=o.series,max=0,tot=0,fmt=o.fmt||fmtH;
   cols.forEach(function(c){c.sum=series.reduce(function(a,s){return a+(+c.vals[s.key]||0);},0);if(c.sum>max)max=c.sum;tot+=c.sum;});
   if(!tot)return empty(o.empty||'Nothing to show yet.');
   var desc=(o.aria||'')+': '+cols.map(function(c){return c.label+' '+(c.sub||'')+' '+fmt(c.sum);}).join(', ');
-  return '<div class="oi-vb'+(cols.length>9?' oi-many':'')+'" role="img" aria-label="'+aria(desc)+'"><div class="oi-plot" style="--oi-n:'+cols.length+'">'+cols.map(function(c){var h=max?c.sum/max*100:0;
+  return '<div class="oi-vb'+(cols.length>9?' oi-many':'')+'" role="img" aria-label="'+aria(desc)+'"><div class="oi-plot" style="--oi-n:'+esc(cols.length)+'">'+cols.map(function(c){var h=max?c.sum/max*100:0;
     return '<div class="oi-col'+(c.cls?' '+c.cls:'')+'" title="'+aria(c.title||(c.label+' '+(c.sub||'')+': '+fmt(c.sum)+(o.unit?' '+o.unit:'')))+'"><div class="oi-colv">'+(c.sum?E(fmt(c.sum)):'')+'</div>'+(c.sum?'<div class="oi-stack" style="height:'+h.toFixed(1)+'%">'+
       series.map(function(s){var v=+c.vals[s.key]||0;return v?'<span style="flex:'+v+' 1 0;background:'+s.color+'"></span>':'';}).join('')+'</div>':'')+'</div>';}).join('')+'</div>'+
-    '<div class="oi-xax" style="--oi-n:'+cols.length+'">'+cols.map(function(c){return '<div class="oi-xl'+(c.cls?' '+c.cls:'')+'">'+E(c.label)+(c.sub?'<span>'+E(c.sub)+'</span>':'')+'</div>';}).join('')+'</div>'+
+    '<div class="oi-xax" style="--oi-n:'+esc(cols.length)+'">'+cols.map(function(c){return '<div class="oi-xl'+(c.cls?' '+c.cls:'')+'">'+E(c.label)+(c.sub?'<span>'+E(c.sub)+'</span>':'')+'</div>';}).join('')+'</div>'+
     (series.length>1||o.legend?legend(series):'')+'</div>';}
 /* horizontal (stacked) bars. rows:[{label,sub,segs:[{v,c,l}],total,href,txt}] */
 function hbars(rows,o){o=o||{};var max=0;rows.forEach(function(r){if(r.total>max)max=r.total;});
@@ -122,16 +122,16 @@ function hbars(rows,o){o=o||{};var max=0;rows.forEach(function(r){if(r.total>max
 /* donut: segs [{v,c,l,sub}] */
 function donut(segs,center,cap,o){o=o||{};var tot=segs.reduce(function(a,s){return a+s.v;},0);
   var ring='<circle cx="21" cy="21" r="15.9155" fill="none" stroke="#ece9f6" stroke-width="6"></circle>',acc=0;
-  if(tot)segs.forEach(function(s){if(!s.v)return;var p=s.v/tot*100;ring+='<circle class="oi-seg" cx="21" cy="21" r="15.9155" fill="none" stroke="'+s.c+'" stroke-width="6" stroke-dasharray="'+p.toFixed(3)+' '+(100-p).toFixed(3)+'" stroke-dashoffset="'+(25-acc).toFixed(3)+'"></circle>';acc+=p;});
+  if(tot)segs.forEach(function(s){if(!s.v)return;var p=s.v/tot*100;ring+='<circle class="oi-seg" cx="21" cy="21" r="15.9155" fill="none" stroke="'+esc(s.c)+'" stroke-width="6" stroke-dasharray="'+p.toFixed(3)+' '+(100-p).toFixed(3)+'" stroke-dashoffset="'+(25-acc).toFixed(3)+'"></circle>';acc+=p;});
   return '<div class="oi-dn" role="img" aria-label="'+aria((o.aria||'')+': '+segs.map(function(s){return s.l+' '+(s.txt||s.v);}).join(', '))+'"><div class="oi-ring"><svg viewBox="0 0 42 42" aria-hidden="true" focusable="false">'+ring+'</svg><div class="oi-ctr"><b>'+E(center)+'</b><span>'+E(cap)+'</span></div></div>'+
-    '<ul class="oi-legend oi-dl">'+segs.map(function(s){return '<li><i style="background:'+s.c+'"></i><span>'+E(s.l)+'</span> <b>'+E(s.txt!=null?s.txt:s.v)+'</b>'+(s.sub?'<small>'+E(s.sub)+'</small>':'')+'</li>';}).join('')+'</ul></div>';}
+    '<ul class="oi-legend oi-dl">'+segs.map(function(s){return '<li><i style="background:'+esc(s.c)+'"></i><span>'+E(s.l)+'</span> <b>'+E(s.txt!=null?s.txt:s.v)+'</b>'+(s.sub?'<small>'+E(s.sub)+'</small>':'')+'</li>';}).join('')+'</ul></div>';}
 var IC={clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',people:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   truck:'<path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
   inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',pin:'<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
   shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'};
 function icon(k){return '<svg class="oi-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(IC[k]||'')+'</svg>';}
 function tile(t){var inner=icon(t.ic)+'<div class="oi-tt"><b class="oi-tn">'+E(t.n)+'</b><span class="oi-tl">'+E(t.l)+'</span>'+(t.s?'<small>'+E(t.s)+'</small>':'')+'</div>';
-  return t.href?'<a class="oi-tile'+(t.cls?' '+t.cls:'')+'" href="'+E(t.href)+'"'+(t.id?' id="'+t.id+'"':'')+'>'+inner+'</a>':'<div class="oi-tile'+(t.cls?' '+t.cls:'')+'"'+(t.id?' id="'+t.id+'"':'')+'>'+inner+'</div>';}
+  return t.href?'<a class="oi-tile'+(t.cls?' '+t.cls:'')+'" href="'+E(t.href)+'"'+(t.id?' id="'+esc(t.id)+'"':'')+'>'+inner+'</a>':'<div class="oi-tile'+(t.cls?' '+t.cls:'')+'"'+(t.id?' id="'+esc(t.id)+'"':'')+'>'+inner+'</div>';}
 function card(id,title,body,o){o=o||{};return '<section class="oi-card'+(o.wide?' oi-wide':'')+'" id="'+id+'"><div class="oi-ch"><h2>'+E(title)+'</h2>'+(o.link?'<a class="oi-more" href="'+E(o.link[0])+'">'+E(o.link[1])+' →</a>':'')+'</div>'+(o.note?'<p class="oi-note">'+o.note+'</p>':'')+body+'</section>';}
 function insertAt(x,marker,html,after){var i=x.indexOf(marker);if(i<0)return null;var at=after?i+marker.length:i;return x.slice(0,at)+html+x.slice(at);}
 
@@ -197,7 +197,7 @@ function lateBlock(){var L=(DB.time||[]).filter(function(t){return t.lateEntry&&
   var src=function(l){return {s:l.filter(function(t){return t.subAdded;}).length,m:l.filter(function(t){return !t.subAdded&&t.manual;}).length};};var ps=src(p);ps.e=p.length-ps.s-ps.m;
   var ap=L.filter(function(t){return t.lateEntry==='approved'&&String(t.lateApprovedAt||t.addedAt||'').slice(0,10)>=lim;}).length,rj=L.filter(function(t){return t.lateEntry==='rejected'&&String(t.lateRejectedAt||t.addedAt||'').slice(0,10)>=lim;}).length;
   var ph=p.reduce(function(a,t){return a+paidH(t);},0);
-  var tiles='<div class="oi-tiles oi-tiles-s">'+[{ic:'inbox',n:String(p.length),l:'Waiting for approval',s:fmtH(ph)+' h not counted yet',cls:p.length?'oi-t-gold':''},{ic:'shield',n:String(ap),l:'Approved',s:'last 30 days'},{ic:'doc',n:String(rj),l:'Not approved',s:'last 30 days'}].map(tile).join('')+'</div>';
+  var tiles='<div class="oi-tiles oi-tiles-s">'+[{ic:'inbox',n:String(p.length),l:'Waiting for approval',s:fmtH(ph)+' h – counted now, can still change',cls:p.length?'oi-t-gold':''},{ic:'shield',n:String(ap),l:'Approved',s:'last 30 days'},{ic:'doc',n:String(rj),l:'Not approved',s:'last 30 days'}].map(tile).join('')+'</div>';
   var bars=p.length?hbars([{label:'Added by subcontractor',segs:[{v:ps.s,c:C.gold}],total:ps.s},{label:'Crew lead / manual hours',segs:[{v:ps.m,c:C.sand}],total:ps.m},{label:'Employee missed shift',segs:[{v:ps.e,c:C.warn}],total:ps.e}],{aria:'Late entries waiting, by who added them',showZero:true}):'<div class="oi-empty oi-good">No late entries are waiting.</div>';
   return '<div class="oi-grid oi-one" id="oiLate">'+card('oiLateCard','Late entries at a glance',tiles+'<h3 class="oi-h3">Waiting – who added them</h3>'+bars,{wide:true})+'</div>';}
 if(VIEWS['admin:lateentries']){var _late=VIEWS['admin:lateentries'];VIEWS['admin:lateentries']=function(){var x=_late.apply(this,arguments);if(!office())return x;try{var b=lateBlock(),y=insertAt(x,'<div class="tw"><table id="latequeue">',b);x=y||x+b;}catch(e){warnLog('late',e);}return x;};}

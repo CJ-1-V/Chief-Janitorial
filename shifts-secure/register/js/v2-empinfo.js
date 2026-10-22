@@ -37,7 +37,7 @@
   function stats(u){var S=idSet(idsFor(u)),T=today(),ws=weekStart(T),we=addDays(ws,6),P=periodFor(u);
     var r={all:0,week:0,today:0,period:0,P:P,n:0,first:'',wait:0,waitN:0,chg:0,open:0};
     DB.time.forEach(function(t){if(!S[t.userId]||t.test)return;if(!t.out){if(t.clock)r.open++;return;}
-      if(isWaiting(t)){r.wait+=paidH(t);r.waitN++;return;}if(!counts(t))return;var h=paidH(t);
+      if(isWaiting(t)&&!t.test&&t.out){r.wait+=paidH(t);r.waitN++;}if(!(counts(t)||isWaiting(t)&&!t.test&&!!t.out))return;var h=paidH(t);
       r.all+=h;r.n++;if(!r.first||t.date<r.first)r.first=t.date;if(t.date>=ws&&t.date<=we)r.week+=h;if(t.date===T)r.today+=h;if(t.date>=P.start&&t.date<=P.end)r.period+=h;
       if(typeof latestChange==='function'){var c=latestChange(t.key0||('t:'+t.id));if(c&&c.status==='Pending')r.chg++;}});
     return r;}
@@ -50,7 +50,7 @@
       lab=typeof efWeekLabel==='function'?efWeekLabel(W.ws):'Week of '+rng(W.ws,addDays(W.ws,6));
     var aria='Hours by day, '+lab+': '+W.days.map(function(x){return shortDay(x.d).slice(0,3)+' '+fs(x.h);}).join(', ')+'. Total '+f2(W.tot)+' hours.';
     var cols=W.days.map(function(x,i){var pc=x.h>0?Math.max(4,Math.round(x.h/mx*100)):0,fut=x.d>T;
-      return '<div class="ei-col'+(x.d===T?' ei-today':'')+(fut?' ei-fut':'')+'" data-date="'+x.d+'" data-h="'+f2(x.h)+'">'+(mini?'':'<span class="ei-v">'+(x.h>0?fs(x.h):'')+'</span>')+
+      return '<div class="ei-col'+(x.d===T?' ei-today':'')+(fut?' ei-fut':'')+'" data-date="'+esc(x.d)+'" data-h="'+f2(x.h)+'">'+(mini?'':'<span class="ei-v">'+(x.h>0?fs(x.h):'')+'</span>')+
         '<span class="ei-track"><i style="height:'+pc+'%;animation-delay:'+(i*40)+'ms"></i></span><span class="ei-d">'+(mini?shortDay(x.d).charAt(0):shortDay(x.d).slice(0,3))+'</span></div>';}).join('');
     if(mini)return '<div class="ei-bars ei-mini" role="img" aria-label="'+E(aria)+'">'+cols+'</div>';
     var line8=Math.round(8/mx*100);
@@ -60,7 +60,7 @@
       (W.tot?'':'<p class="ei-none small muted">No approved hours '+(off?'that week':'yet this week')+'.</p>')+'</div>';}
   /* segmented ring: segs = [{c:'ok'|'warn'|'bad'|'mut'|'temp'}], big = centre text */
   function ring(segs,big,small,aria){var r=42,C=2*Math.PI*r,n=Math.max(1,segs.length),gap=n>1?Math.min(4,C/n*0.18):0,len=C/n-gap;
-    var arcs=segs.length?segs.map(function(s,i){return '<circle class="ei-seg ei-'+s.c+'" cx="50" cy="50" r="'+r+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-(i*C/n)-gap/2).toFixed(2)+'"/>';}).join(''):'';
+    var arcs=segs.length?segs.map(function(s,i){return '<circle class="ei-seg ei-'+esc(s.c)+'" cx="50" cy="50" r="'+r+'" stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-(i*C/n)-gap/2).toFixed(2)+'"/>';}).join(''):'';
     return '<svg class="ei-ring" viewBox="0 0 100 100" role="img" aria-label="'+E(aria)+'"><circle class="ei-ringbg" cx="50" cy="50" r="'+r+'"/><g transform="rotate(-90 50 50)">'+arcs+'</g>'+
       '<text x="50" y="50" class="ei-rbig" text-anchor="middle" dominant-baseline="central">'+E(big)+'</text><text x="50" y="69" class="ei-rsm" text-anchor="middle">'+E(small)+'</text></svg>';}
   function tile(lab,v,sub,id){return '<div class="ei-tile"'+(id?' id="'+id+'"':'')+'><span class="ei-tl">'+E(lab)+'</span><b>'+f2(v)+'</b><small>'+E(sub||'hrs')+'</small></div>';}
@@ -73,7 +73,7 @@
       '<div class="ei-tiles">'+tile('This week',R.week,rng(ws,addDays(ws,6)),'eiWkT')+tile(R.P.label,R.period,R.P.sub,'eiPpT')+tile('All time',R.all,R.n?'since '+md(R.first):'hrs','eiAllT')+'</div>'+
       weekChart(u,0,false)+
       '<div class="ei-note small muted">Paid hours (worked minus the unpaid break) from '+(sub?'your workers\' clocked and office-approved shifts. Day-by-day list: <a href="#/workerhours">Workers\' hours</a>.':'your clocked and office-approved shifts – the same hours as your shifts below.')+
-      (R.wait?' <span class="ei-wait" id="eiWait"><b>'+f2(R.wait)+' hrs</b> waiting for office approval (not counted yet).</span>':'')+
+      (R.wait?' <span class="ei-wait" id="eiWait"><b>'+f2(R.wait)+' hrs</b> waiting for office approval (counted; the office can still change or remove them).</span>':'')+
       (R.chg?' <span id="eiChg">'+R.chg+' shift'+(R.chg===1?'':'s')+' with a time change pending.</span>':'')+
       (R.open?' <span id="eiOpen">'+(sub?R.open+' worker'+(R.open===1?'':'s')+' on shift now – counted after clock-out.':'Your open shift is counted after you clock out.')+'</span>':'')+'</div></section>';}
   ACT.eiwk=function(el){var box=document.getElementById('eiWeek');if(!box||!ME)return;var off=Math.min(0,(+box.dataset.off||0)+(+el.dataset.d||0));
@@ -93,7 +93,7 @@
       '<div class="ei-rt"><h2 class="ei-h">'+(ok===ks.length?'All '+ks.length+' passed ✓':ok+' of '+ks.length+' passed')+'</h2>'+
       '<ul class="ei-leg">'+(ok-soon.length||!hi.length?'<li><i class="ei-k ei-ok"></i>Passed <b>'+(ok-soon.length)+'</b></li>':'')+(soon.length?'<li><i class="ei-k ei-warn"></i>Renew soon <b>'+soon.length+'</b></li>':'')+
         [['bad','To redo / missing'],['mut','Not started'],['temp','On 14-day pass']].map(function(g){var n=L.filter(function(x){return x.c===g[0];}).length;return n?'<li><i class="ei-k ei-'+g[0]+'"></i>'+g[1]+' <b>'+n+'</b></li>':'';}).join('')+'</ul></div></div>'+
-      (hi.length?'<ul class="ei-due" id="eiDue">'+hi.map(function(x){return '<li class="ei-'+x.c+'"><button type="button" class="linklike" data-act="eijump" data-k="'+E(x.k)+'">'+E(TRAIN_ITEMS[x.k].label)+'</button> <span class="pill '+E(x.s.c)+'">'+E(x.s.s)+'</span></li>';}).join('')+'</ul>':'<p class="ei-okp small">Next renewal: '+E(nextRenew(L)||'–')+'</p>')+'</section>';}
+      (hi.length?'<ul class="ei-due" id="eiDue">'+hi.map(function(x){return '<li class="ei-'+esc(x.c)+'"><button type="button" class="linklike" data-act="eijump" data-k="'+E(x.k)+'">'+E(TRAIN_ITEMS[x.k].label)+'</button> <span class="pill '+E(x.s.c)+'">'+E(x.s.s)+'</span></li>';}).join('')+'</ul>':'<p class="ei-okp small">Next renewal: '+E(nextRenew(L)||'–')+'</p>')+'</section>';}
   function nextRenew(L){var d=L.map(function(x){return x.s.expiry;}).filter(Boolean).sort()[0];return d?md(d)+' '+d.slice(0,4):'';}
   ACT.eijump=function(el){var c=document.getElementById('tr-'+el.dataset.k);if(c){c.scrollIntoView({block:'start',behavior:'smooth'});c.classList.add('ei-flash');setTimeout(function(){c.classList.remove('ei-flash');},1600);}};
   /* ---------- Registration checklist: step bar ---------- */
@@ -102,7 +102,7 @@
     var waitRe=/^Your employer must/,cls=function(r){if(r.ok)return r.st.c==='s-warn'||/Expiring/.test(r.st.s)?'warn':'ok';return (typeof empWait==='function'?empWait(r):waitRe.test(r.msg||''))?'wait':'bad';};
     var C=R.map(function(r){return {r:r,c:cls(r)};}),done=C.filter(function(x){return x.r.ok;}).length,wait=C.filter(function(x){return x.c==='wait';}).length,mine=R.length-done-wait,pc=Math.round(done/R.length*100);
     return '<section class="card ei-card ei-check" id="eiCheck"><div class="ei-hd"><h2 class="ei-h">'+(u.type==='sub'?'Progress':'Registration progress')+'</h2><b class="ei-pc">'+pc+'%</b></div>'+
-      '<div class="ei-steps" role="img" aria-label="'+done+' of '+R.length+' done'+(mine?', '+mine+' for you to do':'')+(wait?', '+wait+' waiting for others':'')+'">'+C.map(function(x,i){return '<i class="ei-'+x.c+'" style="animation-delay:'+(i*30)+'ms" title="'+E(x.r.label)+'"></i>';}).join('')+'</div>'+
+      '<div class="ei-steps" role="img" aria-label="'+done+' of '+R.length+' done'+(mine?', '+mine+' for you to do':'')+(wait?', '+wait+' waiting for others':'')+'">'+C.map(function(x,i){return '<i class="ei-'+esc(x.c)+'" style="animation-delay:'+(i*30)+'ms" title="'+E(x.r.label)+'"></i>';}).join('')+'</div>'+
       '<ul class="ei-leg"><li><i class="ei-k ei-ok"></i>Done <b>'+done+'</b> of '+R.length+'</li>'+(mine?'<li><i class="ei-k ei-bad"></i>'+(u.type==='sub'?'To finish':'For you to finish')+' <b>'+mine+'</b></li>':'')+(wait?'<li><i class="ei-k ei-wait"></i>Waiting for your employer <b>'+wait+'</b></li>':'')+'</ul></section>';}
   /* ---------- Subcontractor: crew training ring ---------- */
   function crewTrainCard(s){var ws=crewOf(s).filter(function(w){return w.active!==false;});if(!ws.length||typeof trainItemsFor!=='function')return '';

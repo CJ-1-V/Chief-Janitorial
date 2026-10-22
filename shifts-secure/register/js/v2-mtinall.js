@@ -66,6 +66,10 @@ function openAdd(pre){var P=parts();if(!P.can){toast('Only the Owner, an Admin o
   var w=fm.querySelector('select[name=wid]');if(w&&pre&&pre.site){var R=recent(pre.site);if(R.length){var g=document.createElement('optgroup');g.label='Worked at '+(f&&!helper()?(f.realName||f.name):pre.site)+' (last 30 days)';
     R.forEach(function(u){var o=document.createElement('option');o.value=u.id;o.textContent=u.name;g.appendChild(o);});w.insertBefore(g,w.children[1]||null);}}
   try{fm.dispatchEvent(new Event('change',{bubbles:true}));}catch(e){}}
+/* manualfix1: the "For <site> on <date>" line follows the form when the site or date is changed */
+document.addEventListener('change',function(e){var m=e.target&&e.target.closest&&e.target.closest('#miamodal');if(!m||!/^(date|site)$/.test(e.target.name||''))return;var p=m.querySelector('.mia-pre');if(!p)return;
+  var fm=m.querySelector('form'),st=(fm.querySelector('[name=site]')||{}).value||'',dt=(fm.querySelector('[name=date]')||{}).value||'',f=st?farmOf(st):null;
+  p.innerHTML='For <b>'+E(st||'(pick a site)')+(f&&!helper()?' – '+E(f.realName||f.name):'')+'</b>'+(dt?' on <b>'+E(dt)+'</b>':'')+' (you can change both).';},true);
 ACT.miaadd=function(el){openAdd(el&&el.dataset&&el.dataset.site?{site:el.dataset.site,date:el.dataset.date||''}:{});};
 (function(){var om=ACT.mtmode;ACT.mtmode=function(el){if(document.getElementById('miamodal')){PAGE_STATE.mtMode=el.dataset.m==='bulk'?'bulk':'single';openAdd(S().pre);return;}return om.apply(this,arguments);};})();
 (function(){var of=FORMS.manualtime;FORMS.manualtime=function(f,d){var n=count(),inModal=!!(f&&f.closest&&f.closest('#miamodal'));var r=of.apply(this,arguments);if(inModal&&count()>n)closeModal();return r;};})();

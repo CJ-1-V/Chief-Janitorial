@@ -97,7 +97,7 @@ FORMS.subaddshift=function(f,d){var s=meSub();
   DB.time.push(t);
   var desc=d.site+' '+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+(t.breakMissed?' · no break':' · break taken');
   audit('Subcontractor added a shift (waiting for office approval)',self?coName(s)+' (own hours)':u.name,desc+' · reason: '+rl+(d.note?' ('+d.note+')':'')+' · '+age+' days after');
-  notify('admin','Shift to approve: '+coName(s)+' added '+(self?'their own shift':'a shift for '+u.name)+' – '+desc+'. Not billed or counted until you approve it (Late entries).');
+  notify('admin','Shift to approve: '+coName(s)+' added '+(self?'their own shift':'a shift for '+u.name)+' – '+desc+'. It counts now; you can still change or remove it (Late entries).');
   if(!self)notify(u.id,'Your employer added a shift for you: '+d.site+' on '+d.date+', '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'. The office checks it before it counts.');
   PAGE_STATE.saLast={site:d.site,date:d.date,'in':d['in'],out:d.out,brk:d.brk};PAGE_STATE.saWho='';
   save();toast('Sent to the office for approval ✓');render();};
@@ -123,14 +123,14 @@ if(VIEWS['worker:shifts']){var _ws=VIEWS['worker:shifts'];VIEWS['worker:shifts']
 ACT.saself=function(){var s=meSub();if(!s)return;PAGE_STATE.saWho=s.id;if(ACT.swmode)ACT.swmode({dataset:{m:'company',to:'#/addshift'}});else go('#/addshift');};
 
 /* Workers' hours: a shift added by the subcontractor is listed only once the office approved it */
-if(typeof subRows==='function'){var _sr=subRows;subRows=function(sub,from,to){var rows=_sr.apply(this,arguments);try{var hide={};(DB.time||[]).forEach(function(t){if(t.subAdded&&(t.lateEntry==='pending'||t.lateEntry==='rejected'))hide['t:'+t.id]=1;});
+if(typeof subRows==='function'){var _sr=subRows;subRows=function(sub,from,to){var rows=_sr.apply(this,arguments);try{var hide={};(DB.time||[]).forEach(function(t){if(t.subAdded&&t.lateEntry==='rejected')hide['t:'+t.id]=1;});
   rows=rows.filter(function(r){return !hide[r.key];});}catch(e){}return rows;};}
 
 /* ---------- office ---------- */
 function officeTag(t){var s=user(t.clockedBy),u=user(t.userId);return '<div class="sa-otagbox"><span class="pill sa-otag">Added by subcontractor</span> <span class="small">'+E(s?coName(s):(t.clockedByName||''))+(t.subSelf?' – their own hours':'')+(t.note?' · '+E(t.note):'')+'</span></div>';}
 if(VIEWS['admin:lateentries']){var _le=VIEWS['admin:lateentries'];VIEWS['admin:lateentries']=function(){var x=_le.apply(this,arguments);try{var n=0;
-  (DB.time||[]).forEach(function(t){if(!t.subAdded||t.test)return;if(t.lateEntry==='pending')n++;var a='<tr data-id="'+t.id+'"><td>';var i=x.indexOf(a);if(i<0){a='<tr data-id="'+t.id+'" class="mt-q"><td>';i=x.indexOf(a);}if(i>=0){var j=x.indexOf('</td>',i+a.length);if(j>=0)x=x.slice(0,i)+'<tr data-id="'+t.id+'" class="sa-q"><td><div class="sa-pcell">'+officeTag(t)+'<div class="sa-pwho">'+x.slice(i+a.length,j)+'</div></div>'+x.slice(j);}});
-  if(n){var h=x.indexOf('</h1>');var b='<div class="alert warn small" id="saOfficePend"><b>'+n+' shift'+(n===1?'':'s')+' added by subcontractors '+(n===1?'waits':'wait')+' for your approval.</b> They are not billed and do not count in any hours until you approve them. Approve, adjust or reject them below.</div>';x=h>=0?x.slice(0,h+5)+b+x.slice(h+5):b+x;}}catch(e){try{console.warn('[subaddshift] queue',e);}catch(z){}}return x;};}
+  (DB.time||[]).forEach(function(t){if(!t.subAdded||t.test)return;if(t.lateEntry==='pending')n++;var a='<tr data-id="'+esc(t.id)+'"><td>';var i=x.indexOf(a);if(i<0){a='<tr data-id="'+esc(t.id)+'" class="mt-q"><td>';i=x.indexOf(a);}if(i>=0){var j=x.indexOf('</td>',i+a.length);if(j>=0)x=x.slice(0,i)+'<tr data-id="'+esc(t.id)+'" class="sa-q"><td><div class="sa-pcell">'+officeTag(t)+'<div class="sa-pwho">'+x.slice(i+a.length,j)+'</div></div>'+x.slice(j);}});
+  if(n){var h=x.indexOf('</h1>');var b='<div class="alert warn small" id="saOfficePend"><b>'+n+' shift'+(n===1?'':'s')+' added by subcontractors '+(n===1?'waits':'wait')+' for your approval.</b> They count now (hours, payroll and invoices). You can still change or remove them: approve, adjust or reject them below.</div>';x=h>=0?x.slice(0,h+5)+b+x.slice(h+5):b+x;}}catch(e){try{console.warn('[subaddshift] queue',e);}catch(z){}}return x;};}
 if(VIEWS['admin:manualtime']){var _mt=VIEWS['admin:manualtime'];VIEWS['admin:manualtime']=function(){var x=_mt.apply(this,arguments);try{var n=(DB.time||[]).filter(function(t){return t.subAdded&&!t.test&&t.lateEntry==='pending';}).length;
   if(n){var b='<div class="alert warn small" id="saMtPend"><b>'+n+' shift'+(n===1?'':'s')+' added by subcontractors '+(n===1?'waits':'wait')+' for approval.</b> <a href="#/lateentries">Open the approval queue →</a></div>';var i=x.indexOf('<div class="row mt-filters">');x=i>=0?x.slice(0,i)+b+x.slice(i):x+b;}}catch(e){}return x;};}
 /* the subcontractor (and the worker) hear back when the office decides */
@@ -142,7 +142,7 @@ if(FORMS.lateact){var _la=FORMS.lateact;FORMS.lateact=function(f,d){var t=(DB.ti
 /* office sub card: shifts this subcontractor sent that still wait */
 if(typeof showPerson==='function'){var _sp=showPerson;showPerson=function(id){var r=_sp.apply(this,arguments);try{var u=user(id),m=document.querySelector('#modal .modal');if(!u||u.type!=='sub'||!m||!ME||ME.type!=='admin')return r;
   var old=m.querySelector('#saOfficeSub');if(old)old.remove();var n=pendingOf(u).length,box=m.querySelector('#soOffice');if(!box||!n)return r;var p=document.createElement('div');
-  p.innerHTML='<div class="alert warn small" id="saOfficeSub"><b>'+n+' shift'+(n===1?'':'s')+' added by this subcontractor '+(n===1?'waits':'wait')+' for approval</b> – not counted above until approved. <button type="button" class="small" data-act="saopenq">Open Late entries</button></div>';
+  p.innerHTML='<div class="alert warn small" id="saOfficeSub"><b>'+n+' shift'+(n===1?'':'s')+' added by this subcontractor '+(n===1?'waits':'wait')+' for approval</b> – counted above; the office can still change or remove them. <button type="button" class="small" data-act="saopenq">Open Late entries</button></div>';
   var h=box.querySelector('.so-otiles');if(h)box.insertBefore(p.firstChild,h);else box.appendChild(p.firstChild);}catch(e){try{console.warn('[subaddshift] office card',e);}catch(z){}}return r;};}
 ACT.saopenq=function(){try{closeModal();}catch(e){}go('#/lateentries');};
 if(typeof ADMIN_ONLY_ACT!=='undefined'&&ADMIN_ONLY_ACT.indexOf('saopenq')<0)ADMIN_ONLY_ACT.push('saopenq');

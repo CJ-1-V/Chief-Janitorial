@@ -63,7 +63,7 @@ ACT.ehedit=function(el){if(!office())return;var t=el.dataset.key?sched(el.datase
   if(t.manual&&!t.unassigned&&typeof ACT.mtedit==='function'){ACT.mtedit({dataset:{id:t.id}});return;}   /* Manual hours' own editor (same rules, its history) */
   var W=warnList(t),site=siteOf(t),before=paidT(t),day=dayTotal(site,t.date);
   modal('<div id="ehbox"><h2>Edit hours</h2><p><b>'+E(who(t))+'</b> · '+E(siteLabel(site))+' · '+E(typeof shortDay==='function'?shortDay(t.date):t.date)+'</p>'+
-    '<p class="small">Now: <b>'+E(span(t['in'],t.out))+'</b> · '+(t.breakMissed?'no break':'break taken')+' · <b>'+before.toFixed(2)+' h</b> paid'+(t.sched?' (scheduled crew hours – nobody clocked)':'')+'</p>'+
+    '<p class="small">Now: <b>'+E(span(t['in'],t.out))+'</b> · '+'break '+HR.label(t)+' · <b>'+before.toFixed(2)+' h</b> paid'+(t.sched?' (scheduled crew hours – nobody clocked)':'')+'</p>'+
     '<form data-form="eheditok" id="eheditform"><input type="hidden" name="id" value="'+E(t.id)+'"><div class="grid2">'+tsel('in','Start',t['in'])+tsel('out','Finish',t.out)+
     '<div><label class="req" for="ehbrk">Unpaid break</label><select name="brk" id="ehbrk"><option value="taken"'+(t.breakMissed?'':' selected')+'>Break taken (normal rule)</option><option value="none"'+(t.breakMissed?' selected':'')+'>No break taken</option></select></div>'+
     '<div><label class="req" for="ehwhy">Why? (the worker sees this – do not write the farm\'s name)</label><input type="text" name="why" id="ehwhy" required maxlength="200" placeholder="e.g. clocked out late by mistake"></div></div>'+

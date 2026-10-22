@@ -478,10 +478,10 @@
         x += '<div class="alert warn small" id="clpendoffice">Pending change from ' + esc(u.name) +
           '<br>Email: ' + esc(clEmail(u) || '(none)') + ' → <b>' + esc(pend.email || '(none)') + '</b>' +
           '<br>Phone: ' + esc(clPhone(u) || '(none)') + ' → <b>' + esc(pend.phone || '(none)') + '</b>' +
-          '<div class="row" style="margin-top:6px"><button class="small" data-act="clapprove" data-id="' + u.id + '">Approve</button> ' +
-          '<button class="small danger" data-act="clreject" data-id="' + u.id + '">Reject</button></div></div>';
+          '<div class="row" style="margin-top:6px"><button class="small" data-act="clapprove" data-id="' + esc(u.id) + '">Approve</button> ' +
+          '<button class="small danger" data-act="clreject" data-id="' + esc(u.id) + '">Reject</button></div></div>';
       }
-      x += '<form data-form="cloffice"><input type="hidden" name="id" value="' + u.id + '"><div class="grid2">' +
+      x += '<form data-form="cloffice"><input type="hidden" name="id" value="' + esc(u.id) + '"><div class="grid2">' +
         inp('email', 'Email', u.email || '', { type: 'email' }) +
         inp('phone', 'Phone', u.phone || '', { type: 'tel' }) +
         '</div><button class="small">Save phone / email</button></form>';
