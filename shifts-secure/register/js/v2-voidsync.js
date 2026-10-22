@@ -224,6 +224,16 @@ ACT.mtvoid=raw(function(el){ACT.vsrm(el);});
 (function(){var ov=VIEWS['admin:manualtime'];if(!ov)return;VIEWS['admin:manualtime']=function(){if((PAGE_STATE.mtFilter||'all')!=='voided')return ov.apply(this,arguments);
   var keep=DB.timeVoided,extra=allTime().filter(function(t){return isRm(t)&&t.manual;}).map(function(t){return Object.assign({},t,{voidedAt:t.removedAt,voidedBy:t.removedBy||'office',voidReason:(t.removedReason||'')+' (Restore on All hours)'});});
   DB.timeVoided=(keep||[]).concat(extra);try{return ov.apply(this,arguments);}finally{DB.timeVoided=keep;}};})();
+/* voidshow1 (owner Oct 21 2026 "when i void it why does it not blur and just disappear"): render() hides removed rows from DB.time, so a voided
+   manual entry dropped out of the "All" manual list (farm box). Now voided / removed manual entries stay in "All", greyed and crossed out, with History. */
+(function(){var ov=VIEWS['admin:manualtime'];if(!ov)return;VIEWS['admin:manualtime']=function(){var x=ov.apply(this,arguments);if((PAGE_STATE.mtFilter||'all')!=='all')return x;
+  try{var a=PAGE_STATE.mtFilter;PAGE_STATE.mtFilter='voided';var v;try{v=ov.apply(this,arguments);}finally{PAGE_STATE.mtFilter=a;}
+    var d=document.createElement('div');d.innerHTML=v;var R=[].slice.call(d.querySelectorAll('#mtlist tr[data-id]'));if(!R.length)return x;
+    var o=document.createElement('div');o.innerHTML=x;var t=o.querySelector('#mtlist');if(!t)return x;var tb=t.tBodies[0]||t;
+    [].forEach.call(t.querySelectorAll('tr'),function(r){if(!r.hasAttribute('data-id')&&/No manual hours here yet/.test(r.textContent))r.remove();});
+    R.forEach(function(r){r.classList.add('mt-void');tb.appendChild(r);});
+    var rows=[].slice.call(tb.querySelectorAll('tr[data-id]'));rows.sort(function(p,q){var a=(p.cells[2]||{}).textContent||'',b=(q.cells[2]||{}).textContent||'';return a<b?1:a>b?-1:0;});rows.forEach(function(r){tb.appendChild(r);});
+    return o.innerHTML;}catch(e){return x;}};})();
 (function(){var oh=ACT.mthist;if(!oh)return;ACT.mthist=raw(function(el){if(el.dataset.v&&!(DB.timeVoided||[]).some(function(x){return x.id===el.dataset.id;})){var t=byId(el.dataset.id);if(t){var u=user(t.userId);modal('<h2>Manual hours – '+esc(u?u.name:'')+'</h2><p>'+esc(desc(t))+'</p><ul class="small">'+(t.removeHistory||[]).map(function(h){return '<li>'+esc(fmtStamp(h.at)+' · '+h.by+' · '+h.action+(h.reason?' · '+h.reason:''))+'</li>';}).join('')+'</ul>');}return;}return oh(el);});})();
 
 /* ---------- 4. person (employee / worker / crew lead): My shifts ---------- */

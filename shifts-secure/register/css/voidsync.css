@@ -22,3 +22,7 @@
 .vs-nwlist ul{margin:0;padding-left:18px}
 .vs-nwlist li{margin:4px 0}
 .vs-nwrow td{background:#fbfaff}
+/* voidshow1: voided manual entries stay in the list, greyed + crossed out */
+#mtlist tr.mt-void td{color:#8a8797;background:#f6f4f8;opacity:.6}
+#mtlist tr.mt-void td:nth-child(3),#mtlist tr.mt-void td:nth-child(4),#mtlist tr.mt-void td:nth-child(5),#mtlist tr.mt-void td:nth-child(6){text-decoration:line-through}
+#mtlist tr.mt-void td:last-child{opacity:1}
