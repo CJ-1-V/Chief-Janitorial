@@ -1,10 +1,12 @@
 /* v2-timesheets.js – invmonth1 farm side (owner Oct 20 2026, 10:31 / 10:32 / 10:33 / 10:34 PM). TEST COPY.
    1. TIME SHEETS tab for farms (#/timesheets): one week (Mon–Sun, this week first, ◀ ▶), each day lists its workers (Worker #n only,
-      no names, no pay rates) with start, finish and hours (billable). NO break wording or choices for farms (owner 10:58 PM).
+      no names, no pay rates) with start, finish and hours (billable). NO break wording or choices for farms (owner 10:58 PM) –
+      CHANGED by brkcorr1 (owner Oct 22 2026, 4:33 PM ET): in a change request the farm now picks the break (No break / 30 / 60 min,
+      optional start time). The office still decides and can override.
    2. Changes = the EXISTING farm "ask to change hours" requests (DB.changes → reg_time_proposals, status Pending). Nothing is
       overwritten: the office approves / changes / rejects in Farm changes, as before. Per day "All workers" (same start / finish
       for everyone that day) makes one request per worker; "Change" on a worker makes one request.
-      Farms request start / finish only; the break stays as it is (only the office sets breaks).
+      brkcorr1: farms request start / finish AND the break (propBrkMin / propBrkAt on the request); the office applies it.
       The old separate "Shifts at your sites – ask to change hours" list on the farm home is replaced by a link to Time sheets;
       old "Ask to change hours" buttons open Time sheets on that day. Pending requests show here and in the office as before.
    3. EDIT WINDOW (REG_STORE.farmEditWindow): until 'until' (Oct 31 2026) any day in the last 'days' (30) days; from the next day only
@@ -67,26 +69,37 @@ NAV.firm.splice(1,0,['#/timesheets','Time sheets']);
 ACT.tswk=function(el){var s=S(),n=+el.dataset.n;s.ws=n?addDays(s.ws||wk(today()),7*n):wk(today());s.d=null;render();};
 document.addEventListener('change',function(e){if(e.target&&e.target.id==='tsrem'&&ME&&ME.type==='firm'){var id='set|'+ME.id,x=get(id);if(!x){x={id:id,kind:'set',firmId:ME.id};L().push(x);}x.remind=e.target.value==='weekly'?'weekly':'daily';x.at=new Date().toISOString();audit('Farm reminder setting',ME.name,x.remind);save();toast(x.remind==='weekly'?'You will get one summary a week.':'You will get a reminder each day a crew worked.');}});
 /* ---------- requests (the existing reg_time_proposals flow) ---------- */
-function mkReq(r,st,en,bm,why){var f=ME;if(firmCodes(f).indexOf(r.site)<0)return 'own';if(!canChangeDay(r.date))return 'locked';if(pend(r))return 'pending';if(hcState(r)==='final')return 'final';
-  st=st||r.start;en=en||r.end;if(spanErr(st,en))return spanErr(st,en);var ob=r.breakMissed?'none':'taken',curB=r.brk?String(r.brk):'';
-  var nb=bm==null?curB:bm;if(st===r.start&&en===r.end&&nb===curB)return 'same';
-  var c={id:uid('fc'),firmId:f.id,firmName:f.name,by:f.name+' ('+(f.username||f.email)+')',key:r.key,site:r.site,date:r.date,workerNo:r.no,uid:r.uid,origStart:r.start,origEnd:r.end,origBreak:ob,propStart:st,propEnd:en,propBreak:ob,
-    comment:(nb!==curB?'[Break: '+(nb?nb+' min':'Normal rule')+'] ':'')+why,at:new Date().toISOString(),status:'Pending',via:'timesheets'};
-  if(nb!==curB){c.propBrkMin=nb;c.origBrkMin=curB;}
+function curBrk(r){if(r.brk)return +r.brk;return HR.brkMinOf({'in':r.start,out:r.end,brkMin:r.brkMin,breakMissed:r.breakMissed,made:r.made,date:r.date});}
+window.tsCurBrk=curBrk;
+function mkReq(r,st,en,bm,why,bat){var f=ME;if(firmCodes(f).indexOf(r.site)<0)return 'own';if(!canChangeDay(r.date))return 'locked';if(pend(r))return 'pending';if(hcState(r)==='final')return 'final';
+  st=st||r.start;en=en||r.end;if(spanErr(st,en))return spanErr(st,en);var ob=r.breakMissed?'none':'taken',cur=curBrk(r),curAt=r.brkAt||'';
+  /* brkcorr1: bm = minutes the farm picked (null = keep each worker's own break); bat = break start (optional) */
+  if(bm!=null&&bm!==''&&!isNaN(+bm))bm=+bm;else bm=null;bat=bm?String(bat||''):'';
+  var brkCh=bm!=null&&(bm!==cur||bat!==(cur?curAt:''));
+  if(st===r.start&&en===r.end&&!brkCh)return 'same';
+  if(bm&&bm/60>=HR.worked(st,en))return 'The break must be shorter than the shift.';
+  var c={id:uid('fc'),firmId:f.id,firmName:f.name,by:f.name+' ('+(f.username||f.email)+')',key:r.key,site:r.site,date:r.date,workerNo:r.no,uid:r.uid,origStart:r.start,origEnd:r.end,origBreak:ob,propStart:st,propEnd:en,propBreak:bm==null?ob:(bm?'taken':'none'),
+    comment:why,at:new Date().toISOString(),status:'Pending',via:'timesheets',origBrkMin:cur,origBrkAt:curAt};
+  if(bm!=null){c.propBrkMin=bm;c.propBrkAt=bat;c.brkMin=bm;c.brkAt=bat;}
   if(String(r.key).indexOf('c:')===0){var csh=DB.shifts.filter(function(x){return x.id===String(r.key).split(':')[1];})[0];if(csh)c.crewSize=(csh.booked||[]).length;}
-  DB.changes.push(c);audit('Farm proposed shift time change',f.name,r.site+' '+r.date+' Worker #'+r.no+': '+r.start+'–'+r.end+' → '+st+'–'+en+(nb!==curB?' break '+(nb?nb+' min':'normal'):'')+' ("'+why+'") via Time sheets');return '';}
+  DB.changes.push(c);audit('Farm proposed shift time change',f.name,r.site+' '+r.date+' Worker #'+r.no+': '+r.start+'–'+r.end+' → '+st+'–'+en+(bm!=null?' · break '+(cur?cur+' min':'none')+' → '+(bm?bm+' min'+(bat?' from '+bat:''):'no break'):'')+' ("'+why+'") via Time sheets');return '';}
 function brkSel(){return '<select name="brk" aria-label="Break"><option value="keep">Break: keep as is</option>'+BRK.map(function(b){return '<option value="'+b[0]+'">'+b[1]+'</option>';}).join('')+'</select>';}
-function form(title,sub,keys,d){return '<h2>'+E(title)+'</h2><p class="small">'+sub+'</p><form data-form="tsreq" id="tsform"><input type="hidden" name="keys" value="'+E(keys.join(','))+'"><input type="hidden" name="d" value="'+E(d)+'">'+
-  '<div class="row"><label>Start <input type="time" name="start"></label><label>Finish <input type="time" name="end"></label></div><p class="small muted">Leave start / finish empty to keep each worker\'s own time.</p>'+
+function brkPick(cur){var o=[0,30,60];if(cur!=null&&o.indexOf(cur)<0){o.push(cur);o.sort(function(a,b){return a-b;});}
+  var opt=function(v,lab,on){return '<label class="bc-opt"><input type="radio" name="bcPick" value="'+v+'"'+(on?' checked':'')+'><span>'+lab+'</span></label>';};
+  return '<fieldset class="bc-fs" id="tsbrk"><legend>Break (unpaid)</legend><div class="bc-pick" role="radiogroup" aria-label="Break">'+(cur==null?opt('keep','Keep each worker\'s break',true):'')+
+    o.map(function(m){return opt(m,(m?m+' min':'No break')+(m===cur?' (now)':''),m===cur);}).join('')+'</div><input type="hidden" name="brkMin" value="'+(cur==null?'':cur)+'">'+
+    '<label class="bc-at" hidden>Break started at <span class="small muted">(optional)</span><input type="time" step="900" name="brkAt" id="tsbrkat"></label><div class="small bc-calc" id="tscalc" aria-live="polite"></div></fieldset>';}
+function form(title,sub,keys,d,cur){return '<h2>'+E(title)+'</h2><p class="small">'+sub+'</p><form data-form="tsreq" id="tsform"><input type="hidden" name="keys" value="'+E(keys.join(','))+'"><input type="hidden" name="d" value="'+E(d)+'">'+
+  '<div class="row"><label>Start <input type="time" name="start"></label><label>Finish <input type="time" name="end"></label></div><p class="small muted">Leave start / finish empty to keep each worker\'s own time.</p>'+brkPick(cur)+
   '<textarea name="comment" placeholder="Short reason (required)" required style="min-height:50px"></textarea><div class="row-end"><button type="button" class="btn sec" data-act="closeModal">Cancel</button><button id="tsgo">Send to office</button></div></form>'+
   '<p class="small muted">The office checks it. Until they answer, the original hours stay on your bill.</p>';}
 ACT.tsall=function(el){var d=el.dataset.d;if(!canChangeDay(d)){toast('Locked: contact the office.');return;}var R=(rowsWeek(ME,wk(d))[d]||[]).filter(function(r){return !pend(r)&&hcState(r)!=='final';});if(!R.length){toast('Every worker that day is already waiting for the office.');return;}
   modal(form('All workers · '+shortDay(d),'Sets the same start and / or finish time for <b>'+R.length+(R.length===1?' worker':' workers')+'</b> this day. Each becomes a change request for the office.',R.map(function(r){return r.key;}),d));};
 ACT.tsone=function(el){var r=(PAGE_STATE.frRows||{})[el.dataset.key];if(!r)return;if(!canChangeDay(r.date)){toast('Locked: contact the office.');return;}
-  modal(form('Worker #'+r.no+' · '+shortDay(r.date),E(r.site)+' · now '+E(r.start)+'–'+E(r.end),[r.key],r.date));var f=document.getElementById('tsform');if(f){f.start.value=r.start;f.end.value=r.end;}};
+  var cur=curBrk(r);modal(form('Worker #'+r.no+' · '+shortDay(r.date),E(r.site)+' · now '+E(r.start)+'–'+E(r.end)+' · break '+(cur?cur+' min'+(r.brkAt?' from '+E(r.brkAt):''):'none'),[r.key],r.date,cur));var f=document.getElementById('tsform');if(f){f.start.value=r.start;f.end.value=r.end;if(r.brkAt&&cur&&f.brkAt){f.brkAt.value=r.brkAt;}f.dataset.key=r.key;if(typeof window.bcSync==='function')window.bcSync(f);}};
 ACT.firmedit=function(el){var r=(PAGE_STATE.frRows||{})[el.dataset.key],s=S();if(r){s.d=r.date;s.ws=wk(r.date);}location.hash='#/timesheets';};  /* old button → Time sheets */
 FORMS.tsreq=function(f,d){if(!ME||ME.type!=='firm')return;var why=String(d.comment||'').trim();if(why.length<3){toast('Please write a short reason.');return;}
-  var bm=null,n=0,errs={};String(d.keys||'').split(',').forEach(function(k){var r=(PAGE_STATE.frRows||{})[k];if(!r)return;var e=mkReq(r,d.start,d.end,bm,why);if(!e)n++;else errs[e]=(errs[e]||0)+1;});
+  var bm=(d.brkMin===''||d.brkMin==null)?null:+d.brkMin,n=0,errs={};String(d.keys||'').split(',').forEach(function(k){var r=(PAGE_STATE.frRows||{})[k];if(!r)return;var e=mkReq(r,d.start,d.end,bm,why,d.brkAt);if(!e)n++;else errs[e]=(errs[e]||0)+1;});
   if(!n){toast(errs.same?'You did not change anything.':errs.locked?'Locked: contact the office.':Object.keys(errs)[0]||'Nothing sent.');return;}
   notify('admin','Farm change to review: '+ME.name+' sent '+n+' change request'+(n===1?'':'s')+' for '+d.d+' (Time sheets).');save();closeModal();S().d=d.d;render();
   modal('<div class="hc-sent" id="tssent" role="status"><div class="hc-tick" aria-hidden="true">✓</div><h2>Sent.</h2><p class="hc-big">'+n+' change request'+(n===1?'':'s')+' sent. Status: <span class="pill s-pend">Waiting for office</span></p><p>Until the office answers, the original hours stay on your bill.</p><div class="hc-btns"><button data-act="closeModal">OK</button></div></div>');};
