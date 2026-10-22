@@ -197,7 +197,8 @@
   }
 
   /* ---------- pickup1: sign-in with no address -> My profile, field highlighted ---------- */
-  function needsAddr(u) { return !!(u && NEED[u.type] && !u.usCrew && !cleanAddr(u.pickupAddress)); }
+  /* golive-1022a (owner, Oct 22 11:23 AM): everyone needs a pickup address on file – no US crew exemption */
+  function needsAddr(u) { return !!(u && NEED[u.type] && !cleanAddr(u.pickupAddress)); }
   window.REG_PICKUP_MISSING = needsAddr;
   /* office People: a red "No pickup address" badge on each worker/employee row that has none */
   function pkBadges() {
@@ -216,11 +217,16 @@
       if (typeof ME === 'undefined' || !ME) return;
       applyPend();
       var h = (location.hash || '#/').split('?')[0];
+      /* loginfix1 (Oct 22 2026): never force people off Home – that looked like "cannot sign in". Show a reminder on Home
+         with a button to My profile instead; the address is still required when they save My profile. */
       if (needsAddr(ME) && !ME.mustChangePw && (h === '#/' || h === '#/home' || h === '')) {
-        PAGE_STATE.pickupNeed = true; location.hash = '#/profile'; return;          /* hashchange draws My profile */
+        var app = document.getElementById('app');
+        var h1 = app && app.querySelector('h1');
+        if (app && !document.getElementById('pk-home-msg')) (h1 || app).insertAdjacentHTML(h1 ? 'afterend' : 'afterbegin', '<div id="pk-home-msg" class="alert warn">Please add your pickup address so the crew van knows where to pick you up. <a class="btn small" href="#/profile">Add pickup address</a></div>');
+        return;
       }
       var el = document.querySelector('#app input[name="pickup"]');
-      if (el && PAGE_STATE.pickupNeed && needsAddr(ME)) {
+      if (el && h === '#/profile' && needsAddr(ME)) {
         var box = el.parentNode; box.classList.add('pk-need');
         if (!document.getElementById('pk-need-msg')) box.insertAdjacentHTML('afterbegin', '<div id="pk-need-msg" class="alert warn">Please add your pickup address – the crew van needs it. Then press Save.</div>');
         setTimeout(function () { try { el.scrollIntoView({ block: 'center' }); el.focus(); } catch (e) {} }, 50);
