@@ -186,9 +186,9 @@ ROLE_ONLY.mtlead=['worker'];
   return x.replace(/<tr><td>/g,function(m){i++;var t=mine[i];return t&&t.manual?'<tr class="mt-row"><td>':m;}).replace(/(<tr class="mt-row"><td>[^<]*)/g,'$1 <span class="pill s-manual">Manual</span>');};})();
 
 /* ---------- payroll: record exports, Manual tag, CSV column, preview ---------- */
-(function(){var op=ACT.paycsv;ACT.paycsv=function(){var cur=payPeriodOf(PAGE_STATE.payDate||today()),a0=DB.audit[0];var r=op();if(!PAGE_STATE.mtPreview&&DB.audit[0]&&DB.audit[0]!==a0&&/Downloaded payroll hours CSV/.test(DB.audit[0].action)){(DB.payExports=DB.payExports||[]).push({start:cur.start,end:cur.end,at:new Date().toISOString(),by:ME.name});DB.time.forEach(function(t){if(t.afterExport===cur.start)delete t.afterExport;});save();render();}return r;};})();
+(function(){var op=ACT.paycsv;ACT.paycsv=function(){var cur=payPeriodOf(PAGE_STATE.payDate||payProcDate()),a0=DB.audit[0];var r=op();if(!PAGE_STATE.mtPreview&&DB.audit[0]&&DB.audit[0]!==a0&&/Downloaded payroll hours CSV/.test(DB.audit[0].action)){(DB.payExports=DB.payExports||[]).push({start:cur.start,end:cur.end,at:new Date().toISOString(),by:ME.name});DB.time.forEach(function(t){if(t.afterExport===cur.start)delete t.afterExport;});save();render();}return r;};})();
 function mtPayLines(){
-  var cur=payPeriodOf(PAGE_STATE.payDate||today()),P=payrollRows(cur.start,cur.end)||[],out=[];
+  var cur=payPeriodOf(PAGE_STATE.payDate||payProcDate()),P=payrollRows(cur.start,cur.end)||[],out=[];
   /* payrollRows returns {u,n,hours,overnight,entries} – not {lines:[{t}]} (P0 crash Oct 6) */
   P.forEach(function(r){
     var lines=r.lines||(r.entries||[]).map(function(t){return {t:t};});
