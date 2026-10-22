@@ -32,7 +32,7 @@ function orderBlock(firm){
   if(firm.accountApproved===false)return {why:'The office is still checking your account.',fix:'The office will approve your account and set your rates. You can order crews after you sign the agreement and Rate Schedule.'};
   if(firm.active===false)return {why:'Your account is switched off.',fix:'Please contact the office.'};
   if(!farmRatesCur(firm))return {why:'The office has not set your labour rates yet, so there is no signed agreement.',fix:'Contact the office to set your rates. Then sign the agreement and your Rate Schedule on "Workers, hours & billing" and come back here.'};
-  if(!firmSignedEver(firm)||!farmSigsOf(firm).some(function(s){return s.rateVersion;}))return {why:'You have not signed the agreement and your Rate Schedule yet.',fix:'Open "Workers, hours & billing", sign the agreement and Rate Schedule, then come back here to order.'};
+  if(!firmSignedEver(firm)||!farmSigsOf(firm).some(function(s){return s.rateVersion;}))return {why:'You have not signed the agreement and your Rate Schedule yet.',fix:'On Home, open "Agreement & rates", sign the agreement and Rate Schedule, then come back here to order.'};
   if(!farmRatesReady(firm))return {why:'The office changed your rates and you have not accepted the new Rate Schedule yet.',fix:'Open "Workers, hours & billing" and accept the new Rate Schedule, then come back here to order.'};
   if(!firmCodes(firm).length)return {why:'No work site is set up for your account yet.',fix:'Ask the office to add your site.'};
   return null;}
