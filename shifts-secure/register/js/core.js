@@ -8,6 +8,10 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function uid(p){return (p||'id')+'_'+Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);}
 function pad(n){return (n<10?'0':'')+n;}
 function isoLocal(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+/* officefuture1 (owner Oct 21 2026): the office (owner + office staff, not the Office Assistant) may enter or edit hours at any time – no "in the future" check.
+   Workers, subcontractors and farms keep the check. Server side already lets reg_office_write() through (reg_time_manual_guard returns early). */
+function officeAnyTime(){try{if(typeof ME==='undefined'||!ME||ME.type!=='admin')return false;var r=ME.officeRoles||(ME.officeRole?[ME.officeRole]:null);if(!r||!r.length)return true;
+  return r.some(function(x){return ['owner','admin','ops','payroll','billing'].indexOf(String(x))>=0;});}catch(e){return false;}}
 function realToday(){return isoLocal(new Date());}
 function today(){return (DB&&DB.settings.simDate)||realToday();}
 function parseD(s){var p=String(s).split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
