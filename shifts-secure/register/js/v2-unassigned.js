@@ -61,11 +61,11 @@ function decorateForm(){var m=document.getElementById('miamodal');if(!m||!ON()||
     '<p class="small ua-hint">Counts for the farm (hours, invoice) right away; not for payroll until you assign the person. Shown in red until then.</p>';
   var wf=w.closest('div');wf.parentNode.insertBefore(box,wf.nextSibling);
   w.addEventListener('change',function(){var u=w.value==='__ua';box.hidden=!u;var r=f.querySelector('select[name=reason]');if(r){r.required=!u;var rd=r.closest('div');if(rd)rd.hidden=u;}});}
-function check(d){var E1=[];if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E1.push('Pick the shift date.');else if(d.date>today())E1.push('The date cannot be in the future.');
+function check(d){var E1=[];if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E1.push('Pick the shift date.');else if(!officeAnyTime()&&d.date>today())E1.push('The date cannot be in the future.');
   var sites=(typeof companySites==='function'?companySites({withFirm:true,skipPractice:true,activeOnly:true}):(DB.sites||[]).filter(function(s){return s.firmId;}));
   if(!sites.some(function(s){return s.code===d.site;}))E1.push('Pick a site.');
   if(!quarterOk(d['in'])||!quarterOk(d.out))E1.push('Use quarter-hour times (:00, :15, :30, :45).');else if(spanErr(d['in'],d.out))E1.push(spanErr(d['in'],d.out));
-  else if(!E1.length&&hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('This shift would end in the future. Hours can only be added after they are worked.');
+  else if(!E1.length&&!officeAnyTime()&&hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('This shift would end in the future. Hours can only be added after they are worked.');
   return E1;}
 function make(d,src,extra){var id=uid('t'),now=nowIso(),nick=String(d.uaNick||'').trim().slice(0,60),note=String(d.note||'').trim().slice(0,300);
   var t={id:id,userId:'ua-'+id,unassigned:true,uaNick:nick,site:d.site,shiftId:null,role:'labour',date:d.date,'in':d['in'],out:d.out,clock:false,manual:true,manualSource:src||'office',

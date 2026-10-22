@@ -27,11 +27,11 @@ function span(a,b){return a+'–'+b+(typeof plus1==='function'?plus1(a,b):'');}
 function paid(a,b,none){var w=hrs(a,b);return Math.max(0,w-unpaidBreak(w,{breakMissed:!!none}));}
 function h2(x){return (Math.round(x*100)/100).toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');}
 function brkTxt(a,b,none){if(none)return 'no break';var m=Math.round(unpaidBreak(hrs(a,b),{})*60);return m?m+' min break':'no break (5 h or less)';}
-function check(d){var E1=[];if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E1.push('Pick the shift date.');else if(d.date>today())E1.push('The date cannot be in the future.');
+function check(d){var E1=[];if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E1.push('Pick the shift date.');else if(!officeAnyTime()&&d.date>today())E1.push('The date cannot be in the future.');
   var sites=(typeof companySites==='function'?companySites({withFirm:true,skipPractice:true,activeOnly:true}):(DB.sites||[]).filter(function(s){return s.firmId;}));
   if(!sites.some(function(s){return s.code===d.site;}))E1.push('Pick a farm site.');
   if(!quarterOk(d['in'])||!quarterOk(d.out))E1.push('Use quarter-hour times (:00, :15, :30, :45).');else if(spanErr(d['in'],d.out))E1.push(spanErr(d['in'],d.out));
-  else if(!E1.length&&hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('This shift would end in the future. Hours can only be added after they are worked.');
+  else if(!E1.length&&!officeAnyTime()&&hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('This shift would end in the future. Hours can only be added after they are worked.');
   var n=+d.n;if(!(n>=1&&n<=30&&Math.floor(n)===n))E1.push('How many: a number from 1 to 30.');return E1;}
 function nicks(d){var p=String(d.pre||'').trim().slice(0,50),n=+d.n,L=[];if(!p){for(var i=0;i<n;i++)L.push('');return L;}
   var used=0;(DB.time||[]).forEach(function(t){if(t.unassigned&&!t.removed&&t.date===d.date&&siteOf(t)===d.site){var m=new RegExp('^'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+' (\\d+)$').exec(t.uaNick||'');if(m)used=Math.max(used,+m[1]);}});

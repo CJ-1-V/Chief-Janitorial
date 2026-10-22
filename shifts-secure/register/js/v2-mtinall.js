@@ -123,7 +123,7 @@ function pickHtml(d,err){var sh=shownSites(d),L=allSites().filter(function(x){re
    '<div><label class="req" for="miadate">Day</label><input type="date" name="date" id="miadate" required max="'+today()+'" value="'+E(d)+'"></div>'+
    '<div class="row-end"><button type="button" class="sec" data-act="closeModal">Cancel</button><button id="miapickgo">Add farm box</button></div></form></div>';}
 FORMS.miaaddfarm=function(f,d){if(!canAdd()){toast('Only the Owner, an Admin or Payroll (billing) can add manual hours.');return;}
-  var day=String(d.date||''),site=String(d.site||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||day>today()){toast('Pick a day that is not in the future.');return;}
+  var day=String(d.date||''),site=String(d.site||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||(day>today()&&!officeAnyTime())){toast('Pick a day that is not in the future.');return;}
   if(!allSites().some(function(x){return x.code===site;})){toast('Pick a farm / site.');return;}
   if(shownSites(day)[site]){toast(site+' is already shown for '+dayLabel(day)+'.');return;}
   var s=S();(s.added=s.added||[]).push({date:day,site:site});closeModal();

@@ -77,7 +77,7 @@ function calc(){var f=document.getElementById('eheditform'),c=document.getElemen
 function onCh(e){if(e.target&&e.target.closest&&e.target.closest('#eheditform'))calc();}
 window.addEventListener('change',onCh,true);window.addEventListener('input',onCh,true);
 function check(t,d){var E1=[];if(!quarterOk(d['in'])||!quarterOk(d.out))E1.push('Use quarter-hour times (:00, :15, :30, :45).');else if(spanErr(d['in'],d.out))E1.push(spanErr(d['in'],d.out));
-  else{if(hmMsLocal(t.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('The new finish would be in the future. Hours can only be set after they are worked.');
+  else{if(!officeAnyTime()&&hmMsLocal(t.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E1.push('The new finish would be in the future. Hours can only be set after they are worked.');
     if(!t.unassigned&&typeof overlapsAny==='function'&&overlapsAny(t.userId,t.date,d['in'],d.out,t.sched?null:t.id))E1.push(who(t)+' already has other hours that overlap '+t.date+' '+span(d['in'],d.out)+'.');}
   return E1;}
 function scrub(s,site){s=String(s||'');(DB.users||[]).forEach(function(f){if(f.type!=='firm')return;[f.name,f.realName].forEach(function(n){n=String(n||'').trim();if(n.length>=4)s=s.split(n).join(site||'the farm');});});return s;}

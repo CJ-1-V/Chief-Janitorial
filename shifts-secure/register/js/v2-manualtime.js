@@ -46,12 +46,12 @@ function mtLicenceWarn(u,date){try{var jr=jobRoleOf(u),role=jr==='driver'?'drive
 function mtCheck(u,d,exceptId){var E=[],W=[];
   if(!u){E.push('Pick a worker.');return {E:E,W:W};}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date||''))E.push('Pick the shift date.');
-  else if(d.date>today())E.push('The date cannot be in the future.');
+  else if(!officeAnyTime()&&d.date>today())E.push('The date cannot be in the future.');
   if(!mtSites().some(function(s){return s.code===d.site;}))E.push('Pick a site.');
   if(!quarterOk(d['in'])||!quarterOk(d.out))E.push('Use quarter-hour times (:00, :15, :30, :45).');
   else if(spanErr(d['in'],d.out))E.push(spanErr(d['in'],d.out));
   if(E.length)return {E:E,W:W};
-  if(hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E.push('This shift would end in the future ('+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'). Hours can only be added after they are worked.');
+  if(!officeAnyTime()&&hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E.push('This shift would end in the future ('+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'). Hours can only be added after they are worked.');
   if(overlapsAny(u.id,d.date,d['in'],d.out,exceptId))E.push(u.name+' already has hours that overlap '+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'.');
   if(hrs(d['in'],d.out)>MT_WARN_H)W.push(u.name+': '+hrs(d['in'],d.out).toFixed(2)+' hours is more than '+MT_WARN_H+' hours.');
   var ex=u.type==='employee'&&mtExported(d.date);if(ex)W.push('The pay period '+ex.start+' to '+ex.end+' was already exported for Wagepoint ('+fmtStamp(ex.at)+' by '+ex.by+'). Payroll must be re-exported or corrected in Wagepoint.');
