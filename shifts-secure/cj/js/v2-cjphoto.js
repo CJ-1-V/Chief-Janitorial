@@ -64,7 +64,7 @@
     if (miss.length) return { ok: false, photo: true, msg: '📷 Photo needed before “' + miss[0].t + '” can be marked Done.' };
     return ots.apply(this, arguments);
   }; }
-  function thumbs(code, d, k, del) { var l = cjTaskPhotos(code, d, k); if (!l.length) return cjTaskPhotosRemoved(code, d, k) ? '<div class="phgone small muted">📷 Photo removed after ' + KEEP_DAYS + ' days</div>' : ''; return '<div class="phthumbs">' + l.map(function (x) { return '<span class="phwrap"><img class="phthumb" src="' + x.data + '" alt="Task photo" data-act="phview" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + k + '" data-id="' + x.id + '">' + (del ? '<button type="button" class="phdel" data-act="phdel" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + k + '" data-id="' + x.id + '" aria-label="Remove photo">×</button>' : '') + '</span>'; }).join('') + '</div>'; }
+  function thumbs(code, d, k, del) { var l = cjTaskPhotos(code, d, k); if (!l.length) return cjTaskPhotosRemoved(code, d, k) ? '<div class="phgone small muted">📷 Photo removed after ' + KEEP_DAYS + ' days</div>' : ''; return '<div class="phthumbs">' + l.map(function (x) { return '<span class="phwrap"><img class="phthumb" src="' + esc(x.data) + '" alt="Task photo" data-act="phview" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + k + '" data-id="' + esc(x.id) + '">' + (del ? '<button type="button" class="phdel" data-act="phdel" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + k + '" data-id="' + esc(x.id) + '" aria-label="Remove photo">×</button>' : '') + '</span>'; }).join('') + '</div>'; }
   function reopen(code, d) { var b = document.createElement('button'); b.dataset.act = 'calvisit'; b.dataset.id = code + '|' + d; b.dataset.date = d; ACT.calvisit(b); }
   var ocv = ACT.calvisit; ACT.calvisit = function (el) {
     ocv.apply(this, arguments);
@@ -77,7 +77,7 @@
       var it = items.filter(function (x) { return x.k === row.dataset.k; })[0]; if (!it || !cjPhotoNeeded(code, it.t)) return;
       var n = cjTaskPhotos(code, d, it.k).length; row.classList.add('phneed');
       row.querySelector('.tdt').insertAdjacentHTML('afterbegin', '<span class="phicon" title="Photo needed">📷</span>');
-      row.insertAdjacentHTML('beforeend', '<div class="phbox">' + thumbs(code, d, it.k, true) + (n < MAXN ? '<label class="btn small sec phadd">📷 ' + (n ? 'Add another photo' : 'Take photo') + '<input type="file" accept="image/*" capture="environment" class="phinput" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + it.k + '" hidden></label>' : '') + '<span class="small muted">' + (n ? n + ' of ' + MAXN + ' photos' : 'Photo needed before Done') + '</span></div>');
+      row.insertAdjacentHTML('beforeend', '<div class="phbox">' + thumbs(code, d, it.k, true) + (n < MAXN ? '<label class="btn small sec phadd">📷 ' + (n ? 'Add another photo' : 'Take photo') + '<input type="file" accept="image/*" capture="environment" class="phinput" data-site="' + esc(code) + '" data-date="' + d + '" data-k="' + esc(it.k) + '" hidden></label>' : '') + '<span class="small muted">' + (n ? n + ' of ' + MAXN + ' photos' : 'Photo needed before Done') + '</span></div>');
       if (!n) { var dn = row.querySelector('input[value=done]'); if (dn) { dn.disabled = true; dn.parentElement.title = 'Take a photo first'; dn.parentElement.classList.add('phblocked'); } }
     });
   };
@@ -89,7 +89,7 @@
   ACT.phdel = function (el) { cjTaskPhotoRemove(el.dataset.site, el.dataset.date, el.dataset.k, el.dataset.id); reopen(el.dataset.site, el.dataset.date); };
   ACT.phview = function (el) {
     var x = cjTaskPhotos(el.dataset.site, el.dataset.date, el.dataset.k).filter(function (p) { return p.id === el.dataset.id; })[0]; if (!x) return;
-    modal('<div class="calsheet" id="phfull"><h2>Task photo</h2><img class="phbig" src="' + x.data + '" alt="Task photo full size"><p class="small muted">Taken ' + fmtStamp(x.takenAt) + (ME.type === 'firm' ? '' : ' · ' + esc(x.byName)) + ' · ' + x.w + '×' + x.h + '</p><div class="row"><button type="button" data-act="phback" data-site="' + esc(el.dataset.site) + '" data-date="' + el.dataset.date + '">Back to the visit</button><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
+    modal('<div class="calsheet" id="phfull"><h2>Task photo</h2><img class="phbig" src="' + esc(x.data) + '" alt="Task photo full size"><p class="small muted">Taken ' + fmtStamp(x.takenAt) + (ME.type === 'firm' ? '' : ' · ' + esc(x.byName)) + ' · ' + esc(x.w) + '×' + esc(x.h) + '</p><div class="row"><button type="button" data-act="phback" data-site="' + esc(el.dataset.site) + '" data-date="' + esc(el.dataset.date) + '">Back to the visit</button><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
   };
   ACT.phback = function (el) { reopen(el.dataset.site, el.dataset.date); };
 

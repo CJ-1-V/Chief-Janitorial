@@ -36,7 +36,7 @@ function downloadText(name,text,mime){var a=document.createElement('a');a.href=U
 function csvRow(a){return a.map(function(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');}
 function showFile(name,type,data,label){
   var url=dataToBlobUrl(data);
-  modal('<h2>'+esc(label||name)+'</h2>'+(/^image\//.test(type)?'<img src="'+url+'" style="max-width:100%;border:1px solid #ddd">':/pdf/.test(type)?'<iframe src="'+url+'" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>':'<p>Preview not available for this file type.</p>')+'<p><a class="btn sec" href="'+url+'" download="'+esc(name)+'">Download '+esc(name)+'</a></p>');
+  modal('<h2>'+esc(label||name)+'</h2>'+(/^image\//.test(type)?'<img src="'+esc(url)+'" style="max-width:100%;border:1px solid #ddd">':/pdf/.test(type)?'<iframe src="'+esc(url)+'" style="width:100%;height:65vh;border:1px solid #ddd"></iframe>':'<p>Preview not available for this file type.</p>')+'<p><a class="btn sec" href="'+esc(url)+'" download="'+esc(name)+'">Download '+esc(name)+'</a></p>');
 }
 ACT.viewdoc=function(el){var d=DB.docs.filter(function(x){return x.id===el.dataset.id;})[0];if(!d)return;var u=user(d.userId);
   if(!canSeeDoc(d)){toast('You do not have access to this document.');return;}
@@ -160,7 +160,7 @@ VIEWS.terms=function(){var u=ME,miss=missingTerms(u),x='<h1>Terms</h1>';
   var c=consentOf(u);
   if(u.type!=='firm'&&(!c||c.version!==DB.settings.consentVersion))x+='<div class="card"><h3 style="margin-top:0">Optional: data-use consent'+(c?' (wording updated – please choose again)':'')+'</h3><form data-form="consent">'+chk('consent',esc(CONSENT_TEXT),c&&c.choice)+'<div class="hint">Optional – it never blocks registration, shifts, pay or invoices.</div><button class="sec">Save my choice</button></form></div>';
   var mine=DB.acceptances.filter(function(a){return a.userId===u.id;});
-  x+='<h2>Terms I have accepted (permanent history)</h2>'+(mine.length?'<div class="tw"><table><tr><th>Terms</th><th>Version</th><th>Accepted</th><th>Time zone</th><th>Device</th><th></th></tr>'+mine.map(function(a){return '<tr><td>'+esc(a.name)+(a.employerName?'<div class="small muted">Employer: '+esc(a.employerName)+'</div>':'')+'</td><td>'+esc(a.version)+'</td><td>'+fmtStamp(a.at)+'</td><td>'+esc(a.tz)+'</td><td class="small">'+esc(String(a.device||'').replace(' (IP not available in local test)',''))+'</td><td><button class="small sec" data-act="dlterms" data-id="'+a.id+'">View / download</button></td></tr>';}).join('')+'</table></div>':'<p class="muted">None yet.</p>');
+  x+='<h2>Terms I have accepted (permanent history)</h2>'+(mine.length?'<div class="tw"><table><tr><th>Terms</th><th>Version</th><th>Accepted</th><th>Time zone</th><th>Device</th><th></th></tr>'+mine.map(function(a){return '<tr><td>'+esc(a.name)+(a.employerName?'<div class="small muted">Employer: '+esc(a.employerName)+'</div>':'')+'</td><td>'+esc(a.version)+'</td><td>'+fmtStamp(a.at)+'</td><td>'+esc(a.tz)+'</td><td class="small">'+esc(String(a.device||'').replace(' (IP not available in local test)',''))+'</td><td><button class="small sec" data-act="dlterms" data-id="'+esc(a.id)+'">View / download</button></td></tr>';}).join('')+'</table></div>':'<p class="muted">None yet.</p>');
   return x;};
 FORMS.accept=function(f,d){recordAcceptance(ME,d.key);save();toast('Thank you – accepted.');go(missingTerms(ME).length?'#/terms':'#/home');};
 FORMS.consent=function(f,d){recordConsent(ME,!!d.consent);save();toast('Choice saved.');render();};

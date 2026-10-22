@@ -27,7 +27,7 @@ function pastPill(){return ' <span class="pill s-mut uplpill">'+PAST_TAG+'</span
 function pastForm(i){i=i||{};var edit=!!i.id,firms=users('firm').slice().sort(function(a,b){return (isFarm(a)?0:1)-(isFarm(b)?0:1)||(a.name<b.name?-1:1);});
   var paid=!!i.paidAt;
   return '<form data-form="pastinv" class="pastinvform" id="'+(edit?'pastinvedit':'pastinvnew')+'" novalidate>'+(edit?'<input type="hidden" name="id" value="'+esc(i.id)+'">':'')+
-  '<div><label class="req" for="pi-firm'+(edit?'-e':'')+'">Client / site (name and site codes)</label><select name="firmId" id="pi-firm'+(edit?'-e':'')+'" required><option value="">Choose…</option>'+firms.map(function(f){return '<option value="'+f.id+'"'+(i.firmId===f.id?' selected':'')+'>'+esc(pastFirmLabel(f))+'</option>';}).join('')+'</select></div>'+
+  '<div><label class="req" for="pi-firm'+(edit?'-e':'')+'">Client / site (name and site codes)</label><select name="firmId" id="pi-firm'+(edit?'-e':'')+'" required><option value="">Choose…</option>'+firms.map(function(f){return '<option value="'+esc(f.id)+'"'+(i.firmId===f.id?' selected':'')+'>'+esc(pastFirmLabel(f))+'</option>';}).join('')+'</select></div>'+
   '<div class="grid2">'+inp('number','Invoice number',i.number,{req:true,ph:'e.g. 2025-114'})+inp('issued','Invoice date',i.issued,{type:'date',req:true})+
   inp('periodStart','Work period from',i.periodStart,{type:'date',req:true})+inp('periodEnd','Work period to',i.periodEnd,{type:'date',req:true})+
   inp('amount','Amount before tax $',i.amount,{type:'number',req:true,extra:' step="0.01" min="0" data-calc="pastinv"'})+inp('hst','HST $',i.hst,{type:'number',req:true,extra:' step="0.01" min="0" data-calc="pastinv"'})+
@@ -50,9 +50,9 @@ function pastErr(f,msg){var w=f.querySelector('.pastwarn');if(w)w.innerHTML='<di
 function pastList(){var l=(DB.clientInvoices||[]).filter(function(i){return i.uploaded;}).sort(function(a,b){return a.issued<b.issued?1:-1;});
   if(!l.length)return '<p class="small muted" id="pastlist">No uploaded invoices yet.</p>';
   return '<div class="tw"><table id="pastlist"><tr><th>Client</th><th>Invoice #</th><th>Invoice date</th><th>Work period</th><th>Total</th><th>Status</th><th>File</th><th></th></tr>'+l.map(function(i){var st=clientInvStatus(i);
-    return '<tr data-past="'+esc(i.number)+'"><td>'+esc(user(i.firmId).name)+'</td><td>'+esc(i.number)+pastPill()+'</td><td>'+esc(i.issued)+'</td><td class="small">'+esc(i.periodStart)+' – '+esc(i.periodEnd)+'</td><td>'+money(i.total)+'</td><td><span class="pill '+st.c+'">'+esc(st.t)+'</span></td><td class="small">'+esc(i.file?i.file.name:'')+'</td><td>'+pastBtns(i,true)+'</td></tr>';}).join('')+'</table></div>';}
-function pastBtns(i,office){return '<span class="pastbtns"><button class="small sec" data-act="civview" data-id="'+i.id+'">View</button><button class="small sec" data-act="civpdf" data-id="'+i.id+'">Download</button>'+
-  (office?'<button class="small sec" data-act="pastinvedit" data-id="'+i.id+'">Edit</button><button class="small sec rmv" data-act="pastinvdel" data-id="'+i.id+'">Remove</button>':'')+'</span>';}
+    return '<tr data-past="'+esc(i.number)+'"><td>'+esc(user(i.firmId).name)+'</td><td>'+esc(i.number)+pastPill()+'</td><td>'+esc(i.issued)+'</td><td class="small">'+esc(i.periodStart)+' – '+esc(i.periodEnd)+'</td><td>'+money(i.total)+'</td><td><span class="pill '+esc(st.c)+'">'+esc(st.t)+'</span></td><td class="small">'+esc(i.file?i.file.name:'')+'</td><td>'+pastBtns(i,true)+'</td></tr>';}).join('')+'</table></div>';}
+function pastBtns(i,office){return '<span class="pastbtns"><button class="small sec" data-act="civview" data-id="'+esc(i.id)+'">View</button><button class="small sec" data-act="civpdf" data-id="'+esc(i.id)+'">Download</button>'+
+  (office?'<button class="small sec" data-act="pastinvedit" data-id="'+esc(i.id)+'">Edit</button><button class="small sec rmv" data-act="pastinvdel" data-id="'+esc(i.id)+'">Remove</button>':'')+'</span>';}
 function pastCard(where){var open=PAGE_STATE.pastOpen||!!PAGE_STATE.pastWarnKeep;
   return '<div class="card" id="pastinv'+(where?'-'+where:'')+'"><h2 style="margin-top:0">Upload past invoice</h2><p class="small">For work already completed and invoiced outside the app (for example a PDF made before the app). '+
   'It shows in the client invoice list marked <b>'+PAST_TAG+'</b> and in that client\'s <b>My invoices</b>, with view and download. No interest is added and the client is not sent a notice.</p>'+
@@ -91,7 +91,7 @@ FORMS.pastinv=function(f,d){if(!pastCanUpload()){denied('pastinv');return;}
   if(fileIn)readUpload(fileIn,function(file){if(!file)return;finish(file);});else finish(null);};
 ACT.pastinvedit=function(el){if(!pastCanUpload())return;var i=invById(el.dataset.id);if(!i||!i.uploaded)return;modal('<h2>Edit uploaded invoice '+esc(i.number)+'</h2>'+pastForm(i));};
 ACT.pastinvdel=function(el){if(!pastCanUpload())return;var i=invById(el.dataset.id);if(!i||!i.uploaded)return;
-  modal('<h2>Remove uploaded invoice?</h2><p>Invoice <b>'+esc(i.number)+'</b> for '+esc(user(i.firmId).name)+' ('+money(i.total)+', file '+esc(i.file?i.file.name:'')+') will be removed from the office list and from the client\'s My invoices. This is written to the audit log.</p><p class="row"><button class="danger" data-act="pastinvdelok" data-id="'+i.id+'">Remove invoice</button><button class="sec" data-act="closeModal">Keep it</button></p>');};
+  modal('<h2>Remove uploaded invoice?</h2><p>Invoice <b>'+esc(i.number)+'</b> for '+esc(user(i.firmId).name)+' ('+money(i.total)+', file '+esc(i.file?i.file.name:'')+') will be removed from the office list and from the client\'s My invoices. This is written to the audit log.</p><p class="row"><button class="danger" data-act="pastinvdelok" data-id="'+esc(i.id)+'">Remove invoice</button><button class="sec" data-act="closeModal">Keep it</button></p>');};
 ACT.pastinvdelok=function(el){if(!pastCanUpload())return;var i=invById(el.dataset.id);if(!i||!i.uploaded)return;
   DB.clientInvoices=DB.clientInvoices.filter(function(x){return x.id!==i.id;});audit('Removed uploaded past invoice',user(i.firmId).name,i.number+' · '+i.issued+' · '+money(i.total)+' · file '+(i.file?i.file.name:''));save();closeModal();toast('Invoice '+i.number+' removed.');render();};
 ACT.pastopen=function(){PAGE_STATE.pastOpen=true;render();};
@@ -104,10 +104,10 @@ ADMIN_ONLY_FORM.push('pastinv');ADMIN_ONLY_ACT.push('pastinvedit','pastinvdel','
     modal('<div class="pastview"><h2 style="margin:0">Invoice '+esc(i.number)+pastPill()+'</h2><div class="small muted">'+esc(user(i.firmId).name)+'</div>'+
       '<div class="invrow"><span>Invoice date</span><b>'+esc(i.issued)+'</b></div><div class="invrow"><span>Work period</span><b>'+esc(i.periodStart)+' – '+esc(i.periodEnd)+'</b></div>'+
       '<div class="invrow"><span>Amount before tax</span><b>'+money(i.amount)+'</b></div><div class="invrow"><span>HST</span><b>'+money(i.hst)+'</b></div><div class="invrow tot"><span>Total</span><b>'+money(i.total)+'</b></div>'+
-      '<div class="invrow"><span>Status</span><b><span class="pill '+st.c+'">'+esc(st.t)+'</span> '+esc(st.d)+'</b></div>'+
+      '<div class="invrow"><span>Status</span><b><span class="pill '+esc(st.c)+'">'+esc(st.t)+'</span> '+esc(st.d)+'</b></div>'+
       (ME.type==='admin'&&i.note?'<div class="pastnote"><b>Office note</b> (not shown to the client): '+esc(i.note)+'</div>':'')+
-      (url?(img?'<img class="pastprev" src="'+url+'" alt="Invoice '+esc(i.number)+'">':'<iframe class="pastprev" src="'+url+'" title="Invoice '+esc(i.number)+'"></iframe>'):'<p class="muted">'+(i.file?'Could not open the file – you may not have access, or it is no longer available.':'No file.')+'</p>')+
-      '<p class="row"><button data-act="civpdf" data-id="'+i.id+'">Download '+(img?'picture':'PDF')+'</button>'+(pastCanUpload()?'<button class="sec" data-act="pastinvedit" data-id="'+i.id+'">Edit</button>':'')+'</p></div>');});};
+      (url?(img?'<img class="pastprev" src="'+esc(url)+'" alt="Invoice '+esc(i.number)+'">':'<iframe class="pastprev" src="'+esc(url)+'" title="Invoice '+esc(i.number)+'"></iframe>'):'<p class="muted">'+(i.file?'Could not open the file – you may not have access, or it is no longer available.':'No file.')+'</p>')+
+      '<p class="row"><button data-act="civpdf" data-id="'+esc(i.id)+'">Download '+(img?'picture':'PDF')+'</button>'+(pastCanUpload()?'<button class="sec" data-act="pastinvedit" data-id="'+esc(i.id)+'">Edit</button>':'')+'</p></div>');});};
   ACT.civpdf=function(el){var i=invById(el.dataset.id);if(!i||!i.uploaded)return op(el);if(!invAllowed(i)){invDenied(i);return;}if(!i.file){toast('No file stored for this invoice.');return;}
     var name=pastFileName(i);pastWithUrl(i,function(url){if(!url){toast('Could not open the file – you may not have access, or it is no longer available.');return;}var a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},100);
     PAGE_STATE.lastDownload={name:name,size:i.file.data.length,type:i.file.type,uploaded:true};audit('Downloaded uploaded invoice file',user(i.firmId).name,i.number+' · '+name);save();toast('Downloaded: '+name);});};})();
@@ -123,8 +123,8 @@ ADMIN_ONLY_FORM.push('pastinv');ADMIN_ONLY_ACT.push('pastinvedit','pastinvdel','
 (function(){var oi=VIEWS['admin:invoicesadmin'];VIEWS['admin:invoicesadmin']=function(){var x=oi();return pastCanUpload()?x+'<h2 id="clientpastinvh">Client invoices for past work</h2>'+pastCard('inv'):x;};})();
 (function(){var om=VIEWS['firm:invoices'];VIEWS['firm:invoices']=function(){var x=om();
   myInvoices(ME).forEach(function(i){if(!i.uploaded)return;
-    x=x.replace('data-act="civview" data-id="'+i.id+'"><span class="ih"><b>'+esc(i.number)+'</b>','data-act="civview" data-id="'+i.id+'"><span class="ih"><b>'+esc(i.number)+'</b>'+pastPill());
-    x=x.replace('data-act="civpdf" data-id="'+i.id+'">Download PDF','data-act="civpdf" data-id="'+i.id+'">Download file');});
+    x=x.replace('data-act="civview" data-id="'+esc(i.id)+'"><span class="ih"><b>'+esc(i.number)+'</b>','data-act="civview" data-id="'+esc(i.id)+'"><span class="ih"><b>'+esc(i.number)+'</b>'+pastPill());
+    x=x.replace('data-act="civpdf" data-id="'+esc(i.id)+'">Download PDF','data-act="civpdf" data-id="'+esc(i.id)+'">Download file');});
   return x.replace('Tap one to see it or download a PDF.','Tap one to see it or download it. Invoices marked “'+PAST_TAG+'” were made before this app – you get the original file.');};})();
 /* app-made monthly invoices never reuse a number already on file for that client (e.g. an uploaded one) */
 (function(){var oc=FORMS.clientinv;FORMS.clientinv=function(f,d){var n=(DB.clientInvoices||[]).length;oc(f,d);var L=DB.clientInvoices||[];if(L.length>n){var inv=L[L.length-1];
