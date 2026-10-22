@@ -23,7 +23,7 @@ function seedV2(db,o){var A=o.A;
   o.w4.jobRole='field';o.w4.roles=[];
   o.e1.jobRole='field';o.e3.jobRole='driver';o.doc(o.e3,'driver_abstract',{meta:{abstractDate:A(-20)}});
   /* both sample farms signed the farm agreement (a new farm added by the office starts unsigned) */
-  db.firmSigs=[o.fA,o.fB].map(function(f,i){return {id:o.uid('fs'),firmId:f.id,firmName:f.name,version:'1.0',label:FIRM_AGR_LABEL,signerName:i?'Sam Sample':'Pat Placeholder',title:i?'Farm Manager':'Owner',signature:i?'Sam Sample':'Pat Placeholder',authorized:true,at:new Date(Date.now()-86400000*(25-i)).toISOString(),tz:'America/Halifax',device:'Computer – sample data',text:firmAgreementText(f.name)};});
+  db.firmSigs=[o.fA,o.fB].map(function(f,i){return {id:o.uid('fs'),firmId:f.id,firmName:f.name,version:'1.0',label:FIRM_AGR_LABEL,signerName:i?'Sam Signer':'Pat Signer',title:i?'Farm Manager':'Owner',signature:i?'Sam Signer':'Pat Signer',authorized:true,at:new Date(Date.now()-86400000*(25-i)).toISOString(),tz:'America/Halifax',device:'Computer – sample data',text:firmAgreementText(f.name)};});
   /* sample clocked hours for subcontractor workers (shown on the sub's Workers' hours page – never used for invoices) */
   var rows=[[-13,o.w1,'TFA-01','07:00','15:30'],[-12,o.w1,'TFA-01','07:00','15:15'],[-11,o.w1,'TFB-01','08:00','16:00'],[-10,o.w2,'TFA-02','07:15','15:30'],[-6,o.w1,'TFA-01','07:00','15:00'],[-5,o.w2,'TFA-02','07:00','12:00'],[-4,o.w1,'TFA-02','06:45','15:15'],[-3,o.w2,'TFA-01','07:00','15:30']];
   rows.forEach(function(r,i){db.time.push({id:o.uid('t'),userId:r[1].id,site:r[2],date:A(r[0]),in:r[3],out:r[4],test:false,clock:true,subId:o.s1.id,crewIn:4,crew:4,loc:'Location check-in (simulated)',breakMissed:i===4});});

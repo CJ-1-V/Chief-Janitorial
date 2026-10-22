@@ -67,7 +67,7 @@ function counted(from,to,q){var out=[];
     x=x.replace(/(id="vshtot">)[^<]*/,'$1'+tot.toFixed(2));
     if(!shown.length)return x;
     var r=withPending(function(){return recon(from,to,shown);}),parts=[];
-    if(Math.abs(r.top)>0.004)parts.push('+ '+f2(r.top)+' h 5-hour daily minimum');
+    if(Math.abs(r.top)>0.004)parts.push('+ '+f2(r.top)+' h '+(typeof CB==='function'?CB().minHours:3)+'-hour daily minimum');
     if(Math.abs(r.brk)>0.004)parts.push((r.brk>0?'− ':'+ ')+f2(Math.abs(r.brk))+' h break taken once per worker per day');
     if(r.nOut)parts.push('− '+f2(r.out)+' h not at a farm or client ('+r.nOut+' shift'+(r.nOut===1?'':'s')+')');
     var line='<div class="small ia-recon" id="iarecon">On farm invoices: <b id="iabill">'+f2(r.bill)+'</b> billable h'+(parts.length?' = the '+f2(tot)+' h shown '+parts.join(' ')+'.':' – the same as the hours shown.')+' Shifts waiting for approval and unassigned shifts are included (pay still waits for approval).</div>';

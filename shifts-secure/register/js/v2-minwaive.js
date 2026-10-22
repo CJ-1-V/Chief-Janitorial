@@ -1,5 +1,5 @@
 /* v2-minwaive.js – Oct 6 2026 (owner decision #7, bundle minwaive1). Farm billing only; employee pay is not touched.
-   - Every farm: 5-hour daily minimum per worker-day (rule itself: billDay / firmRows in v2-clientbilling.js).
+   - Every farm: 3-hour (office setting) daily minimum per worker-day (rule itself: billDay / firmRows in v2-clientbilling.js).
    - Office only: "Farm billing by day" (#/farmbilling) – pick a farm and dates; each day has a "Waive 5-hour minimum" button.
      Waiving needs a confirm, is written to the audit log (who + when), and can be undone (also confirmed + logged).
      While waived, that farm-day bills actual hours (break rule still applies over 5 h) with no 5-hour floor.
@@ -7,7 +7,7 @@
      Workers, crew leads and subcontractors never see billing. Farms only ever see Worker #n.
    - Storage: DB.settings.minWaivers (live: inside the existing reg_settings 'main' JSON row – office-write only, no schema change). */
 'use strict';
-var MW_TXT={btn:'Waive 5-hour minimum',undo:'Undo waiver',on:'Minimum waived',farmNote:'Minimum waived for this day'};
+var MW_TXT={btn:'Waive daily minimum',undo:'Undo waiver',on:'Minimum waived',farmNote:'Minimum waived for this day'};
 function mwKey(firmId,date){return firmId+'|'+date;}
 /* live: settings are saved by owner / admin / ops staff only (reg_office_write). Test copy: officeRoles is not set → allowed. */
 function mwCanEdit(){if(!ME||ME.type!=='admin')return false;var r=ME.officeRoles;if(!r||!r.length)return true;return r.some(function(x){return x==='owner'||x==='admin'||x==='ops';});}
@@ -91,11 +91,11 @@ ACT.mwwaive=function(el){var g=mwGet(el);if(!g)return;if(minWaiver(g.firm.id,g.d
 ACT.mwundo=function(el){var g=mwGet(el);if(!g)return;if(!minWaiver(g.firm.id,g.date)){toast('Not waived.');render();return;}modal(mwModal(g.firm,g.date,false));};
 ACT.mwwaiveok=function(el){var g=mwGet(el);if(!g)return;var E=mwEffect(g.firm,g.date,true),n=document.getElementById('mwnote'),note=n?n.value.trim().slice(0,200):'';
   var S=DB.settings;S.minWaivers=Object.assign({},S.minWaivers||{});S.minWaivers[mwKey(g.firm.id,g.date)]={firmId:g.firm.id,date:g.date,by:ME.name,at:new Date().toISOString()}; /* the reason goes to the audit log only (the settings row is readable by every signed-in account in live) */
-  audit('Waived 5-hour daily minimum',g.firm.name,g.date+' · billable '+E.before.bill.toFixed(2)+' h → '+E.after.bill.toFixed(2)+' h ('+money(E.before.amount)+' → '+money(E.after.amount)+')'+(note?' · reason: '+note:''));
+  audit('Waived '+CB().minHours+'-hour daily minimum',g.firm.name,g.date+' · billable '+E.before.bill.toFixed(2)+' h → '+E.after.bill.toFixed(2)+' h ('+money(E.before.amount)+' → '+money(E.after.amount)+')'+(note?' · reason: '+note:''));
   save();closeModal();toast('Minimum waived for '+g.firm.name+' on '+shortDay(g.date)+'.');render();};
 ACT.mwundook=function(el){var g=mwGet(el);if(!g)return;var w=minWaiver(g.firm.id,g.date);if(!w){closeModal();render();return;}var E=mwEffect(g.firm,g.date,false),n=document.getElementById('mwnote'),note=n?n.value.trim().slice(0,200):'';
   var S=DB.settings;S.minWaivers=Object.assign({},S.minWaivers||{});delete S.minWaivers[mwKey(g.firm.id,g.date)];
-  audit('Undid 5-hour minimum waiver',g.firm.name,g.date+' (waived by '+(w.by||'?')+' '+fmtStamp(w.at)+') · billable '+E.before.bill.toFixed(2)+' h → '+E.after.bill.toFixed(2)+' h ('+money(E.before.amount)+' → '+money(E.after.amount)+')'+(note?' · reason: '+note:''));
+  audit('Undid '+CB().minHours+'-hour minimum waiver',g.firm.name,g.date+' (waived by '+(w.by||'?')+' '+fmtStamp(w.at)+') · billable '+E.before.bill.toFixed(2)+' h → '+E.after.bill.toFixed(2)+' h ('+money(E.before.amount)+' → '+money(E.after.amount)+')'+(note?' · reason: '+note:''));
   save();closeModal();toast('Waiver undone – the '+CB().minHours+'-hour minimum applies again.');render();};
 ADMIN_ONLY_ACT.push('mwwaive','mwundo','mwwaiveok','mwundook','farmbilling','mwweek');ADMIN_ONLY_FORM.push('mwbrange','mwnone');
 

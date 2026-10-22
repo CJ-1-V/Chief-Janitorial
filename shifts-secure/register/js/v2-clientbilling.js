@@ -1,11 +1,11 @@
 /* v2-clientbilling.js – client (farm and other client) billing per the Independent Contractor Service Agreement, plus the driver's abstract age rule. TEST ONLY.
    - Billable hours (Oct 6 2026): per worker per farm per day – shifts added up, 30-minute break off once if the total is over 5 h
-     (unless "break missed"), then a 5-hour DAILY MINIMUM per worker per day; the office can waive the minimum for one farm-day (v2-minwaive.js).
+     (unless "break missed"), then a 3-hour DAILY MINIMUM (office setting) per worker per day; the office can waive the minimum for one farm-day (v2-minwaive.js).
    - Monthly client invoices, net 30, 2% per month interest on overdue invoices (shown on the farm/client view and office billing).
    - Driver's abstract must be dated within the last 30 days when uploaded or typed in.
    All numbers editable in office Settings. */
 'use strict';
-function CB(){var d={minHours:5,breakMin:30,netDays:30,interestPct:2,abstractMaxDays:30};var s=(DB&&DB.settings&&DB.settings.clientBilling)||{};Object.keys(d).forEach(function(k){if(s[k]===undefined||s[k]===null||s[k]==='')s[k]=d[k];});return s;}
+function CB(){var d={minHours:3,breakMin:30,netDays:30,interestPct:2,abstractMaxDays:30};var s=(DB&&DB.settings&&DB.settings.clientBilling)||{};Object.keys(d).forEach(function(k){if(s[k]===undefined||s[k]===null||s[k]==='')s[k]=d[k];});return s;}
 function syncBreak(){if(DB&&DB.settings){DB.settings.clientBilling=CB();BREAK_MIN=CB().breakMin;}}
 (function(){var ol=load;load=function(){ol();syncBreak();};})();
 
@@ -64,6 +64,6 @@ FORMS.clientbill=function(f,d){var n={};var bad=['minHours','breakMin','netDays'
 function seedClientInvoices(db){if(db.clientInvoices)return;db.clientInvoices=[];var fA=db.users.filter(function(u){return u.username==='firmA';})[0];if(!fA)return;
   db.clientInvoices.push({id:uid('ci'),firmId:fA.id,number:'UC-SAMPLE-001',periodStart:addDays(today(),-105),periodEnd:addDays(today(),-76),billHours:180,amount:4410,hst:661.5,total:5071.5,issued:addDays(today(),-75),due:addDays(today(),-45),interestPct:2,paidAt:'',sample:true});
   db.clientInvoices.push({id:uid('ci'),firmId:fA.id,number:'UC-SAMPLE-002',periodStart:addDays(today(),-75),periodEnd:addDays(today(),-46),billHours:150,amount:3675,hst:551.25,total:4226.25,issued:addDays(today(),-45),due:addDays(today(),-15),interestPct:2,paidAt:addDays(today(),-17),sample:true});}
-(function(){var os=seedV2;seedV2=function(db,o){os(db,o);seedClientInvoices(db);db.settings.clientBilling=db.settings.clientBilling||{minHours:5,breakMin:30,netDays:30,interestPct:2,abstractMaxDays:30};};})();
+(function(){var os=seedV2;seedV2=function(db,o){os(db,o);seedClientInvoices(db);db.settings.clientBilling=db.settings.clientBilling||{minHours:3,breakMin:30,netDays:30,interestPct:2,abstractMaxDays:30};};})();
 (function(){var ol=load;load=function(){ol();if(DB&&!DB.clientInvoices){seedClientInvoices(DB);save();}};})();
 ADMIN_ONLY_FORM.push('clientinv','clientbill');ADMIN_ONLY_ACT.push('clientinvpaid');
