@@ -596,7 +596,7 @@
   }
   FORMS.signup = function (f, d) { if (!TYPES[d.type] || d.type === 'admin' || d.type === 'firm') return; selfSignup(d, d.type); };
   FORMS.firmsignup = function (f, d) {
-    if (!d.name || !d.contact || !d.email) { toast('Enter the business name, contact person and email.'); return; }
+    if (!d.name || !d.contact || (!String(d.email || '').trim() && !signupLogin({ phone: d.phone }))) { toast('Enter the business name, contact person and a mobile phone or email.'); return; } // farminvite1: phone-only farms
     // 016h: optional invite code from the office (js/v2-clientlink.js). Nothing about the client is shown; the office links after approval.
     var rawInv = String(d.invite || '').trim(), inv = rawInv && typeof clNormCode === 'function' ? clNormCode(rawInv) : '';
     if (rawInv && !inv) { toast('Invite codes look like ABCD-2345 (8 letters/numbers). Check the code, or leave it empty.'); return; }
