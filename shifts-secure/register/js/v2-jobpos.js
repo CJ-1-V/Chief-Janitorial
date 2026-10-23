@@ -27,7 +27,12 @@ function get(k){if(!k)return null;var l=list();for(var i=0;i<l.length;i++)if(l[i
 window.jpGet=get;
 function keyOf(t){if(!t)return '';if(t.key&&/^[tc]:/.test(t.key))return t.key;if(t.key0)return t.key0;return t.id?'t:'+t.id:'';}
 function rateOf(r,p){if(!r)return 0;if(p==='other')return r.other&&r.other.rate>0?r.other.rate:0;return r.rates&&r.rates[p]>0?r.rates[p]:0;}
-window.jpRate=function(firm,date,p){var r=typeof farmRateOn==='function'?farmRateOn(firm,date):null;var own=rateOf(r,p);return {rate:own||rateOf(r,'labour'),missing:!own&&p!=='labour',gl:rateOf(r,'labour'),sched:r};};
+/* draftinv1 (Oct 23 2026): if no SIGNED schedule is in effect on that date (farm never signed, or rates start later, e.g. live rates are all
+   effective 2026-10-01), bill at the office-entered schedule instead of $0: the latest version effective on or before the date, else the
+   earliest version. Flagged (q.unsigned) so screens can say so. Booking rules (farmRateOn) are unchanged. */
+function rateFallback(firm,date){var L=typeof farmRateList==='function'?farmRateList(firm):[];if(!L.length)return null;var b=null;L.forEach(function(r){if(String(r.effective||'')<=date)b=r;});return b||L[0];}
+window.jpRateFallback=rateFallback;
+window.jpRate=function(firm,date,p){var r=typeof farmRateOn==='function'?farmRateOn(firm,date):null,un=false;if(!r&&!(typeof cjSkipFarmRates==='function'&&cjSkipFarmRates())){r=rateFallback(firm,date);un=!!r;}var own0=rateOf(r,p);if(un)return {rate:own0||rateOf(r,'labour'),missing:!own0&&p!=='labour',gl:rateOf(r,'labour'),sched:r,unsigned:true};var own=rateOf(r,p);return {rate:own||rateOf(r,'labour'),missing:!own&&p!=='labour',gl:rateOf(r,'labour'),sched:r};};
 /* ---- break: chosen break replaces the normal rule for that shift only ---- */
 var oub=window.unpaidBreak;
 if(typeof oub==='function'){window.unpaidBreak=unpaidBreak=function(h,t){var j=get(keyOf(t));if(j&&j.brk)return Math.min(Math.max(0,+h||0),(+j.brk)/60);return oub(h,t);};}
