@@ -111,6 +111,17 @@
     setTimeout(tick, 2200);
   });
 
+  // Swipe hint above phone carousels
+  if (window.matchMedia('(max-width: 767px)').matches) {
+    document.querySelectorAll('.row.cj-swipe').forEach(function (row) {
+      var h = document.createElement('div');
+      h.className = 'cj-swipe-hint';
+      h.innerHTML = 'Swipe <i>→</i>';
+      row.parentNode.insertBefore(h, row);
+      row.addEventListener('scroll', function () { h.style.opacity = row.scrollLeft > 20 ? '0' : '1'; }, { passive: true });
+    });
+  }
+
   // Footer year
   document.querySelectorAll('[data-year]').forEach(function (y) { y.textContent = new Date().getFullYear(); });
 
