@@ -251,7 +251,9 @@
 
   /* ---------- saving: only what changed, in the background ---------- */
   save = function () { if (SUSPEND || !SIGNED_IN || !ME) return true; clearTimeout(TIMER); TIMER = setTimeout(flush, 300); return true; };
-  window.REG_FLUSH = function () { clearTimeout(TIMER); return flush(); };
+  /* flushwait1 (Oct 23 2026): wait for a save that is already running (flush() returns at once while BUSY), so sign-out
+     never ends the session in the middle of a save (Oct 23 1:02 AM: 22 hour edits went out without a session -> 42501 as anon). */
+  window.REG_FLUSH = async function () { clearTimeout(TIMER); for (var i = 0; i < 150 && BUSY; i++) await new Promise(function (r) { setTimeout(r, 100); }); await flush(); for (var j = 0; j < 150 && BUSY; j++) await new Promise(function (r) { setTimeout(r, 100); }); };
   /* subinv1 (Oct 21 2026): per-row save result, so a screen can say "saved" only after the server really took the row.
      'saved' = the server has exactly this row; {error} = the server refused it; 'pending' = not sent yet / still sending. */
   var ROWFAIL = {};
