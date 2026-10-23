@@ -79,6 +79,18 @@
     }
   }
 
+  // Hero infographic follows the typed word
+  function showScene(i) {
+    var box = document.querySelector('.cj-scenes');
+    if (!box) return;
+    box.querySelectorAll('.cj-scene').forEach(function (sc) {
+      var on = parseInt(sc.getAttribute('data-scene'), 10) === i;
+      sc.classList.toggle('is-active', on);
+      sc.setAttribute('aria-hidden', on ? 'false' : 'true');
+    });
+    box.querySelectorAll('.cj-scene-dots i').forEach(function (d, k) { d.classList.toggle('on', k === i); });
+  }
+
   // Typing word swap
   document.querySelectorAll('.cj-swap').forEach(function (el) {
     var words = (el.getAttribute('data-words') || '').split('|').filter(Boolean);
@@ -89,7 +101,7 @@
       var w = words[wi];
       if (deleting) {
         ci--; el.textContent = w.slice(0, ci);
-        if (ci <= 0) { deleting = false; wi = (wi + 1) % words.length; }
+        if (ci <= 0) { deleting = false; wi = (wi + 1) % words.length; showScene(wi); }
         setTimeout(tick, 45);
       } else {
         var nw = words[wi]; ci++; el.textContent = nw.slice(0, ci);
