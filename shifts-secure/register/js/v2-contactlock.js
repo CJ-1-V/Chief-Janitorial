@@ -211,7 +211,8 @@
         if (d.pw.length < 6) { toast('Password must be at least 6 characters.'); return; }
         if (d.pw !== d.pw2) { toast('Passwords do not match.'); return; }
         if (loginTaken(d.username, d.email)) { toast('That username or email is already used.'); return; }
-        if (!String(d.email || '').trim() && String(d.phone || '').trim()) {
+        if (!(window.REG_STORE && window.REG_STORE.mode === 'supabase') && !String(d.email || '').trim() && String(d.phone || '').trim()) {
+          /* farminvite1: on the live site store-supabase makes the real phone-only account (was a local-only account – farms invited by text could not sign up) */
           /* phone-only farm: old firmsignup required email – create here */
           var u = { id: uid('u'), type: 'firm', name: d.name, username: d.username, email: '', phone: d.phone, passHash: hashPw(d.pw), active: true, suspended: false, approved: false, accountApproved: false, createdAt: new Date().toISOString(), lastLogin: new Date().toISOString(), profile: {}, roles: [], orientations: [], firm: { billRate: 0, contact: d.contact, siteRequest: d.site || '' } };
           DB.users.push(u); ME = u; sessionStorage.setItem('us-test-me', u.id);

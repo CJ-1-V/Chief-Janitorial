@@ -21,6 +21,9 @@ window.REG_STORE = {
   farmRoles: true,                                  // 025a farmroles1: farm managers / supervisors (no invoices, rates or amounts) – set true only AFTER migration 025a
   famInv: true,                                     // 027a faminv1: per person "Invoices & amounts" for farm managers / supervisors – set true only AFTER migration 027a
   homeBoxes: true,                                   // homebox1: farm Home = Crew coming + Order crew + a grid of boxes (front end only; false = the old Home)
+  messagesFn: false,                                 // 027g msgsend1: forgot-password by text/email through reg-messages – set true only AFTER the reg-messages secrets are set
+  inviteFn: false,                                   // 027f/027h: invites (farm, farm team, sub workers) sent from admin@unscramble.ca – set true only AFTER the reg-messages secrets are set
+  twoStep: false,                                    // 027i twostep1: 2-step sign-in (emailed code) for office + farm logins – set true only AFTER migration 027i + reg-messages deploy
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
