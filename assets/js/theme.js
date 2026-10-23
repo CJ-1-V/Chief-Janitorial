@@ -164,8 +164,8 @@
         }
     });
     //===== Nice select js
-    // Quote-form selects stay native so their labels, validation, and mobile pickers work.
-    $('select').not('#quote-form select').niceSelect();
+    // Quote and walkthrough selects stay native so their labels, validation, and mobile pickers work.
+    $('select').not('#quote-form select, #walkthrough-form select').niceSelect();
 
     
     //===== Slick slider js
