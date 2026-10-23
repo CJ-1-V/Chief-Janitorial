@@ -312,6 +312,45 @@ html,body{overflow-x:clip}
 @media (max-width:991px){.cj-scenes{width:104%;top:0;opacity:.14}}
 
 
+
+/* ---------- Why Chief (accountability first) ---------- */
+.cj-pitch{font-size:40px;line-height:1.2}
+.cj-why-feat{display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:start;background:linear-gradient(120deg,#1d1b4f,#3f3cc9);color:#fff;border-radius:22px;padding:40px;position:relative;overflow:hidden;box-shadow:0 30px 70px rgba(29,27,79,.25)}
+.cj-why-feat:after{content:"";position:absolute;width:320px;height:320px;border:2px dashed rgba(255,255,255,.14);border-radius:50%;right:-110px;top:-120px;animation:cj-spin 40s linear infinite}
+.cj-why-feat h3{color:#fff;font-size:32px;margin:6px 0 10px}
+.cj-why-feat p{color:rgba(255,255,255,.85);font-size:18px;max-width:640px}
+.cj-why-feat .cj-num{color:#bdbbff}
+.cj-why-ic{width:56px;height:56px;border-radius:14px;background:var(--cj-soft);display:flex;align-items:center;justify-content:center;flex:none;transition:transform .4s}
+.cj-why-ic svg{width:28px;height:28px;stroke:var(--cj-primary)}
+.cj-why-ic.big{width:76px;height:76px;border-radius:20px;background:rgba(255,255,255,.12)}
+.cj-why-ic.big svg{width:38px;height:38px;stroke:#fff}
+.cj-why-log{margin-top:22px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:14px;overflow:hidden;max-width:620px;font-size:14.5px}
+.cj-why-log > div{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.1fr;gap:8px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.08)}
+.cj-why-log > div:first-child{border-top:0;background:rgba(255,255,255,.06)}
+.cj-why-log b{font-weight:700;color:#bdbbff;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
+.cj-why-log span{color:#fff}
+.cj-why-log .ok{color:#7ff0dc;font-weight:700}
+.cj-why-log .pulse{color:#ffb32c;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.cj-why-log .pulse:before{content:"";width:8px;height:8px;border-radius:50%;background:#ffb32c;animation:cj-ping 1.4s ease-out infinite}
+@keyframes cj-ping{0%{box-shadow:0 0 0 0 rgba(255,179,44,.7)}100%{box-shadow:0 0 0 10px rgba(255,179,44,0)}}
+.cj-why-ex{display:block;margin-top:8px;font-size:13px;color:rgba(255,255,255,.6)}
+.cj-why-item{display:flex;gap:18px;align-items:flex-start;background:#fff;border:1px solid #eeeef8;border-radius:16px;padding:24px;height:100%;transition:all .35s}
+.cj-why-item:hover{transform:translateY(-6px);box-shadow:var(--cj-shadow);border-color:transparent}
+.cj-why-item:hover .cj-why-ic{transform:rotate(-8deg) scale(1.08)}
+.cj-why-item h4{font-size:20px;color:#000;margin:4px 0 6px}
+.cj-why-item p{font-size:16px;line-height:1.6;margin:0}
+.mb-20{margin-bottom:20px}
+@media (max-width:991px){.cj-pitch{font-size:30px}}
+@media (max-width:767px){
+  .cj-pitch{font-size:25px}
+  .cj-why-feat{grid-template-columns:1fr;padding:26px 20px;gap:14px}
+  .cj-why-feat h3{font-size:24px}.cj-why-feat p{font-size:16px}
+  .cj-why-log{font-size:12.5px}.cj-why-log > div{grid-template-columns:1.2fr .9fr .9fr 1.1fr;padding:9px 10px;gap:4px}
+  .cj-why-log b{font-size:10.5px}
+  .cj-why-item{padding:18px;gap:14px}.cj-why-item h4{font-size:18px}.cj-why-item p{font-size:15px}
+  .cj-why-ic{width:46px;height:46px}.cj-why-ic svg{width:24px;height:24px}
+}
+
 /* =========================================================
    PHONE-FIRST POLISH
    ========================================================= */
