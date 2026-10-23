@@ -274,21 +274,21 @@ html,body{overflow-x:clip}
 @keyframes cj-caret{50%{border-color:transparent}}
 
 
-/* ---------- Hero infographic that follows the typed word (faded, behind the headline) ---------- */
-.cj-hero-bgwrap{position:relative}
-.cj-hero-bgwrap > *:not(.cj-scenes){position:relative;z-index:1}
-.cj-scenes{position:absolute;z-index:0;left:50%;top:-6%;width:112%;max-width:620px;transform:translateX(-50%);pointer-events:none;opacity:.16;filter:saturate(.85)}
+/* ---------- Hero line-art that follows the typed word (behind the cleaner, never over text) ---------- */
+.hero-banner-v2 .hero-img{position:relative}
+.hero-banner-v2 .hero-img .cj-hero-man{position:relative;z-index:2}
+.cj-hero-col{position:relative}
+.cj-scenes{position:absolute;z-index:1;right:-2%;top:4%;width:86%;pointer-events:none}
 .cj-scenes .cj-scene-cap,.cj-scenes .cj-scene-dots{display:none}
-.cj-scene svg{background:none!important}
-.cj-scene{display:none}
-.cj-scene.is-active{display:block;animation:cj-scene-in .6s cubic-bezier(.2,.7,.2,1)}
+.cj-scene{position:absolute;inset:0;display:block!important;opacity:0;transform:scale(.97);transition:opacity 1.2s ease,transform 1.6s ease}
+.cj-scene.is-active{opacity:1;transform:none}
 .cj-scene svg{width:100%;height:auto;display:block}
-.cj-scene-cap{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding:0 4px}
-.cj-scene-cap strong{font-size:17px;color:#000}
-.cj-scene-cap small{font-size:13px;color:var(--cj-primary);font-weight:700;line-height:1.3}
-.cj-scene-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
-.cj-scene-dots i{width:6px;height:6px;border-radius:6px;background:#dcdcf3;transition:all .35s}
-.cj-scene-dots i.on{width:20px;background:var(--cj-primary)}
+.cj-scene svg *{fill:none!important;stroke:#5956e9;stroke-width:1.1;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.cj-scene svg ellipse,.cj-scene svg text,.cj-scene .sp,.cj-scene .conf,.cj-scene .bub,.cj-scene .smoke{display:none}
+.cj-scenes{opacity:.28}
+.cj-scene.is-active svg{animation:cj-draw 2.4s ease forwards}
+@keyframes cj-draw{from{stroke-dasharray:600;stroke-dashoffset:600}to{stroke-dasharray:600;stroke-dashoffset:0}}
+.cj-scene svg *{stroke-dasharray:inherit;stroke-dashoffset:inherit}
 @keyframes cj-scene-in{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 .cj-scene .sp{transform-box:fill-box;transform-origin:center;animation:cj-twinkle 1.8s ease-in-out infinite}
 .cj-scene .sp:nth-of-type(2n){animation-delay:.6s}
@@ -309,7 +309,7 @@ html,body{overflow-x:clip}
 .cj-scene .conf{transform-box:fill-box;transform-origin:center;animation:cj-conf 2.2s linear infinite}
 .cj-scene .c1{animation-delay:.5s}.cj-scene .c2{animation-delay:1s}.cj-scene .c3{animation-delay:1.5s}
 @keyframes cj-conf{0%{transform:translateY(-6px) rotate(0);opacity:0}20%{opacity:1}100%{transform:translateY(40px) rotate(220deg);opacity:0}}
-@media (max-width:991px){.cj-scenes{width:104%;top:0;opacity:.14}}
+@media (max-width:991px){.cj-scenes{width:96%;right:-2%;top:4%;opacity:.24}}
 
 
 
