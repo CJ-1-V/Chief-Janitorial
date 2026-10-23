@@ -274,11 +274,15 @@ html,body{overflow-x:clip}
 @keyframes cj-caret{50%{border-color:transparent}}
 
 
-/* ---------- Hero infographic that follows the typed word ---------- */
-.cj-scenes{position:absolute;right:-10px;top:38%;width:250px;background:#fff;border-radius:18px;padding:14px 14px 12px;box-shadow:0 24px 60px rgba(29,27,79,.18);z-index:4;animation:cj-float 7s ease-in-out infinite}
+/* ---------- Hero infographic that follows the typed word (faded, behind the headline) ---------- */
+.cj-hero-bgwrap{position:relative}
+.cj-hero-bgwrap > *:not(.cj-scenes){position:relative;z-index:1}
+.cj-scenes{position:absolute;z-index:0;left:50%;top:-6%;width:112%;max-width:620px;transform:translateX(-50%);pointer-events:none;opacity:.16;filter:saturate(.85)}
+.cj-scenes .cj-scene-cap,.cj-scenes .cj-scene-dots{display:none}
+.cj-scene svg{background:none!important}
 .cj-scene{display:none}
 .cj-scene.is-active{display:block;animation:cj-scene-in .6s cubic-bezier(.2,.7,.2,1)}
-.cj-scene svg{width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(180deg,#f4f4fe,#fff)}
+.cj-scene svg{width:100%;height:auto;display:block}
 .cj-scene-cap{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding:0 4px}
 .cj-scene-cap strong{font-size:17px;color:#000}
 .cj-scene-cap small{font-size:13px;color:var(--cj-primary);font-weight:700;line-height:1.3}
@@ -305,7 +309,95 @@ html,body{overflow-x:clip}
 .cj-scene .conf{transform-box:fill-box;transform-origin:center;animation:cj-conf 2.2s linear infinite}
 .cj-scene .c1{animation-delay:.5s}.cj-scene .c2{animation-delay:1s}.cj-scene .c3{animation-delay:1.5s}
 @keyframes cj-conf{0%{transform:translateY(-6px) rotate(0);opacity:0}20%{opacity:1}100%{transform:translateY(40px) rotate(220deg);opacity:0}}
-@media (max-width:991px){.cj-scenes{position:relative;right:auto;top:auto;margin:16px auto 90px;width:min(300px,90%)}}
+@media (max-width:991px){.cj-scenes{width:104%;top:0;opacity:.14}}
+
+
+/* =========================================================
+   PHONE-FIRST POLISH
+   ========================================================= */
+.cj-mbar{display:none}
+@media (max-width:767px){
+  body{padding-bottom:78px}
+  .cj-mbar{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px;position:fixed;left:10px;right:10px;bottom:10px;z-index:9990;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid #ececf8;border-radius:18px;padding:8px;box-shadow:0 14px 40px rgba(29,27,79,.18)}
+  .cj-mbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 4px;border-radius:12px;font-size:12.5px;font-weight:700;color:#1d1b4f}
+  .cj-mbar a svg{width:20px;height:20px;stroke:currentColor}
+  .cj-mbar a.quote{background:var(--cj-primary);color:#fff;flex-direction:row;gap:8px;font-size:15px;box-shadow:0 8px 20px rgba(89,86,233,.35)}
+  .cj-mbar a:active{transform:scale(.96)}
+  .back-to-top{bottom:96px!important}
+
+  .cj-section{padding:64px 0}
+  .cj-section.tight{padding:44px 0}
+  .cj-h2{font-size:28px;margin-bottom:12px}
+  .cj-eyebrow{font-size:13px;margin-bottom:10px}
+  .mb-50{margin-bottom:28px!important}
+
+  /* Swipe carousels */
+  .row.cj-swipe{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;margin-right:-15px;margin-left:-15px;padding:6px 15px 18px;scrollbar-width:none;gap:0}
+  .row.cj-swipe::-webkit-scrollbar{display:none}
+  .row.cj-swipe > [class*="col-"]{flex:0 0 80%;max-width:80%;scroll-snap-align:start;padding-left:7px;padding-right:7px;margin-bottom:0!important}
+  .row.cj-swipe > [class*="col-"]:first-child{padding-left:15px}
+  .cj-swipe-hint{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--cj-primary);margin:-4px 0 8px}
+  .cj-swipe-hint i{display:inline-block;animation:cj-nudge 1.4s ease-in-out infinite}
+  @keyframes cj-nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(6px)}}
+
+  /* Compact cards */
+  .cj-card{padding:24px 22px}
+  .cj-card h3{font-size:20px;margin:14px 0 8px}
+  .cj-card p{font-size:15.5px}
+  .cj-card .cj-icon{width:56px;height:56px;border-radius:14px}
+  .cj-industry{min-height:0;padding:24px 22px 60px}
+  .cj-industry h3{font-size:20px}
+  .cj-step{padding:24px 22px}.cj-step .n{font-size:48px}
+  .cj-insight .top{height:130px}
+
+  /* Theme service cards: horizontal, compact */
+  .service-area-v2 .service-wrapper{padding:44px 14px 30px!important}
+  .service-area-v2 .section-title h2{font-size:28px!important;line-height:1.2}
+  .service-item.service-style-three{display:flex!important;flex-direction:row!important;align-items:flex-start;gap:16px;text-align:left!important;padding:20px 18px!important;margin-bottom:14px!important}
+  .service-item.service-style-three .icon{flex:0 0 56px;width:56px!important;height:auto!important;margin:0!important}
+  .service-item.service-style-three .text{flex:1;min-width:0;width:auto!important}
+  .service-item.service-style-three .icon img{width:52px;height:auto}
+  .service-item.service-style-three .text h3.title{font-size:18px!important;margin-bottom:6px!important}
+  .service-item.service-style-three .text p{font-size:15px;line-height:1.55}
+
+  /* Counters 2x2 */
+  .counter-area-v2 .row > [class*="col-"]{flex:0 0 50%;max-width:50%;padding-left:7px;padding-right:7px}
+  .counter-area-v2 .counter-item{padding:22px 14px!important;margin-bottom:14px!important;text-align:center}
+  .counter-area-v2 .counter-item .icon{margin:0 auto 8px!important}
+  .counter-area-v2 .counter-item .icon i{font-size:38px!important}
+  .counter-area-v2 .counter-item h2.number{font-size:34px!important}
+  .counter-area-v2 .counter-item h6{font-size:14px!important}
+  .counter-area-v2 .section-title h2,.contact-area-v2 h2{font-size:28px!important}
+
+  /* Hero */
+  .hero-banner-v2 .hero-content h1{font-size:36px!important;line-height:1.12}
+  .hero-banner-v2 .hero-content p{font-size:16px}
+  .hero-banner-v2 .hero-actions{flex-direction:column}
+  .hero-banner-v2 .hero-actions a{width:100%;text-align:center;justify-content:center}
+  .hero-banner-v2 .hero-img{max-width:330px;margin:30px auto 0}
+  .cj-badge{width:110px;height:110px}.cj-badge .core{inset:28px;font-size:11px}
+
+  /* Images & misc */
+  .testimonial-area-v2 .img-holder{max-width:230px;margin:0 auto 20px}
+  .testimonial-area-v2 .testimonial-content h3{font-size:21px!important;line-height:1.45}
+  .about-area-v2 .img-holder{margin-bottom:24px!important}
+  .contact-area-v2 .contact-form img{max-width:280px;margin:0 auto;display:block}
+  .cj-split-img .cj-float-card{padding:12px 14px}
+  .cj-split-img .cj-float-card strong{font-size:19px}
+  .cj-split-img .cj-float-card .dot{width:36px;height:36px}
+  .cj-band{border-radius:18px}.cj-band p{font-size:16px}
+  .cj-role{padding:20px}.cj-role .main-btn{width:100%;text-align:center}
+  .cj-role:hover{transform:none}
+  .cj-faq summary{font-size:17px;padding:18px 56px 18px 18px}
+  .cj-side-card{position:static}
+  .page-banner .page-title h1{font-size:34px!important}
+  .page-banner .cj-lead{font-size:16px}
+  .cj-marquee span{font-size:17px}
+  .cj-form .main-btn{width:100%}
+  .footer-area img[alt='Chief Janitorial logo']{max-width:240px;height:auto}
+  .footer-area img[alt='Canadian flag']{max-width:70px;height:auto}
+  .cj-chips span{padding:9px 14px;font-size:14.5px}
+}
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion:reduce){
