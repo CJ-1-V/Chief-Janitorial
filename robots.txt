@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /shifts-secure/
 Disallow: /shifts-secure/register/
+Disallow: /application-received.html
 
 Sitemap: https://www.chiefjanitorial.com/sitemap.xml

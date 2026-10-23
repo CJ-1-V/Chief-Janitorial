@@ -2,10 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.chiefjanitorial.com/</loc>
-    <lastmod>2026-10-06</lastmod>
+    <lastmod>2026-10-23</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/services.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/industries.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/about.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/insights.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/careers.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.chiefjanitorial.com/apply.html</loc>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.chiefjanitorial.com/contact.html</loc>
-    <lastmod>2026-10-06</lastmod>
+    <lastmod>2026-10-23</lastmod>
+    <priority>0.9</priority>
   </url>
 </urlset>
