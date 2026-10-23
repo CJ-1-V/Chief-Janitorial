@@ -273,6 +273,40 @@ html,body{overflow-x:clip}
 .cj-swap{color:var(--cj-primary);display:inline-block;min-width:1ch;border-right:3px solid var(--cj-primary);padding-right:4px;animation:cj-caret 1s step-end infinite}
 @keyframes cj-caret{50%{border-color:transparent}}
 
+
+/* ---------- Hero infographic that follows the typed word ---------- */
+.cj-scenes{position:absolute;right:-10px;top:38%;width:250px;background:#fff;border-radius:18px;padding:14px 14px 12px;box-shadow:0 24px 60px rgba(29,27,79,.18);z-index:4;animation:cj-float 7s ease-in-out infinite}
+.cj-scene{display:none}
+.cj-scene.is-active{display:block;animation:cj-scene-in .6s cubic-bezier(.2,.7,.2,1)}
+.cj-scene svg{width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(180deg,#f4f4fe,#fff)}
+.cj-scene-cap{display:flex;flex-direction:column;gap:2px;margin-top:8px;padding:0 4px}
+.cj-scene-cap strong{font-size:17px;color:#000}
+.cj-scene-cap small{font-size:13px;color:var(--cj-primary);font-weight:700;line-height:1.3}
+.cj-scene-dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.cj-scene-dots i{width:6px;height:6px;border-radius:6px;background:#dcdcf3;transition:all .35s}
+.cj-scene-dots i.on{width:20px;background:var(--cj-primary)}
+@keyframes cj-scene-in{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.cj-scene .sp{transform-box:fill-box;transform-origin:center;animation:cj-twinkle 1.8s ease-in-out infinite}
+.cj-scene .sp:nth-of-type(2n){animation-delay:.6s}
+@keyframes cj-twinkle{0%,100%{transform:scale(.6) rotate(0);opacity:.5}50%{transform:scale(1.15) rotate(45deg);opacity:1}}
+.cj-scene .win{animation:cj-lights 3s steps(1) infinite}
+.cj-scene .w1{animation-delay:.4s}.cj-scene .w2{animation-delay:1.1s}.cj-scene .w3{animation-delay:1.7s}.cj-scene .w4{animation-delay:2.3s}
+@keyframes cj-lights{0%,100%{fill:#cfceff}50%{fill:#ffb32c}}
+.cj-scene .bub{animation:cj-bub 2.6s ease-in-out infinite}.cj-scene .b2{animation-delay:1.2s}
+@keyframes cj-bub{0%{transform:translateY(0);opacity:0}30%{opacity:1}100%{transform:translateY(-40px);opacity:0}}
+.cj-scene .smoke{transform-box:fill-box;transform-origin:center;animation:cj-smoke 3s ease-out infinite}.cj-scene .s2{animation-delay:1.4s}
+@keyframes cj-smoke{0%{transform:translateY(6px) scale(.6);opacity:0}40%{opacity:1}100%{transform:translateY(-14px) scale(1.3);opacity:0}}
+.cj-scene .belt{animation:cj-belt 3s linear infinite}
+@keyframes cj-belt{from{transform:translateX(-20px)}to{transform:translateX(40px)}}
+.cj-scene .shine{animation:cj-shine 2.4s ease-in-out infinite}
+@keyframes cj-shine{0%,100%{opacity:.2}50%{opacity:1}}
+.cj-scene .fork{animation:cj-fork 4s ease-in-out infinite}
+@keyframes cj-fork{0%,100%{transform:translateX(0)}50%{transform:translateX(-26px)}}
+.cj-scene .conf{transform-box:fill-box;transform-origin:center;animation:cj-conf 2.2s linear infinite}
+.cj-scene .c1{animation-delay:.5s}.cj-scene .c2{animation-delay:1s}.cj-scene .c3{animation-delay:1.5s}
+@keyframes cj-conf{0%{transform:translateY(-6px) rotate(0);opacity:0}20%{opacity:1}100%{transform:translateY(40px) rotate(220deg);opacity:0}}
+@media (max-width:991px){.cj-scenes{position:relative;right:auto;top:auto;margin:16px auto 90px;width:min(300px,90%)}}
+
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion:reduce){
   *,*:before,*:after{animation:none!important;transition:none!important}
