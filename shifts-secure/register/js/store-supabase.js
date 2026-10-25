@@ -576,6 +576,8 @@
     try {
       var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
         full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null,
+        reg_invite_hash: (kind === 'firm' && typeof clNormCode === 'function' && clNormCode(d.invite || '') ? clCodeHash(clNormCode(d.invite)) : null),   /* ownerreq1: server auto-approves a valid invite */
+        farm_code: (String(d.farmCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || null),   /* ownerreq1: farm code match */
         app: 'us', pickup_address: (window.REG_PICKUP_ADDR ? window.REG_PICKUP_ADDR(d) : null),   /* pickup1 */
         sms_consent: !!d.smsConsent, sms_consent_at: d.smsConsent ? new Date().toISOString() : null,
         phone_e164: (digits(d.phone).slice(-10).length === 10 ? '+1' + digits(d.phone).slice(-10) : null) } } });
