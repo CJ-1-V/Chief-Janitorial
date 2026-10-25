@@ -1,0 +1,49 @@
+/* simplify1 – simpler office menu, tab strips, ⓘ menu, client "Open" panel (Oct 25, 2026). Works with js/v2-simplify.js.
+   Company colours only (navy #332E57, gold #D9A03C); nothing else restyled. */
+
+/* tab strip at the top of a grouped page (Approvals, Schedule, Compliance, Clients, Invoices, Payroll, …) */
+.sx-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;padding:0}
+.sx-tabs a{display:inline-flex;align-items:center;min-height:36px;padding:6px 14px;border:1px solid var(--line,#e4e2ec);border-radius:999px;background:#fff;
+  color:var(--p,#332E57);font-weight:600;font-size:14px;line-height:1.2;text-decoration:none;white-space:nowrap;box-shadow:var(--shadow,0 1px 2px rgba(24,20,56,.05))}
+.sx-tabs a:hover{background:var(--pl,#efedf7);text-decoration:none}
+.sx-tabs a.on{background:var(--p,#332E57);border-color:var(--p,#332E57);color:#fff}
+.sx-tabs a:focus-visible{outline:2px solid var(--g,#D9A03C);outline-offset:2px}
+
+/* bell: always in the bar; marked when you are on the Alerts outbox */
+#obar .mbadge.sx-bell.cur{background:rgba(255,255,255,.14);box-shadow:inset 0 -3px 0 var(--g,#D9A03C);border-radius:8px 8px 0 0}
+
+/* ⓘ menu (details on/off, Download the app, Replay tour, unscramble.ca) – a round button like before, with a dropdown */
+#obar .sx-info{align-items:center}
+#obar .sx-info .ogrp-btn.infobtn{width:32px;height:32px;padding:0;margin:0;border:1px solid rgba(255,255,255,.35);border-bottom:1px solid rgba(255,255,255,.35);border-radius:50%;background:transparent;color:#fff;font-size:15px;line-height:1}
+#obar .sx-info .ogrp-btn.infobtn.sx-on{background:rgba(255,255,255,.15)}
+#obar .sx-info.open .ogrp-btn.infobtn{background:rgba(255,255,255,.22)}
+#obar .sx-info .ogrp-btn.infobtn::before{content:none}
+#obar .sx-infomenu{min-width:250px}
+#obar .sx-infomenu a.sx-mi{justify-content:flex-start;gap:8px}
+#obar .sx-infomenu a.sx-mi[aria-disabled=true]{opacity:.7}
+#obar .sx-infomenu .sx-chk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1px solid var(--line,#e4e2ec);border-radius:4px;font-size:12px;font-weight:700;color:var(--p,#332E57);background:#fff;flex:none}
+#obar .sx-infomenu a.sx-mi[aria-checked=true] .sx-chk{background:var(--p,#332E57);border-color:var(--p,#332E57);color:#fff}
+#obar .sx-infomenu .sx-ic{width:18px;text-align:center;flex:none}
+
+/* the "Saving…" chip for office logins: bottom right, never over Sign out */
+body.us-office #usb-chip{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+body.us-office .toast:not(#reg-busy){bottom:64px}
+
+/* client "Open" panel: invite + duplicate sections */
+.modal .sx-sect{margin-top:18px;padding-top:14px;border-top:1px solid var(--line,#e4e2ec)}
+.modal .sx-sect h3{margin:0 0 4px}
+.modal .sx-sect p.small{margin:0 0 10px}
+.modal .sx-invbtns{margin-bottom:10px}
+.sx-invst{margin-top:4px}
+
+/* phones (≤640px): one clean row of pills, buttons full width and never touching */
+@media(max-width:640px){
+  .sx-tabs{gap:6px;margin-bottom:10px}
+  .sx-tabs a{font-size:13px;padding:6px 11px;min-height:34px}
+  #obar .sx-info .ogrp-btn.infobtn{width:28px;height:28px;font-size:14px}
+  #obar .sx-infomenu{min-width:0}
+  .modal .sx-invbtns button,.sx-invtable .clbtns button{flex:1 1 auto}
+  .modal .sx-sect button{min-height:40px}
+  /* tables that cannot stack (class no-stack, e.g. Farm day approvals) scroll sideways inside their box instead of pushing the page wider */
+  .tw:has(> table.no-stack){overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
