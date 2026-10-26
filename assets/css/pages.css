@@ -271,9 +271,11 @@ html,body{overflow-x:clip}
 
 /* ---------- Typed word swap ---------- */
 .cj-swap{color:var(--cj-primary);display:inline-block;min-width:1ch;border-right:3px solid var(--cj-primary);padding-right:4px;animation:cj-caret 1s step-end infinite}
-/* Own line, never wraps, keeps a line box when empty: h1 height stays fixed while typing */
+/* Phones/tablets: own line, never wraps, keeps a line box when empty so h1 height stays fixed */
+@media (max-width:991px){
 .cj-swap{display:block;width:fit-content;max-width:100%;white-space:nowrap}
 .cj-swap:before{content:"\200b"}
+}
 @media (prefers-reduced-motion:reduce){.cj-swap{animation:none}}
 @keyframes cj-caret{50%{border-color:transparent}}
 
