@@ -26,7 +26,7 @@ window.orIsOwner=isOwner;window.orIsOfficeAdmin=isOfficeAdmin;
 function normC(c){return String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');}
 function farms(){return (DB.users||[]).filter(function(u){return u.type==='firm'&&!u.loginOf&&!u.mergedInto;});}
 function realName(f){if(!f)return '';var n=(f.firm&&f.firm.realName)||'';if(!n&&f.name&&!/^(Client|Unknown farm) /i.test(f.name))n=f.name;return String(n).trim();}
-function isUnknownFarm(f){return !!(f&&((f.firm&&f.firm.unknown===true)||/^Unknown farm /i.test(f.name||'')));}
+function isUnknownFarm(f){return !!(f&&((f.firm&&(f.firm.unknown===true||f.firm.unknownFarm===true))||/^Unknown farm /i.test(f.name||'')));}
 function isUnknownSite(code){var n=normC(code);if(/^UNK\d+$/.test(n))return true;var s=(DB.sites||[]).filter(function(x){return normC(x.code)===n;})[0];if(s&&(s.isUnknown||s.is_unknown))return true;
   var f=s&&s.firmId?user(s.firmId):farms().filter(function(x){return normC(x.firm&&x.firm.clientCode)===n;})[0];return isUnknownFarm(f);}
 function farmByCode(code){var n=normC(code);if(!n)return null;var s=(DB.sites||[]).filter(function(x){return normC(x.code)===n;})[0];if(s&&s.firmId){var f=user(s.firmId);if(f)return f;}
@@ -37,7 +37,7 @@ window.orIsUnknownSite=isUnknownSite;window.orIsUnknownFarm=isUnknownFarm;
 /* farm code check used at sign-up and clock-in: ok = a known (not unknown) farm or site */
 window.orMatchCode=function(code){var n=normC(code);if(!n)return {st:'none'};var s=(DB.sites||[]).filter(function(x){return normC(x.code)===n&&!isUnknownSite(x.code);})[0];
   var f=farmByCode(n);if(isUnknownFarm(f)||isUnknownSite(n))return {st:'unknown',code:n};if(s||f)return {st:'ok',code:s?s.code:f.firm.clientCode,farm:f,site:s||null};return {st:'nomatch',code:n};};
-function addUnknown(kind,o){(DB.orUnknown=DB.orUnknown||[]).unshift(Object.assign({id:uid('unk'),kind:kind,at:new Date().toISOString(),done:false},o));if(DB.orUnknown.length>300)DB.orUnknown.length=300;}
+function addUnknown(kind,o){if(live()){if(typeof window.or2Report==='function'&&o&&o.where==='clock-in')window.or2Report(o.code,'clock-in');return;}/* ownerreq2: live = server list (sign-up rows are written by the sign-up trigger) */(DB.orUnknown=DB.orUnknown||[]).unshift(Object.assign({id:uid('unk'),kind:kind,at:new Date().toISOString(),done:false},o));if(DB.orUnknown.length>300)DB.orUnknown.length=300;}
 
 /* ---------- 1) + 5) owner display pass (runs after every draw of #app / #modal) ---------- */
 var RX=null,RXKEY='';

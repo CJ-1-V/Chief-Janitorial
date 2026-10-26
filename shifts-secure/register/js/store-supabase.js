@@ -54,6 +54,7 @@
   MAP = Object.assign({ clientRecs: 'reg_clients' }, MAP, { clientInvites: 'reg_client_invites' });
   NEVER_DELETE.clientRecs = 1; NEVER_DELETE.clientInvites = 1;
   if (C.shiftJobs) MAP.shiftJobs = 'reg_shift_jobs';
+  if (C.unknownCodes) { MAP.orUnknown = 'reg_unknown_codes'; NEVER_DELETE.orUnknown = 1; }   // ownerreq2: office admin's Unknown list on the server (set true only AFTER sql/ownerreq2_apply.sql)
   if (C.farmTimesheets) MAP.farmTs = 'reg_farm_timesheets';      // 023a invmonth1: farm day approvals + reminder setting (set true only AFTER migration 023a)                 // 022a jobpos1: per-shift job + break (set true only AFTER migration 022a)
   /* invdelete1: deleted farm invoices are kept apart in DB.clientInvoicesDel (v2-invdelete.js) but are still rows of reg_client_invoices –
      count them here so a soft delete is saved as an UPDATE (never a DELETE) and restore works. */
@@ -180,6 +181,9 @@
         var mq = await sb.from(MAP[mk]).select('id,data').order('created_at');
         db[mk] = (!mq.error && mq.data) ? mq.data.map(function (x) { return Object.assign(x.data || {}, { id: x.id }); }) : [];
       }
+    }
+    if (OFFICE && MAP.orUnknown) {                      // ownerreq2: Unknown list (RLS: owner + office admin only; others get no rows)
+      try { var uq = await sb.from(MAP.orUnknown).select('id,data').order('created_at', { ascending: false }).limit(300); db.orUnknown = (!uq.error && uq.data) ? uq.data.map(function (x) { return Object.assign(x.data || {}, { id: x.id }); }) : []; } catch (e) { db.orUnknown = []; }
     }
     if (MAP.farmTs && !(s.farmTs && s.farmTs.length)) {  // 023a invmonth1: farm day approvals (RLS: office all, a farm its own rows)
       try { var fq = await sb.from(MAP.farmTs).select('id,data').order('created_at'); db.farmTs = (!fq.error && fq.data) ? fq.data.map(function (x) { return Object.assign(x.data || {}, { id: x.id }); }) : []; } catch (e) { db.farmTs = []; }
