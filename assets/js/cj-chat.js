@@ -32,49 +32,49 @@
     { id: "phone", q: "Phone number? (optional, type 'skip')" }
   ];
   var css = ""
-    + "#cjc-btn{position:fixed;left:12px;right:auto;bottom:18px;z-index:900;margin:0;appearance:none;-webkit-appearance:none;background:#5956e9;color:#fff;border:0;border-radius:999px;padding:14px 18px;font:600 15px/1.2 inherit;text-align:center;box-shadow:0 10px 30px rgba(89,86,233,.35);cursor:pointer;max-width:calc(100% - 104px);box-sizing:border-box}"
-    + "#cjc-btn:hover{background:#3f3cc9}"
-    + "#cjc{position:fixed;left:12px;right:auto;bottom:78px;z-index:900;width:min(360px,calc(100% - 24px));max-height:min(600px,calc(100% - 120px));display:none;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(11,11,26,.25);overflow:hidden;font-family:inherit;box-sizing:border-box}"
-    + "#cjc.open{display:flex}"
-    + "#cjc header{background:#5956e9;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex:none}"
-    + "#cjc header b{font-size:16px}"
-    + "#cjc header button{background:none;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;margin:0}"
-    + "#cjc-log{flex:1;overflow-y:auto;padding:12px;background:#fafafb;overscroll-behavior:contain}"
+    + "#cj-chat-btn{position:fixed;left:12px;right:auto;bottom:18px;z-index:900;margin:0;appearance:none;-webkit-appearance:none;background:#5956e9;color:#fff;border:0;border-radius:999px;padding:14px 18px;font:600 15px/1.2 inherit;text-align:center;box-shadow:0 10px 30px rgba(89,86,233,.35);cursor:pointer;max-width:calc(100% - 104px);box-sizing:border-box}"
+    + "#cj-chat-btn:hover{background:#3f3cc9}"
+    + "#cj-chat{position:fixed;left:12px;right:auto;bottom:78px;z-index:900;width:min(360px,calc(100% - 24px));max-height:min(600px,calc(100% - 120px));display:none;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(11,11,26,.25);overflow:hidden;font-family:inherit;box-sizing:border-box}"
+    + "#cj-chat.open{display:flex}"
+    + "#cj-chat header{background:#5956e9;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex:none}"
+    + "#cj-chat header b{font-size:16px}"
+    + "#cj-chat header button{background:none;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 4px;margin:0}"
+    + "#cj-chat-log{flex:1;overflow-y:auto;padding:12px;background:#fafafb;overscroll-behavior:contain}"
     + ".cjm{max-width:85%;margin:6px 0;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.45;color:#0b0b1a;overflow-wrap:anywhere}"
     + ".cjm.b{background:#f4f4fe}.cjm.u{background:#5956e9;color:#fff;margin-left:auto}.cjm a{color:#3f3cc9}"
     + ".cjo{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}"
     + ".cjo button{border:1px solid #5956e9;background:#fff;color:#5956e9;border-radius:999px;padding:7px 11px;font:600 13px/1.3 inherit;cursor:pointer;margin:0;max-width:100%;box-sizing:border-box}"
     + ".cjo button.p{background:#ffb32c;border-color:#ffb32c;color:#0b0b1a;font-weight:600}"
-    + "#cjc form{display:flex;border-top:1px solid #eee;flex:none}"
-    + "#cjc input{flex:1;min-width:0;border:0;padding:12px;font-size:16px;line-height:1.3;outline:none;background:#fff;color:#0b0b1a;margin:0}"
-    + "#cjc form button{border:0;background:#5956e9;color:#fff;padding:0 16px;cursor:pointer;margin:0;font:600 15px/1 inherit}"
-    + "#cjc-safe{position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden}";
+    + "#cj-chat form{display:flex;border-top:1px solid #eee;flex:none}"
+    + "#cj-chat input{flex:1;min-width:0;border:0;padding:12px;font-size:16px;line-height:1.3;outline:none;background:#fff;color:#0b0b1a;margin:0}"
+    + "#cj-chat form button{border:0;background:#5956e9;color:#fff;padding:0 16px;cursor:pointer;margin:0;font:600 15px/1 inherit}"
+    + "#cj-chat-safe{position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden}";
   var st = document.createElement("style");
   st.textContent = css;
   document.head.appendChild(st);
 
   var btn = document.createElement("button");
-  btn.id = "cjc-btn";
+  btn.id = "cj-chat-btn";
   btn.type = "button";
   btn.setAttribute("aria-label", "Open chat");
   btn.textContent = "💬 Questions? Chat";
 
   var p = document.createElement("div");
-  p.id = "cjc";
+  p.id = "cj-chat";
   p.setAttribute("role", "dialog");
   p.setAttribute("aria-label", "Chief Janitorial chat");
   p.setAttribute("aria-hidden", "true");
-  p.innerHTML = "<header><b>Chief Janitorial</b><button type='button' aria-label='Close'>×</button></header><div id='cjc-log' aria-live='polite'></div><form><input aria-label='Type a message' placeholder='Type a question…' autocomplete='off'><button type='submit'>Send</button></form>";
+  p.innerHTML = "<header><b>Chief Janitorial</b><button type='button' aria-label='Close'>×</button></header><div id='cj-chat-log' aria-live='polite'></div><form><input aria-label='Type a message' placeholder='Type a question…' autocomplete='off'><button type='submit'>Send</button></form>";
 
   var safe = document.createElement("div");
-  safe.id = "cjc-safe";
+  safe.id = "cj-chat-safe";
   safe.setAttribute("aria-hidden", "true");
 
   document.body.appendChild(safe);
   document.body.appendChild(btn);
   document.body.appendChild(p);
 
-  var log = p.querySelector("#cjc-log");
+  var log = p.querySelector("#cj-chat-log");
   var inp = p.querySelector("input");
   var flow = null;
   var data = {};
@@ -214,15 +214,22 @@
     var top = window.innerHeight - b - h;
     return { left: left, top: top, right: left + w, bottom: top + h, width: w, height: h };
   }
-  function headerBottom() {
+  function topChromeBottom() {
     var n = 0;
-    var header = document.querySelector("header");
-    if (header) {
-      var hr = header.getBoundingClientRect();
-      if (hr.bottom > 0) n = hr.bottom;
+    var nav = document.querySelector(".header-navigation");
+    if (nav) {
+      var cs = getComputedStyle(nav);
+      var r = nav.getBoundingClientRect();
+      if (cs.display !== "none" && cs.visibility !== "hidden" && r.height > 1) {
+        if (cs.position === "fixed" || cs.position === "sticky" || nav.classList.contains("sticky")) {
+          n = nav.offsetHeight;
+        } else if (r.bottom > 0 && r.top < 220) {
+          n = r.bottom;
+        }
+      }
     }
     var tog = shown(document.querySelector(".navbar-toggler"));
-    if (tog) n = Math.max(n, tog.bottom);
+    if (tog && tog.top < 220) n = Math.max(n, tog.bottom);
     return n;
   }
   function overlaps(a, b) {
@@ -259,7 +266,7 @@
     p.style.right = "auto";
     p.style.width = panelW + "px";
     p.style.bottom = panelBottom + "px";
-    var maxH = window.innerHeight - panelBottom - headerBottom() - GAP;
+    var maxH = window.innerHeight - panelBottom - topChromeBottom() - GAP;
     if (maxH < 180) maxH = Math.max(160, window.innerHeight - panelBottom - 8);
     p.style.maxHeight = Math.min(600, Math.floor(maxH)) + "px";
 
@@ -276,7 +283,7 @@
         var shrink = Math.ceil(pr.right - (btt.left - GAP));
         if (shrink > 0) p.style.width = Math.max(200, Math.floor(pr.width - shrink)) + "px";
       }
-      var hb = headerBottom();
+      var hb = topChromeBottom();
       pr = p.getBoundingClientRect();
       if (pr.top < hb + GAP) {
         var cut = Math.ceil(hb + GAP - pr.top);
@@ -313,7 +320,12 @@
   p.querySelector("header button").onclick = function () { toggle(false); };
   window.addEventListener("resize", schedule);
   window.addEventListener("orientationchange", schedule);
-  window.addEventListener("scroll", schedule, { passive: true });
+  var scrollTimer = 0;
+  window.addEventListener("scroll", function () {
+    schedule();
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(schedule, 1300);
+  }, { passive: true });
   if (window.visualViewport) {
     visualViewport.addEventListener("resize", schedule);
     visualViewport.addEventListener("scroll", schedule);
