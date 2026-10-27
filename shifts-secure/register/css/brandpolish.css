@@ -1,0 +1,56 @@
+/* polish1 (Oct 26 2026): one professional UnScramble look. Montserrat headings, Inter body,
+   purple #332E57 / gold #D9A03C (accents) / teal #1F7A6E (codes), 8px grid, 1200px content, one button style. Loads last. */
+@font-face{font-family:"Montserrat";src:url("../assets/fonts/montserrat-latin.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Inter";src:url("../assets/fonts/inter-latin.woff2") format("woff2");font-weight:100 900;font-display:swap}
+:root{--p:#332E57;--p2:#463f78;--g:#D9A03C;--teal:#1F7A6E;--bp-h:"Montserrat","Segoe UI",Arial,sans-serif;--bp-b:"Inter",-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{font-family:var(--bp-b);font-size:16px;line-height:1.55}
+@media(min-width:900px){body{font-size:17px}}
+h1,h2,h3,.auth-hero h2,.card h1{font-family:var(--bp-h);letter-spacing:-.01em}
+h1{font-size:24px;font-weight:700;margin:8px 0 16px}h2{font-size:20px;font-weight:650;margin:24px 0 8px}h3{font-size:16px;font-weight:650;margin:16px 0 8px}
+main{max-width:1200px;padding:24px}
+@media(max-width:640px){main{padding:16px}h1{font-size:21px}}
+.card{border-radius:12px;padding:16px 24px;margin:0 0 16px;border-color:#e3e1ec;box-shadow:0 1px 3px rgba(51,46,87,.06)}
+@media(max-width:640px){.card{padding:16px}}
+.grid{gap:16px}
+code,kbd,.code,.mono{color:var(--teal);font-family:ui-monospace,Menlo,Consolas,monospace}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=time],input[type=tel],select,textarea{border-radius:8px;padding:10px 12px;border-color:#c9c6d8}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--g);outline-offset:0;border-color:var(--g)}
+
+/* top bar: full logo ~200px, no extra "UnScramble" text beside it */
+header.top{padding:8px 24px;gap:16px;min-height:64px;border-bottom:3px solid var(--g)}
+header.top>img{height:auto;width:200px;max-width:200px}
+header.top>img+div{display:none}
+@media(max-width:640px){header.top{padding:8px 16px;min-height:56px}header.top>img{width:180px;max-width:180px}}
+
+/* one button style: solid purple, 8px corners, clear hover */
+button,.btn,button.gold{background:var(--p);color:#fff;border:1px solid var(--p);border-radius:8px;padding:10px 16px;font-family:var(--bp-b);font-weight:600;transition:background-color .15s,box-shadow .15s}
+button:hover,.btn:hover,button.gold:hover{background:var(--p2);border-color:var(--p2);color:#fff;box-shadow:0 0 0 3px rgba(217,160,60,.4)}
+button.sec,.btn.sec{background:#fff;color:var(--p);border:1px solid var(--p)}
+button.sec:hover,.btn.sec:hover{background:#f1effa;color:var(--p)}
+button.danger{background:#c0392b;border-color:#c0392b}button.danger:hover{background:#a5301f;border-color:#a5301f}
+button:disabled,.btn[aria-disabled=true]{opacity:.55;box-shadow:none}
+nav.tabs{padding:0 16px}nav.tabs a{padding:12px 16px}
+
+/* welcome panel fixes */
+html body .auth-shell{max-width:1200px;gap:24px;padding:0 24px;margin-top:32px;align-items:stretch}
+html body .auth-hero::before{display:none}
+html body .auth-hero{border-radius:16px;padding:32px;display:flex;flex-direction:column;min-height:0}
+html body .auth-hero .ah-help{display:none}
+html body .ah-trust{display:inline-flex;align-items:center;gap:8px;margin:24px 0 0;padding:8px 16px;border:1px solid rgba(217,160,60,.7);border-radius:8px;font-weight:600;font-size:14px;align-self:flex-start}
+html body .ah-trust::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--g)}
+html body .auth-shell>div{display:flex;flex-direction:column}
+html body .auth-shell .login-wrap{flex:1;display:flex;flex-direction:column}
+html body .auth-shell .login-wrap>.card:first-of-type{flex:1;border-radius:16px}
+html body .auth-shell form[data-form=login] button[type=submit],html body .auth-shell a.btn[href="#/signup"]{border-radius:8px}
+@media(max-width:860px){html body .auth-shell{padding:0 16px;margin-top:16px}html body .ah-trust{display:none}}
+/* round 2: tighter welcome panel on computers so it ends with the sign-in card */
+@media(min-width:861px){
+  html body .auth-hero{padding:24px 32px}
+  html body .ah-logo{margin-bottom:8px}html body .ah-logo img{height:40px}
+  html body .auth-hero h2{font-size:24px;margin-bottom:8px}
+  html body .auth-hero p.ah-sub{margin-bottom:8px}
+  html body .ah-steps li{padding:6px 0}
+  html body .ah-chips{display:none}
+  html body .ah-trust{margin-top:16px}
+  html body .auth-shell .login-wrap>.card:first-of-type{display:flex;flex-direction:column;justify-content:center}
+}

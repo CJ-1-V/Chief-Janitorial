@@ -73,3 +73,32 @@
   header.top:not(:has([data-act=logout]))>div{min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.auth-shell .choice{transition:none}}
+
+/* welcome1 (Oct 26 2026) – UnScramble desktop: bigger balanced two columns, full logo on a white tile, larger type, help line.
+   Desktop only (min-width:861px) and UnScramble only; phone layout and Chief Janitorial unchanged. */
+.ah-help{display:none}
+@media(min-width:861px){
+  html:not(.cj-app) .auth-shell{max-width:1340px;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;margin-top:32px;padding:0 28px;align-items:stretch}
+  html:not(.cj-app) .auth-shell>div:last-child{display:flex;align-items:center}
+  html:not(.cj-app) .auth-shell .login-wrap{max-width:520px}
+  html:not(.cj-app) .auth-hero{padding:36px 44px 30px;min-height:0;border-radius:22px;display:flex;flex-direction:column}
+  html:not(.cj-app) .auth-hero::before{width:380px;height:380px;right:-130px;top:-130px}
+  html:not(.cj-app) .auth-hero::after{width:300px;height:300px;left:-90px;bottom:-150px}
+  html:not(.cj-app) .ah-logo{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:22px}
+  html:not(.cj-app) .ah-logo img{height:auto;width:220px;max-width:100%;padding:12px 16px;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  html:not(.cj-app) .ah-logo span{font-size:15px}
+  html:not(.cj-app) .auth-hero h2{font-size:40px;margin-bottom:10px;letter-spacing:-.3px}
+  html:not(.cj-app) .auth-hero p.ah-sub{font-size:17px;max-width:44ch;margin-bottom:22px}
+  html:not(.cj-app) .ah-steps li{grid-template-columns:48px 1fr;gap:16px;padding:14px 0}
+  html:not(.cj-app) .ah-ic{width:48px;height:48px}
+  html:not(.cj-app) .ah-ic svg{width:26px;height:26px}
+  html:not(.cj-app) .ah-ic i{width:22px;height:22px;line-height:22px;font-size:12px}
+  html:not(.cj-app) .ah-steps b{font-size:18px}
+  html:not(.cj-app) .ah-steps span{font-size:15px;line-height:1.45}
+  html:not(.cj-app) .ah-chips{margin-top:24px;gap:10px}
+  html:not(.cj-app) .ah-chips span{font-size:14px;padding:7px 13px}
+  html:not(.cj-app) .ah-help{display:flex;align-items:center;gap:10px;margin:auto 0 0;padding-top:22px;font-size:16px;font-weight:600}
+  html:not(.cj-app) .ah-help svg{width:20px;height:20px;stroke:var(--g);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 20px}
+  html:not(.cj-app) .ah-help a{color:var(--g);text-decoration:none;font-weight:800}
+  html:not(.cj-app) .ah-help a:hover{text-decoration:underline}
+}

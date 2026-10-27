@@ -44,7 +44,8 @@
             ['check', 'Reviewed and invoiced', 'The office reviews the hours; clients see visit logs and one monthly invoice.']],
     chips: [['lock', 'Secure sign in'], ['phone', 'Works on your phone'], ['camera', 'Visit photos'], ['calendar', 'Site calendar']]
   } : {
-    logo: 'assets/unscramble-logo.svg', alt: 'UnScramble', tag: 'Clock, farms & compliance',
+    logo: 'assets/unscramble-logo-main.svg', alt: 'UnScramble', tag: 'Clock, farms & compliance',
+    trust: 'Trusted by 50+ farms and 97+ clients',
     title: 'Welcome to UnScramble',
     sub: 'One sign in for workers, subcontractor crews and farm clients.',
     steps: [['id', 'Create your account', 'Workers add their documents online; farms and clients sign the agreement online.'],
@@ -60,7 +61,8 @@
     CO.steps.forEach(function (s, n) {
       h += '<li><div class="ah-ic">' + svg(s[0]) + '<i>' + (n + 1) + '</i></div><div><b>' + s[1] + '</b><span>' + s[2] + '</span></div></li>';
     });
-    h += '</ol><div class="ah-chips">' + CO.chips.map(function (c) { return '<span>' + svg(c[0]) + c[1] + '</span>'; }).join('') + '</div></aside>';
+    h += '</ol><div class="ah-chips">' + CO.chips.map(function (c) { return '<span>' + svg(c[0]) + c[1] + '</span>'; }).join('') + '</div>' +
+      (CO.trust ? '<p class="ah-trust">' + CO.trust + '</p>' : '') + (CO.help ? '<p class="ah-help">' + svg('phone') + '<span>' + CO.help + '</span></p>' : '') + '</aside>';
     return h;
   }
 
