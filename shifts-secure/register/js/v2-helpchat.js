@@ -5,7 +5,7 @@
   if (!((window.REG_STORE || {}).helpChat) && !window.HELPCHAT_URL) return;   // off until reg-help-chat is deployed
   var S = window.REG_STORE || {}; var CFG = S.supabase || S;
   var BASE = (window.HELPCHAT_URL || ((CFG.url || 'https://lfefpmzfnvgwuicthlyg.supabase.co') + '/functions/v1/reg-help-chat'));
-  var IDLE_MS = 5 * 60 * 1000, btn, panel, log, ta, send, chatId = null, idleT = null, ended = false, busy = false;
+  var IDLE_MS = 5 * 60 * 1000, btn, panel, log, ta, send, chatId = null, idleT = null, ended = false, busy = false, mic = null, rec = null, listening = false;
   function signedOut() { return !!document.querySelector('.auth-shell'); }
   function el(t, c, txt) { var e = document.createElement(t); if (c) e.className = c; if (txt != null) e.textContent = txt; return e; }
   function add(cls, txt) { var m = el('div', 'hc-m ' + cls, txt); log.appendChild(m); log.scrollTop = log.scrollHeight; return m; }
@@ -15,7 +15,7 @@
     var data = JSON.stringify({ action: 'end', id: chatId, reason: reason });
     if (reason === 'unload' && navigator.sendBeacon) navigator.sendBeacon(BASE, new Blob([data], { type: 'text/plain' })); else post({ action: 'end', id: chatId, reason: reason }); }
   function idle() { clearTimeout(idleT); idleT = setTimeout(function () { end('idle'); add('hc-note', 'Chat ended (no reply for 5 minutes). Open again any time.'); setOff(true); }, IDLE_MS); }
-  function setOff(v) { ta.disabled = v; send.disabled = v; }
+  function setOff(v) { ta.disabled = v; send.disabled = v; if (mic) { mic.disabled = v; if (v) stopMic(); } }
   function start() { ended = false; chatId = null; log.innerHTML = ''; setOff(true);
     add('hc-note', 'Please do not type passwords or codes here.');
     post({ action: 'start' }).then(function (j) { if (j.id) { chatId = j.id; add('hc-bot', j.greeting); setOff(false); ta.focus(); idle(); } else add('hc-bot', j.error || 'Help chat is not working. Call or text 902-200-4888.'); })
@@ -26,15 +26,37 @@
     post({ action: 'send', id: chatId, text: t.slice(0, 600) }).then(function (j) { w.textContent = j.reply || j.error || 'Sorry, try again.'; if (j.ended || j._s === 409) { ended = true; clearTimeout(idleT); } else { setOff(false); ta.focus(); idle(); } })
       .catch(function () { w.textContent = 'Network problem. Try again, or call 902-200-4888.'; setOff(false); }).then(function () { busy = false; }); }
   function open() { if (!panel) build(); panel.hidden = false; document.body.classList.add('hc-open'); btn.setAttribute('aria-expanded', 'true'); if (!chatId || ended) start(); }
-  function close() { if (panel) panel.hidden = true; document.body.classList.remove('hc-open'); btn.setAttribute('aria-expanded', 'false'); end('closed'); }
+  function close() { stopMic(); if (panel) panel.hidden = true; document.body.classList.remove('hc-open'); btn.setAttribute('aria-expanded', 'false'); end('closed'); }
+  /* helpmic1: voice typing with the browser's own speech recognition. Fills the box only; the person reviews and presses Send. No audio is stored or sent by us. */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function recLang() { var L = ['en-CA', 'fr-CA', 'pa-IN', 'hi-IN'];
+    var c = [window.HELPCHAT_LANG, document.documentElement.lang].concat(navigator.languages || [navigator.language]);
+    for (var i = 0; i < c.length; i++) { var v = String(c[i] || '').toLowerCase(); if (!v) continue;
+      for (var k = 0; k < L.length; k++) if (v === L[k].toLowerCase() || v.split('-')[0] === L[k].split('-')[0]) return L[k]; }
+    return 'en-CA'; }
+  function setListen(v) { listening = v; if (!mic) return; mic.classList.toggle('hc-on', v);
+    mic.setAttribute('aria-pressed', v ? 'true' : 'false'); mic.setAttribute('aria-label', v ? 'Stop voice typing' : 'Speak your message'); }
+  function stopMic() { if (rec && listening) { try { rec.stop(); } catch (e) {} } setListen(false); }
+  function startMic() { if (!SR || listening) return; var base = ta.value ? ta.value.replace(/\s*$/, ' ') : '';
+    rec = new SR(); rec.lang = recLang(); rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+    rec.onresult = function (e) { var t = ''; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; ta.value = (base + t).slice(0, 600); };
+    rec.onerror = function (e) { setListen(false);
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') add('hc-note', 'Microphone is blocked. Allow it in your browser settings, or just type your question.');
+      else if (e.error === 'no-speech') add('hc-note', 'Did not hear anything. Tap the mic and try again.');
+      else if (e.error !== 'aborted') add('hc-note', 'Voice typing did not work. Please type your question.'); };
+    rec.onend = function () { setListen(false); ta.focus(); };
+    try { rec.start(); setListen(true); } catch (e) { setListen(false); } }
+  function buildMic() { if (!SR) return null; mic = el('button', 'hc-mic'); mic.type = 'button';
+    mic.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>';
+    setListen(false); mic.onclick = function () { listening ? stopMic() : startMic(); }; return mic; }
   function build() {
     panel = el('div', 'hc-panel'); panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Help chat');
     var h = el('div', 'hc-head'), t = el('div'); t.appendChild(el('b', null, 'UnScramble help')); t.appendChild(el('small', null, 'Sign-in & sign-up help · 902-200-4888'));
     var x = el('button', 'hc-x', '×'); x.setAttribute('aria-label', 'Close chat'); x.onclick = close; h.appendChild(t); h.appendChild(x);
     log = el('div', 'hc-log'); log.setAttribute('aria-live', 'polite');
     var f = el('form', 'hc-form'); ta = el('textarea'); ta.maxLength = 600; ta.rows = 1; ta.placeholder = 'Type your question…'; ta.setAttribute('aria-label', 'Your message');
-    send = el('button', null, 'Send'); send.type = 'submit'; f.appendChild(ta); f.appendChild(send);
-    f.onsubmit = function (e) { e.preventDefault(); doSend(); };
+    send = el('button', null, 'Send'); send.type = 'submit'; f.appendChild(ta); if (buildMic()) f.appendChild(mic); f.appendChild(send);
+    f.onsubmit = function (e) { e.preventDefault(); stopMic(); doSend(); };
     ta.onkeydown = function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); } };
     panel.appendChild(h); panel.appendChild(log); panel.appendChild(f); document.body.appendChild(panel);
   }

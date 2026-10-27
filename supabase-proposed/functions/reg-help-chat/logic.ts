@@ -35,7 +35,7 @@ export async function handle(body: Record<string, unknown>, ip: string, d: Deps)
   if (action === "start") {
     if (!rateOk("c:" + ip, LIMITS.perIpChatsPerDay, 86_400_000, now)) return { status: 429, error: "Too many chats today. Please call or text 902-200-4888." };
     const c: Chat = { id: d.newId(), ip, msgs: [], created: now, last: now }; await d.save(c);
-    return { status: 200, id: c.id, greeting: "Hi! I can help with signing in, forgot password and sign-up. What do you need? (English, ਪੰਜਾਬੀ, हिंदी)" };
+    return { status: 200, id: c.id, greeting: "Hi! I can help with signing in, forgot password and sign-up. What do you need? You can write in English, French, Punjabi or Hindi." };
   }
   const id = clean(body.id); if (!/^[a-f0-9-]{20,40}$/.test(id)) return { status: 400, error: "Bad chat." };
   const c = await d.load(id); if (!c || c.ip !== ip && c.ip !== "*") return { status: 404, error: "Chat not found. Please reopen." };
