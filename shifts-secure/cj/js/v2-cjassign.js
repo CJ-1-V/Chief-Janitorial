@@ -229,7 +229,7 @@
           box.innerHTML = '<label>Assigned cleaners</label><div class="asg-ro">' + (crew.length ? crew.map(function (id) { return '<span class="pill s-ok">' + E(nm(id)) + '</span>'; }).join(' ') : '<span class="pill s-warn">No cleaner yet</span>') + '</div><a class="small" href="' + ROUTE + '">Change on Site assignments →</a>' +
             crew.map(function (id) { return '<input type="hidden" name="crew[]" value="' + E(id) + '">'; }).join('');
         });
-        x = t.innerHTML.replace('and which cleaners are assigned to the site. One task per line.', 'One task per line. Who cleans each site is set on <a href="' + ROUTE + '">Site assignments</a>.');
+        x = t.innerHTML.replace('visit, and which cleaners are assigned to the site. One task per line.', 'visit. One task per line. Who cleans each site is set on <a href="' + ROUTE + '">Site assignments</a>.');
       } catch (e) { try { console.warn('[cjassign checklists]', e); } catch (z) {} }
       return x;
     };

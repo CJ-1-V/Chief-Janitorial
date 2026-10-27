@@ -15,13 +15,30 @@
     if (typeof companySites !== 'function') return [];
     return companySites({ skipPractice: true, activeOnly: true }).filter(function (s) { return typeof cjSiteAllowed !== 'function' || cjSiteAllowed(s.code); });
   }
-  /* the clock-in picker and the unusual-day form: assigned sites, linked to a client or not */
-  ['clockSites', 'mtSites'].forEach(function (fn) {
-    if (typeof window[fn] !== 'function') return; var o = window[fn];
-    window[fn] = function () { return limited() ? mine() : o.apply(this, arguments); };
-  });
-  try { clockSites = window.clockSites; } catch (e) {}
-  try { mtSites = window.mtSites; } catch (e) {}
+  /* the clock-in picker and the unusual-day form: assigned sites, linked to a client or not.
+     v2-company-filter.js replaces clockSites/mtSites again on a short timer (its own company list).
+     Re-apply after that, or a site with no client disappears and the cleaner is told they have no site. */
+  function wrapFn(name) {
+    var cur = window[name];
+    if (typeof cur !== 'function' || cur.__cjmysite) return false;
+    var prev = cur;
+    var w = function () { return limited() ? mine() : prev.apply(this, arguments); };
+    w.__cjmysite = true;
+    window[name] = w;
+    try { if (name === 'clockSites') clockSites = w; } catch (e) {}
+    try { if (name === 'mtSites') mtSites = w; } catch (e) {}
+    return true;
+  }
+  function applyWrap(rerender) {
+    var a = wrapFn('clockSites'), b = wrapFn('mtSites'), changed = a || b;
+    if (changed && rerender && typeof render === 'function' && typeof ME !== 'undefined' && ME && emp(ME)) {
+      try { render(); } catch (e) {}
+    }
+  }
+  applyWrap(false);
+  document.addEventListener('DOMContentLoaded', function () { applyWrap(false); });
+  setTimeout(function () { applyWrap(true); }, 80);
+  setTimeout(function () { applyWrap(true); }, 250);
 
   function hide(el) { if (el) el.style.display = 'none'; }
   function summary(s) { return typeof shSummary === 'function' ? shSummary(s) : ''; }
