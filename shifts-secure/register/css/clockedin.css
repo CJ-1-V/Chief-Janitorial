@@ -31,3 +31,6 @@
 .cs-st{font-weight:700;border-radius:8px;padding:6px 10px;margin-top:2px}
 .cs-bad{background:#fde8e6;color:#b42318}.cs-ok{background:#e6f4ea;color:#1e6b34}.cs-none{background:#f1f0f6;color:#5e5a7a;font-weight:500}
 .ci-crew{grid-column:1/-1;font-size:.84rem;color:#5e5a7a}
+/* clockout1: office "Clock out" button on each open shift */
+.ci-co{grid-column:1/-1;margin-top:.4rem;display:flex;justify-content:flex-end}
+.ci-cobtn{min-width:7rem}
