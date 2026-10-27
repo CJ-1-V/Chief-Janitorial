@@ -17,3 +17,9 @@
 @media (max-width:560px){.hc-panel{right:0;left:0;bottom:0;width:100%;max-width:100%;height:85vh;max-height:85vh;border-radius:16px 16px 0 0}.hc-btn{right:12px;bottom:12px}}
 .hc-panel[hidden]{display:none}
 @media (max-width:560px){.hc-open .hc-btn{display:none!important}}
+/* helpmic1: mic button next to Send */
+.hc-form .hc-mic{background:#fff;color:#332E57;border:2px solid #332E57;border-radius:10px;padding:0;width:44px;min-width:44px;min-height:40px;display:flex;align-items:center;justify-content:center}
+.hc-form .hc-mic:focus-visible{outline:3px solid #b9b2e6;outline-offset:2px}
+.hc-form .hc-mic.hc-on{background:#d93025;border-color:#d93025;color:#fff;animation:hc-pulse 1.2s ease-out infinite}
+@keyframes hc-pulse{0%{box-shadow:0 0 0 0 rgba(217,48,37,.6)}100%{box-shadow:0 0 0 12px rgba(217,48,37,0)}}
+@media (prefers-reduced-motion:reduce){.hc-form .hc-mic.hc-on{animation:none}}
