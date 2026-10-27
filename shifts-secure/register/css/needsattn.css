@@ -1,0 +1,15 @@
+/* needsattn2 (Oct 26 2026): Needs attention / office lists on phones.
+   ul.check li{display:flex} also hit the nested people lists, so names were squeezed letter by letter.
+   Desktop look unchanged; under 600px the pill stacks above its text and each person is a block. */
+ul.check>li>div{min-width:0;flex:1 1 auto}
+.na-list li a b{word-break:normal;overflow-wrap:normal}
+@media (max-width:600px){
+  ul.check>li:has(>.pill:first-child){flex-direction:column;align-items:stretch;gap:6px}
+  ul.check>li>.pill:first-child{align-self:flex-start;min-width:0}
+  ul.check li .na-list{padding-left:0;list-style:none}
+  ul.check li .na-list li{display:block;padding:8px 0;border-bottom:1px solid #f0f0f0}
+  ul.check li .na-list li:last-child{border-bottom:0}
+  .na-list li>a:first-child{display:block;word-break:normal;overflow-wrap:anywhere}
+  .na-list li>a:first-child b{overflow-wrap:anywhere}
+  .na-list li>.small,.na-list li>span{display:block;width:100%}
+}
