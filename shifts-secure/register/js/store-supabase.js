@@ -95,6 +95,7 @@
     var s = String(login || '').trim().toLowerCase(), dg = s.replace(/\D/g, '');
     if (!s) return '';
     if (s.indexOf('@') > 0) return s;
+    if (/^[\d\s().+-]+$/.test(s) && window.REG_PHONE10 && window.REG_PHONE10(s)) return window.REG_PHONE10(s) + '@' + C.loginDomain;   /* phonenorm1: 0/+1/011 forms */
     if (/^[\d\s().+-]+$/.test(s) && (dg.length === 10 || (dg.length === 11 && dg[0] === '1'))) return dg.slice(-10) + '@' + C.loginDomain;
     return 'u-' + s.replace(/[^a-z0-9._-]/g, '') + '@' + C.loginDomain;
   }
@@ -102,6 +103,8 @@
   function signupLogin(d) {
     if (d.email) return { email: String(d.email).trim().toLowerCase(), shown: String(d.email).trim().toLowerCase() };
     var dg = digits(d.phone);
+    var p10 = window.REG_PHONE10 ? window.REG_PHONE10(d.phone) : '';   /* phonenorm1 */
+    if (p10) return { email: p10 + '@' + C.loginDomain, shown: p10 };
     if (dg.length === 10 || (dg.length === 11 && dg[0] === '1')) return { email: dg.slice(-10) + '@' + C.loginDomain, shown: dg.slice(-10) };
     if (d.username) return { email: authEmail(d.username), shown: String(d.username).trim() };
     return null;
@@ -579,12 +582,12 @@
     busy(true, 'Creating your account…');
     try {
       var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
-        full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null,
+        full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: (window.REG_PHONE10 ? window.REG_PHONE10(d.phone) : digits(d.phone).slice(-10)) || null,
         reg_invite_hash: (kind === 'firm' && typeof clNormCode === 'function' && clNormCode(d.invite || '') ? clCodeHash(clNormCode(d.invite)) : null),   /* ownerreq1: server auto-approves a valid invite */
         farm_code: (String(d.farmCode || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || null),   /* ownerreq1: farm code match */
         app: 'us', pickup_address: (window.REG_PICKUP_ADDR ? window.REG_PICKUP_ADDR(d) : null),   /* pickup1 */
         sms_consent: !!d.smsConsent, sms_consent_at: d.smsConsent ? new Date().toISOString() : null,
-        phone_e164: (digits(d.phone).slice(-10).length === 10 ? '+1' + digits(d.phone).slice(-10) : null) } } });
+        phone_e164: (window.REG_E164 ? window.REG_E164(d.phone) : '') || null } } });
       if (r.error) { toast(friendly(r.error)); return; }
       if (r.data && r.data.user && r.data.user.id) res.id = r.data.user.id;
       if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
@@ -628,7 +631,7 @@
         busy(true, 'Creating the account…');
         var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
         var r = await tmp.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: kind === 'worker' ? ME.id : null,
-          full_name: created.name, username: created.username || null, contact_email: created.email || null, phone: digits(created.phone).slice(-10) || null } } });
+          full_name: created.name, username: created.username || null, contact_email: created.email || null, phone: (window.REG_PHONE10 ? window.REG_PHONE10(created.phone) : digits(created.phone).slice(-10)) || null } } });
         if (r.error || !r.data.user) throw (r.error || new Error('Could not create the account.'));
         try { await tmp.auth.signOut(); } catch (e) {}
         rekey(created.id, r.data.user.id);
@@ -672,7 +675,7 @@
       var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
       var r = await tmp.auth.signUp({ email: email, password: throwawayPw(), options: { data: { company: (C.companyId || 'us'), reg_kind: kind,
         reg_sub: kind === 'worker' ? p.subId : null, full_name: p.name, username: p.username, contact_email: email,
-        phone: digits(p.phone).slice(-10) || null, added_by_office: me.id } } });
+        phone: (window.REG_PHONE10 ? window.REG_PHONE10(p.phone) : digits(p.phone).slice(-10)) || null, added_by_office: me.id } } });
       if (r.error || !r.data.user) return { error: friendly(r.error || 'Could not create the account.') };
       try { await tmp.auth.signOut(); } catch (e) {}
       // server: temporary password (same generator as Reset password), must-change flag, approval, audit row

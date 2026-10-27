@@ -53,7 +53,9 @@ function list(L){return '<ul class="ci-list">'+L.map(function(t){var u=user(t.us
       '<div class="ci-when"><span>In at <b>'+E(t['in'])+'</b>'+(t.date!==today()?' (yesterday)':'')+'</span><small>On shift '+E(dur(ms))+'</small></div>'+
       '<div class="ci-crew">Crew at clock-in: <b>'+(+t.crewIn>0?+t.crewIn:'–')+'</b> · at clock-out: <b>'+(+t.crew>0?+t.crew:'on shift')+'</b></div>'+
       (fl.length?'<div class="ci-flags">'+fl.map(function(m){return '<span class="pill s-warn">'+E(m)+'</span>';}).join(' ')+'</div>':'')+
-      (lead&&lead.id!==u.id?'<div class="ci-lead">Crew lead: '+E(lead.name)+'</div>':'')+'</li>';}).join('')+'</ul>';}
+      (lead&&lead.id!==u.id?'<div class="ci-lead">Crew lead: '+E(lead.name)+'</div>':'')+
+      /* clockout1: office clock-out for someone who forgot (same roles + save path as Edit hours, v2-edithours.js) */
+      (typeof window.ehCanClockOut==='function'&&window.ehCanClockOut(t)?'<div class="ci-co"><button type="button" class="small danger ci-cobtn" data-act="ehedit" data-co="1" data-id="'+E(t.id)+'" data-back="'+E(siteKey(t))+'">Clock out</button></div>':'')+'</li>';}).join('')+'</ul>';}
 /* dupshift1 (owner Oct 19 2026 6:07 PM): a farm punched in today whose punched shifts were ALL removed → faded box, 0 people, tap = All hours for that farm/day */
 function gone(G){var have={},R={};G.forEach(function(x){have[x.k]=1;});(DB.time||[]).forEach(function(t){if(t.test||!t.removed||t.date!==today()||t.manual||t.crewPlaceholder||!t['in'])return;var k=siteKey(t);if(!k||have[k])return;R[k]=(R[k]||0)+1;});
   return Object.keys(R).sort().map(function(k){var nm=boxSub(k);return '<button type="button" class="cb-box cb-gone" role="listitem" data-act="cigone" data-site="'+E(k)+'" aria-label="'+E(k+': no workers now, shifts removed')+'"><span class="cb-code">'+E(k)+'</span><span class="cb-n">0</span><span class="cb-l">people</span><span class="cb-gonel">No workers now – shifts removed</span>'+(nm?'<span class="cb-name">'+E(nm)+'</span>':'')+'</button>';}).join('');}
@@ -71,7 +73,8 @@ document.addEventListener('click',function(e){var s=e.target.closest&&e.target.c
   if(b){SEL=b.getAttribute('data-cb');redraw();return;}if(e.target.closest('[data-cb-back]')){SEL=null;redraw();}});
 function open(){if(!office())return;SEL=null;
   modal('<div class="ci-sheet" id="ciSheet"><h2>Clocked in right now</h2><p class="ci-note">'+E(note())+'</p><div class="ci-body">'+body()+'</div></div>');}
-window.clockedInList={rows:rows,open:open};
+function openSite(k){open();if(rows().some(function(t){return siteKey(t)===k&&!t.removed&&!t.voided;})){SEL=k;redraw();}}
+window.clockedInList={rows:rows,open:open,openSite:openSite};
 function hit(e){var x=e.target&&e.target.closest&&e.target.closest('#oiTNow');if(!x||!office())return false;e.preventDefault();open();return true;}
 document.addEventListener('click',hit);
 document.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' ')hit(e);});

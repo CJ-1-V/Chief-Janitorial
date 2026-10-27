@@ -2,14 +2,14 @@
    Display layer only, signed-out screens only (#/, #/signup*, #/forgot, #/2fa). No change to sign-up logic, invite
    auto-approve, approval wait, or secure1 rate limits – those all still run first; this only changes words and layout.
    - Big tap targets (48px+) and 16px text (no iPhone zoom) on the sign-in / sign-up cards.
-   - Help line on every signed-out screen and inside every error: "Need help? Call or text Aasa at 705-650-0024".
+   - Help line on every signed-out screen and inside every error: "Need help? Call or text Aasa at 902-200-4888" (Call/Text buttons in UnScramble purple #332E57, helpline902 Oct 26 2026).
    - Errors (toasts) on these screens also stay on screen in a red box at the top of the form with what to do next.
    - Farm code box: trims spaces, uppercases, fixes letter O typed for zero in the number part; plain found / not found text.
    - Shorter, plainer intro and notice text on the farm form. */
 (function(){
   'use strict';
-  var TEL='+17056500024',PH='705-650-0024';
-  var HELP='<span class="es-help">Need help? Call or text Aasa at '+PH+'<br><a href="tel:'+TEL+'" class="es-tel">📞 Call</a> <a href="sms:'+TEL+'" class="es-sms">💬 Text</a></span>';
+  var TEL='+19022004888',PH='902-200-4888';
+  var HELP='<span class="es-help">Need help? Call or text Aasa at <span style="white-space:nowrap">'+PH+'</span><br><a href="tel:'+TEL+'" class="es-tel">📞 Call</a> <a href="sms:'+TEL+'" class="es-sms">💬 Text</a></span>';
   function out(){return typeof ME==='undefined'||!ME;}
   function pub(){var h=String(location.hash||'#/');return out()&&(h==='#/'||h==='#'||h===''||/^#\/(signup|forgot|2fa|login)/.test(h));}
   function E(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -24,6 +24,8 @@
    '#orfarmcode::placeholder{text-transform:none;font-size:16px;font-weight:400;letter-spacing:0}'+
    '.es-farmlbl{font-size:18px;font-weight:700}'+
    '.es-help{display:block;margin-top:6px;font-size:16px}.es-help a{display:inline-flex;align-items:center;min-height:48px;padding:0 6px;font-weight:700}'+
+   '.es-help a.es-tel,.es-help a.es-sms{padding:0 16px;margin:6px 6px 0 0;border-radius:10px;background:var(--us,#332E57);color:#fff;text-decoration:none}'+
+   '.es-help a.es-tel:hover,.es-help a.es-sms:hover,.es-help a.es-tel:focus,.es-help a.es-sms:focus{background:#433c72;color:#fff}'+
    '.es-foot{margin:14px 0 4px;text-align:center}'+
    '.es-err{font-size:16px;margin-bottom:10px}.es-err b{display:block}';
   (document.head||document.documentElement).appendChild(css);
