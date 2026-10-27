@@ -26,6 +26,7 @@ window.REG_STORE = {
   twoStep: false,                                    // 027i twostep1: 2-step sign-in (emailed code) for office + farm logins – set true only AFTER migration 027i + reg-messages deploy
   unknownCodes: true,                                // ownerreq2: Unknown farm codes saved on the server + live farm-code check/auto-match – set true only AFTER sql/ownerreq2_apply.sql
   unassignedShifts: true,                            // 019a: unassigned shifts (person picked later) – set true only AFTER migration 019a
+  helpChat: true,                                    // helpchat1: live 2026-10-26 (reg-help-chat deployed)
   url: 'https://lfefpmzfnvgwuicthlyg.supabase.co',
   key: 'sb_publishable_3T6uAqwjHXpv4HUY5gOPGQ_gWqA88JI',
   loginDomain: 'example.com',                           // same as Shift Tracker: phone 9025551234 -> 9025551234@example.com
