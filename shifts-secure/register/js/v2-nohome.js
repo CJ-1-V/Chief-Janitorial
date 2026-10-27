@@ -7,6 +7,8 @@
    - Workers, crew leads, employees, subcontractors and testers, on every screen (phone layout and the waiting-for-approval /
      terms / new-password screens): no Home button in the top bar, no "unscramble.ca" next to Sign out, none in the Menu.
    - Office (admin) and farms/clients (firm) keep the "unscramble.ca" button next to Sign out.
+   brandlink1: the top-left UnScramble logo (class us-brand or emp-brand) stays a same-tab link to
+   https://www.unscramble.ca on every screen. Other website links are still removed.
    Safety net on those same pages: any other link to the company website (unscramble.ca or chiefjanitorial.com outside
    /shifts-secure/, or a "/..." or "../" link) is shown as plain text. tel:, mailto: and in-app (#/...) links are kept.
    Sign out already goes back to this app's sign-in page (#/), not the website. Load after all other js/.
@@ -24,7 +26,7 @@
     x=x.replace(/<a class="ush [^"]*"[^>]*>[\s\S]*?<\/a>/g,'');                         /* Home / unscramble.ca buttons */
     x=x.replace(/<div class="who ush-who"><\/div>/g,'');
     x=x.replace(/<a class="ush-logo [^"]*"[^>]*>(<img [^>]*>)<\/a>/g,'$1');             /* sign-in logos: picture only */
-    x=x.replace(/<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g,function(m,a,h,b,inner){return siteLink(h)?'<span class="nh-off">'+inner+'</span>':m;});
+    x=x.replace(/<a\b([^>]*?)\bhref="([^"]*)"([^>]*)>([\s\S]*?)<\/a>/g,function(m,a,h,b,inner){if(/\b(?:us-brand|emp-brand)\b/.test(a+' '+b))return m;return siteLink(h)?'<span class="nh-off">'+inner+'</span>':m;});
     return x;}
   window.nhStrip=strip;window.nhNoHome=noHome;
   var ol=layout;

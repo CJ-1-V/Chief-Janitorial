@@ -16,11 +16,14 @@ code,kbd,.code,.mono{color:var(--teal);font-family:ui-monospace,Menlo,Consolas,m
 input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=time],input[type=tel],select,textarea{border-radius:8px;padding:10px 12px;border-color:#c9c6d8}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--g);outline-offset:0;border-color:var(--g)}
 
-/* top bar: full logo ~200px, no extra "UnScramble" text beside it */
+/* top bar: full logo ~200px, no extra "UnScramble" text beside it.
+   brandlink1: the logo is a same-tab link; the link box matches the image and never underlines. */
 header.top{padding:8px 24px;gap:16px;min-height:64px;border-bottom:3px solid var(--g)}
-header.top>img{height:auto;width:200px;max-width:200px}
-header.top>img+div{display:none}
-@media(max-width:640px){header.top{padding:8px 16px;min-height:56px}header.top>img{width:180px;max-width:180px}}
+header.top>img,header.top>a.us-brand>img{height:auto;width:200px;max-width:200px}
+header.top>img+div,header.top>a.us-brand+div{display:none}
+header.top>a.us-brand,header.top>a.us-brand:hover,header.top>a.us-brand:focus,header.top>a.us-brand:active,header.top>a.us-brand:visited{display:block;line-height:0;color:inherit;text-decoration:none}
+.emp .emp-brand:hover,.emp .emp-brand:focus,.emp .emp-brand:active,.emp .emp-brand:visited{color:var(--us);text-decoration:none}
+@media(max-width:640px){header.top{padding:8px 16px;min-height:56px}header.top>img,header.top>a.us-brand>img{width:180px;max-width:180px}}
 
 /* one button style: solid purple, 8px corners, clear hover */
 button,.btn,button.gold{background:var(--p);color:#fff;border:1px solid var(--p);border-radius:8px;padding:10px 16px;font-family:var(--bp-b);font-weight:600;transition:background-color .15s,box-shadow .15s}

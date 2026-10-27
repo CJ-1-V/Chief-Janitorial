@@ -49,7 +49,7 @@ function layout(content){
   if(u){var gn=gateNav(u);if(gn)nav=gn;}
   var unread=u?DB.notes.filter(function(n){return (n.to===u.id||(u.type==='admin'&&n.to==='admin'))&&!n.read;}).length:0;
   return '<div class="testbar"><span>TEST VERSION – local only.</span> Fake data, stored only in this browser. Nothing is sent anywhere.'+(DB.settings.simDate?' &nbsp;<span>Simulated date: '+DB.settings.simDate+'</span>':'')+'</div>'+
-  '<header class="top"><img src="assets/unscramble-logo.svg" alt="UnScramble"><div><div style="font-weight:700">UnScramble</div><div class="small" style="opacity:.8">Clock, farms &amp; compliance</div></div>'+
+  '<header class="top"><a class="us-brand" href="https://www.unscramble.ca" aria-label="UnScramble"><img src="assets/unscramble-logo.svg" alt="UnScramble"></a><div><div style="font-weight:700">UnScramble</div><div class="small" style="opacity:.8">Clock, farms &amp; compliance</div></div>'+
   (u?'<div class="who">'+esc(u.name)+' · <b>'+esc(TYPES[u.type])+'</b>'+(u.type==='tester'?' <span class="badge-test">TEST</span>':'')+(u.type==='sub'?tempBadge(u):u.type==='worker'?tempBadge(subOf(u)):'')+' <button class="small sec" data-act="logout">Sign out</button></div>':'')+'</header>'+
   (u?'<nav class="tabs">'+nav.map(function(n){var c=n[0]==='#/alerts'&&unread?'<span class="cnt">'+unread+'</span>':'';return '<a href="'+n[0]+'" class="'+(h===n[0]?'on':'')+'">'+esc(n[1])+c+'</a>';}).join('')+'</nav>':'')+
   '<main id="main">'+content+'</main><footer>UnScramble – The HR Company Inc.</footer>'+
