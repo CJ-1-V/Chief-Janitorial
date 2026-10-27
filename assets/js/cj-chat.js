@@ -32,7 +32,8 @@
     { id: "phone", q: "Phone number? (optional, type 'skip')" }
   ];
   var css = ""
-    + "#cj-chat-btn{position:fixed;left:12px;right:auto;bottom:18px;z-index:900;margin:0;appearance:none;-webkit-appearance:none;background:#5956e9;color:#fff;border:0;border-radius:999px;padding:14px 18px;font:600 15px/1.2 inherit;text-align:center;box-shadow:0 10px 30px rgba(89,86,233,.35);cursor:pointer;max-width:calc(100% - 104px);box-sizing:border-box}"
+    + "#cj-chat-btn{position:fixed;left:12px;right:auto;bottom:18px;z-index:900;margin:0;appearance:none;-webkit-appearance:none;background:#5956e9;color:#fff;border:0;border-radius:50%;width:52px;height:52px;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px rgba(89,86,233,.35);cursor:pointer;box-sizing:border-box}"
+    + "#cj-chat-btn svg{width:26px;height:26px;display:block}"
     + "#cj-chat-btn:hover{background:#3f3cc9}"
     + "#cj-chat{position:fixed;left:12px;right:auto;bottom:78px;z-index:900;width:min(360px,calc(100% - 24px));max-height:min(600px,calc(100% - 120px));display:none;flex-direction:column;background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(11,11,26,.25);overflow:hidden;font-family:inherit;box-sizing:border-box}"
     + "#cj-chat.open{display:flex}"
@@ -45,6 +46,7 @@
     + ".cjo{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}"
     + ".cjo button{border:1px solid #5956e9;background:#fff;color:#5956e9;border-radius:999px;padding:7px 11px;font:600 13px/1.3 inherit;cursor:pointer;margin:0;max-width:100%;box-sizing:border-box}"
     + ".cjo button.p{background:#ffb32c;border-color:#ffb32c;color:#0b0b1a;font-weight:600}"
+    + ".cjo.slim button{padding:6px 10px;font-size:12.5px}"
     + "#cj-chat form{display:flex;border-top:1px solid #eee;flex:none}"
     + "#cj-chat input{flex:1;min-width:0;border:0;padding:12px;font-size:16px;line-height:1.3;outline:none;background:#fff;color:#0b0b1a;margin:0}"
     + "#cj-chat form button{border:0;background:#5956e9;color:#fff;padding:0 16px;cursor:pointer;margin:0;font:600 15px/1 inherit}"
@@ -56,8 +58,8 @@
   var btn = document.createElement("button");
   btn.id = "cj-chat-btn";
   btn.type = "button";
-  btn.setAttribute("aria-label", "Open chat");
-  btn.textContent = "💬 Questions? Chat";
+  btn.setAttribute("aria-label", "Chat with us");
+  btn.innerHTML = "<svg viewBox='0 0 24 24' aria-hidden='true' focusable='false'><path fill='currentColor' d='M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3.2V16H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z'/></svg>";
 
   var p = document.createElement("div");
   p.id = "cj-chat";
@@ -88,11 +90,30 @@
     d.className = "cjm " + (who || "b");
     d.innerHTML = h;
     log.appendChild(d);
-    log.scrollTop = log.scrollHeight;
+    return d;
   }
-  function opts(list) {
+  /* Put this bubble's top at the top of the visible log. A trailing spacer
+     lets a short answer reach the top when nothing below it would otherwise fill the log. */
+  function reveal(el) {
+    if (!el) return;
+    var pad = 6;
+    var spacer = log.querySelector(".cj-spacer");
+    if (!spacer) {
+      spacer = document.createElement("div");
+      spacer.className = "cj-spacer";
+      spacer.setAttribute("aria-hidden", "true");
+    }
+    spacer.style.height = "0px";
+    log.appendChild(spacer);
+    var delta = el.getBoundingClientRect().top - log.getBoundingClientRect().top - pad;
+    var want = log.scrollTop + delta;
+    var max = log.scrollHeight - log.clientHeight;
+    if (want > max + 0.5) spacer.style.height = Math.ceil(want - max) + "px";
+    log.scrollTop = want;
+  }
+  function opts(list, slim) {
     var w = document.createElement("div");
-    w.className = "cjo";
+    w.className = "cjo" + (slim ? " slim" : "");
     list.forEach(function (o) {
       var b = document.createElement("button");
       b.type = "button";
@@ -102,35 +123,52 @@
       w.appendChild(b);
     });
     log.appendChild(w);
-    log.scrollTop = log.scrollHeight;
+    return w;
   }
-  function menu() {
-    opts([{ t: "Book a quote", p: 1, f: function () { say("Book a quote", "u"); start(); } }].concat(FAQ.map(function (f) {
-      return { t: f.q, f: function () { say(esc(f.q), "u"); say(f.a); menu(); } };
+  function quoteAction() {
+    return { t: "Book a quote", p: 1, f: function () { say("Book a quote", "u"); start(); } };
+  }
+  function fullMenu(scrollList) {
+    log.querySelectorAll(".cjo").forEach(function (e) { e.remove(); });
+    var w = opts([quoteAction()].concat(FAQ.map(function (f) {
+      return { t: f.q, f: function () { answerFaq(f); } };
     })));
+    if (scrollList) reveal(w);
   }
-  function start() { flow = 0; data = {}; say("Great, a few quick questions so we can prepare your free quote."); ask(); }
+  function followUps() {
+    log.querySelectorAll(".cjo").forEach(function (e) { e.remove(); });
+    opts([quoteAction(), { t: "More questions", f: function () { fullMenu(true); } }], true);
+  }
+  function answerFaq(f) {
+    say(esc(f.q), "u");
+    var bot = say(f.a);
+    followUps();
+    reveal(bot);
+  }
+  function start() { flow = 0; data = {}; say("Great, a few quick questions so we can prepare your free quote."); reveal(ask()); }
   function ask() {
     var s = STEPS[flow];
-    say(s.q);
+    var q = say(s.q);
     if (s.opts) opts(s.opts.map(function (o) { return { t: o, f: function () { answer(o); } }; }));
+    return q;
   }
   function answer(v) {
     var s = STEPS[flow];
     say(esc(v), "u");
     v = v.trim();
-    if (s.req && !v) { say("This one is needed."); return ask(); }
-    if (s.v && !s.v(v)) { say(s.err); return ask(); }
+    if (s.req && !v) { var need = say("This one is needed."); ask(); reveal(need); return; }
+    if (s.v && !s.v(v)) { var bad = say(s.err); ask(); reveal(bad); return; }
     data[s.id] = /^(skip|none|not sure)$/i.test(v) ? "" : v;
     log.querySelectorAll(".cjo").forEach(function (e) { e.remove(); });
     flow++;
-    if (flow < STEPS.length) return ask();
+    if (flow < STEPS.length) { reveal(ask()); return; }
     flow = null;
     review();
   }
   function review() {
-    say("<b>Please check:</b><br>Site: " + esc(data.site) + "<br>Service: " + esc(data.service) + "<br>Address: " + esc(data.address) + "<br>Size: " + esc(data.size || "not given") + " sq ft<br>Frequency: " + esc(data.freq) + "<br>Details: " + esc(data.details || "-") + "<br>Name: " + esc(data.name) + "<br>Business: " + esc(data.business || "-") + "<br>Email: " + esc(data.email) + "<br>Phone: " + esc(data.phone || "-"));
+    var card = say("<b>Please check:</b><br>Site: " + esc(data.site) + "<br>Service: " + esc(data.service) + "<br>Address: " + esc(data.address) + "<br>Size: " + esc(data.size || "not given") + " sq ft<br>Frequency: " + esc(data.freq) + "<br>Details: " + esc(data.details || "-") + "<br>Name: " + esc(data.name) + "<br>Business: " + esc(data.business || "-") + "<br>Email: " + esc(data.email) + "<br>Phone: " + esc(data.phone || "-"));
     opts([{ t: "Send request", p: 1, f: send }, { t: "Start over", f: start }]);
+    reveal(card);
   }
   function send() {
     say("Send request", "u");
@@ -153,14 +191,17 @@
       Source: "Website chat"
     };
     var done = function () {
-      say("Thanks, " + esc(data.name) + "! Your request was sent to our team at " + MAIL + ". We'll get back to you with your free quote. Office hours are Monday–Friday, 9 am–5 pm.");
-      var actions = [];
+      var thanks = say("Thanks, " + esc(data.name) + "! Your request was sent to our team at " + MAIL + ". We'll get back to you with your free quote. Office hours are Monday–Friday, 9 am–5 pm.");
       if (BOOKING_URL) {
         say("Want to pick a time for a walkthrough or quote call now?");
-        actions.push({ t: "📅 Pick a walkthrough time", p: 1, f: function () { window.open(BOOKING_URL, "_blank", "noopener"); } });
+        opts([
+          { t: "📅 Pick a walkthrough time", p: 1, f: function () { window.open(BOOKING_URL, "_blank", "noopener"); } },
+          { t: "More questions", f: function () { fullMenu(true); } }
+        ], true);
+      } else {
+        followUps();
       }
-      actions.push({ t: "Ask another question", f: menu });
-      opts(actions);
+      reveal(thanks);
     };
     fetch(ENDPOINT, {
       method: "POST",
@@ -174,11 +215,13 @@
     });
   }
   function free(t) {
+    log.querySelectorAll(".cjo").forEach(function (e) { e.remove(); });
     say(esc(t), "u");
     if (/book|quote|estimate|walkthrough|appoint/i.test(t) && !/cost|price|how much/i.test(t)) return start();
     var f = FAQ.find(function (x) { return x.k.test(t); });
-    say(f ? f.a : FALLBACK);
-    menu();
+    var bot = say(f ? f.a : FALLBACK);
+    followUps();
+    reveal(bot);
   }
   p.querySelector("form").onsubmit = function (e) {
     e.preventDefault();
@@ -242,14 +285,30 @@
     var btt = reservedBackToTop();
     var btnBottom = 18 + safePx;
     if (bar) btnBottom = Math.ceil(window.innerHeight - bar.top) + GAP + safePx;
-    var rightLimit = window.innerWidth - GAP;
-    if (btt) rightLimit = Math.min(rightLimit, btt.left - GAP);
     btn.style.left = "12px";
     btn.style.right = "auto";
+    btn.style.width = "52px";
+    btn.style.height = "52px";
+    btn.style.maxWidth = "52px";
     btn.style.bottom = btnBottom + "px";
-    btn.style.maxWidth = Math.max(120, Math.floor(rightLimit - 12)) + "px";
+    var guard = 0;
+    while (guard++ < 6) {
+      var hit = null;
+      var links = document.querySelectorAll(".hero-actions a");
+      var brNow = btn.getBoundingClientRect();
+      for (var hi = 0; hi < links.length; hi++) {
+        var box = shown(links[hi]);
+        if (box && overlaps(brNow, box)) { hit = box; break; }
+      }
+      if (!hit) break;
+      var raised = Math.ceil(window.innerHeight - hit.top) + GAP;
+      if (raised <= parseFloat(btn.style.bottom) + 0.5) break;
+      if (window.innerHeight - raised - 52 < topChromeBottom() + GAP) break;
+      btn.style.bottom = raised + "px";
+      btnBottom = raised;
+    }
 
-    var btnH = btn.offsetHeight || 48;
+    var btnH = btn.offsetHeight || 52;
     var panelBottom = btnBottom + btnH + 10;
     var panelW = Math.min(360, window.innerWidth - 24);
     if (btt) {
@@ -308,7 +367,8 @@
     if (o && !greeted) {
       greeted = 1;
       say("Hi! I can answer questions about Chief Janitorial or help you book a free quote.");
-      menu();
+      fullMenu(false);
+      log.scrollTop = 0;
     }
     place();
     if (o) {
@@ -331,5 +391,7 @@
     visualViewport.addEventListener("scroll", schedule);
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  setTimeout(schedule, 400);
+  setTimeout(schedule, 1200);
   place();
 })();
