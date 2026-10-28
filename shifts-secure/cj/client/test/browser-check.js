@@ -11,7 +11,7 @@ const REPO = path.join(__dirname, '..', '..', '..', '..');
 const PORT = 8765;
 const ORIGIN = 'http://127.0.0.1:' + PORT + '/shifts-secure/cj/client/';
 const SHOTS = process.env.CJ_SHOTS || path.join('/tmp', 'cj-client-shots');
-const CHROME = process.env.CHROME || 'google-chrome';
+const CHROME = process.env.CHROME || '/opt/google/chrome/chrome';
 const ASOF = '2026-10-28';
 
 function startServer() {
@@ -36,23 +36,30 @@ function startServer() {
 
 function chrome(args) {
   return new Promise(function (resolve, reject) {
+    const profile = fs.mkdtempSync(path.join('/tmp', 'cj-chrome-'));
     const child = spawn(CHROME, [
       '--headless=new',
       '--no-sandbox',
       '--disable-gpu',
       '--disable-dev-shm-usage',
+      '--disable-extensions',
+      '--no-first-run',
       '--hide-scrollbars',
       '--force-device-scale-factor=1',
       '--window-size=1280,1200',
-      '--virtual-time-budget=8000',
-      '--timeout=20000',
-      '--default-background-color=FFFFFFFF'
+      '--default-background-color=FFFFFFFF',
+      '--user-data-dir=' + profile
     ].concat(args), { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '', err = '';
+    const timer = setTimeout(function () {
+      child.kill('SIGKILL');
+      reject(new Error('chrome timed out\n' + err.slice(-400)));
+    }, 20000);
     child.stdout.on('data', function (b) { out += b; });
     child.stderr.on('data', function (b) { err += b; });
-    child.on('error', reject);
+    child.on('error', function (e) { clearTimeout(timer); reject(e); });
     child.on('close', function (code) {
+      clearTimeout(timer);
       if (code !== 0 && !out) reject(new Error('chrome ' + code + '\n' + err.slice(-500)));
       else resolve(out);
     });
