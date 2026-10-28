@@ -1,0 +1,22 @@
+/* cjinvite1: site sign-up link + printable QR. Chief Janitorial indigo, same cards as the rest of the app. */
+.cji-slot{margin:8px 0 4px}
+.cji-sheet{max-width:420px}
+.cji-sheet h2{margin:8px 0 4px}
+.cji-logo{height:42px;width:auto;display:block;margin-bottom:8px;background:#fff}
+.cji-qr{display:flex;justify-content:center;margin:12px 0;background:#fff;border:1px solid var(--bd,#e8e8ec);border-radius:12px;padding:10px}
+.cji-qr svg{width:240px;height:240px;max-width:100%}
+.cji-link{width:100%;font-size:13px;font-family:ui-monospace,monospace;margin:6px 0}
+.cji-code{font-family:ui-monospace,monospace;letter-spacing:.04em;word-break:break-all;font-size:14px}
+.cji-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cji-acts button{min-height:44px}
+.cji-site{margin:0 0 12px;padding:10px 12px;border:2px solid var(--p,#5956e9);border-radius:12px;background:var(--pl,#eeedfc)}
+.cji-site.cji-bad{border-color:var(--bad,#c0392b);background:var(--badl,#fbe5e2)}
+.cji-lbl{display:block;font-size:18px;font-weight:700;margin-bottom:6px}
+#cjisitecode{font-size:22px;font-weight:700;letter-spacing:1px;text-transform:uppercase;min-height:48px;width:100%;box-sizing:border-box;background:#fff}
+.cji-site .hint{font-size:15px;line-height:1.4}
+.cji-site .hint.ok{color:#1d7a3a}
+.cji-note{font-size:14px;line-height:1.4}
+@media (max-width:560px){
+  .cji-qr svg{width:200px;height:200px}
+  .cji-acts button{flex:1 1 140px}
+}
