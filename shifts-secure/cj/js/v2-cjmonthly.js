@@ -40,7 +40,7 @@
     return { sites: S, jobs: J, sub: sub, hst: hst, total: r2(sub + hst), on: on, unset: S.filter(function (l) { return l.unset; }).map(function (l) { return l.site; }), inactive: off,
       flat: S.some(function (l) { return l.mode === 'flat_monthly'; }), blocked: S.filter(function (l) { return l.mode === 'flat_monthly' && l.unset; }).map(function (l) { return l.site; }) };  // flatmonthly1
   }
-  function invOfMonth(firm, m) { return clientInvs(firm).filter(function (i) { return i.periodStart === mStart(m) && !i.uploaded; })[0] || null; }
+  function invOfMonth(firm, m) { return clientInvs(firm).filter(function (i) { return i.periodStart === mStart(m) && !i.uploaded && !i.extraWork; })[0] || null; }
   function recalc(i) { var on = i.hstOn !== undefined ? i.hstOn : i.hst > 0; i.amount = r2((i.siteLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0) + (i.specialLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0) + (i.extraLines || []).reduce(function (a, l) { return a + (+l.amount || 0); }, 0)); i.hst = on ? r2(i.amount * 0.15) : 0; i.total = r2(i.amount + i.hst); }
   window.cjmCalc = calc; window.cjmAmt = amt;
 

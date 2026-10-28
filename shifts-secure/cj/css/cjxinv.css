@@ -1,0 +1,17 @@
+/* Extra work invoices. Amounts and line details stay readable on a phone and on a desktop. */
+#cjxinv h2 { margin-bottom: 6px; }
+.cjx-line { display: grid; grid-template-columns: minmax(0, 1fr) 130px auto; gap: 8px; align-items: end; margin: 0 0 8px; }
+.cjx-line label { font-size: 13px; }
+.cjx-line .small.sec, .cjx-line button { margin-bottom: 2px; }
+.cjx-sum { background: #f7f7fb; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.cjx-sum.bad { background: #fdecec; }
+.cjx-totals { margin: 8px 0 0; }
+tr.cjxlines td { background: #fafaff; }
+.cjxdetail { display: block; line-height: 1.35; }
+#cjxform textarea { width: 100%; }
+@media (max-width: 640px) {
+  .cjx-line { grid-template-columns: 1fr; }
+  .cjx-line button { justify-self: start; }
+  #cjxinvtable td, #clientinvtable td { word-break: break-word; }
+  .cjx-totals { font-size: 14px; }
+}
