@@ -4,7 +4,8 @@
    amounts) sits in the invoice JSON. No new columns: lines are workLines, not extraLines / siteLines / month / hstOn,
    so the live save does not send the typed columns from the unrun flat-monthly draft.
    Who can create one: office owner, admin and ops (mock office login with no role is allowed, same as other office tools).
-   Monthly invoices stay owner-only. HST follows the client's existing on/off at 15%. Payment wording matches the
+   Live roles are staff_roles for company cj (migrations/cj-extrainv-001.sql). Monthly invoices stay owner-only.
+   HST follows the client's existing on/off at 15%. Payment wording matches the
    current Chief Janitorial invoice. Loads last. */
 'use strict';
 (function () {
