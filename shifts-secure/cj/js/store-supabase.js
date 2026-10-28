@@ -273,6 +273,20 @@
     if (r.error) throw r.error;
     var s = r.data || {};
     if (s.role === 'none') { await loadPublic(); PAGE_STATE.notReg = true; return false; }
+    /* cj-active: crew who are not in cj-main activeCleaners stay signed in only long enough to see the
+       "isn't active" screen (v2-cjactive.js). role 'none' would sign them out as "no account". */
+    if (s.role === 'crew-inactive') {
+      ROLE = 'crew-inactive'; OFFICE = false; MY_ID = s.me || null;
+      var dbI = emptyDB();
+      dbI.settings = Object.assign(baseSettings(), s.settings || {});
+      dbI.users = (s.users && s.users.length) ? s.users : [{ id: s.me, type: s.kind === 'worker' ? 'worker' : 'employee', name: s.name || 'Cleaner', username: s.username || '', email: s.email || '', active: true, suspended: false, approved: true, accountApproved: true, profile: {}, roles: [], orientations: [], usCrew: !!s.usCrew, crewView: !!s.crewView, companyId: s.companyId || '' }];
+      installDB(dbI);
+      ME = user(s.me);
+      if (ME) sessionStorage.setItem('us-test-me', ME.id);
+      PAGE_STATE.cjInactiveCrew = true;
+      LAST_REFRESH = Date.now();
+      return !!ME;
+    }
     ROLE = s.role; OFFICE = s.role === 'office'; MY_ID = s.me || null;
     var db = emptyDB();
     Object.keys(MAP).forEach(function (k) { db[k] = s[k] || []; });

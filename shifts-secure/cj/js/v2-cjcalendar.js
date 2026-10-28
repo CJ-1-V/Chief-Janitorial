@@ -24,6 +24,8 @@
   function CO() { return window.CJ_COMPANY || {}; }
   function sites() { return (DB.sites || []).filter(function (s) { return s.code !== 'TEST-PRACTICE' && (s.companyId || 'cj') === 'cj' && s.active !== false; }); }
   function site(c) { return (DB.sites || []).filter(function (s) { return s.code === c; })[0] || null; }
+  /* schedules, the calendar and clock-in count only cleaners the office has ticked Active (v2-cjactive.js). site.crew itself is not changed. */
+  function liveCrew(s) { var ids = (s && s.crew) ? s.crew.slice() : []; return typeof window.cjScheduleCrew === 'function' ? window.cjScheduleCrew(ids) : ids; }
   function dIdx(d) { return (parseD(d).getDay() + 6) % 7; }
   function reg(s, d) { return s && s.regHours ? (+s.regHours[dIdx(d)] || 0) : 0; }
   function ov() { return DB.calOv = DB.calOv || []; }
@@ -49,8 +51,8 @@
     seedLate();
     if (ME.type === 'admin') return sites();
     if (ME.type === 'firm') { var ts = typeof cjtTeamSites === 'function' ? cjtTeamSites() : null; return sites().filter(function (s) { return s.firmId === ME.id && (!ts || ts.indexOf(s.code) >= 0); }); }
-    if (isCleaner()) { var hx = typeof window.calHandSites === 'function' ? window.calHandSites(ME.id) : []; return sites().filter(function (s) { return (s.crew || []).indexOf(ME.id) >= 0 || hx.indexOf(s.code) >= 0; }); }   // + visits handed to me (approved)
-    if (ME.type === 'sub') { var ids = DB.users.filter(function (u) { return u.subId === ME.id; }).map(function (u) { return u.id; }); return sites().filter(function (s) { return (s.crew || []).some(function (i) { return ids.indexOf(i) >= 0; }); }); }
+    if (isCleaner()) { if (typeof window.cjActiveCleaner === 'function' && !window.cjActiveCleaner(ME)) return []; var hx = typeof window.calHandSites === 'function' ? window.calHandSites(ME.id) : []; return sites().filter(function (s) { return (s.crew || []).indexOf(ME.id) >= 0 || hx.indexOf(s.code) >= 0; }); }   // + visits handed to me (approved); inactive cleaners see no sites
+    if (ME.type === 'sub') { var ids = DB.users.filter(function (u) { return u.subId === ME.id && (typeof window.cjActiveCleaner !== 'function' || window.cjActiveCleaner(u)); }).map(function (u) { return u.id; }); return sites().filter(function (s) { return (s.crew || []).some(function (i) { return ids.indexOf(i) >= 0; }); }); }
     return [];
   }
   window.calCanSite = function (c) { return canSite(c); }; window.calCanVisit = function (v) { return canVisit(v); }; window.calMySitesFull = function () { return crewSites(); };
@@ -69,7 +71,7 @@
       if (!s.regHours) return;
       for (var d = from; d <= to; d = addDays(d, 1)) {
         var h = reg(s, d); if (!(h > 0)) continue;
-        var v = { id: s.code + '|' + d, site: s.code, name: s.name, date: d, orig: d, start: s.visitStart || '', hours: h, crew: (s.crew || []).length, status: 'scheduled' };
+        var v = { id: s.code + '|' + d, site: s.code, name: s.name, date: d, orig: d, start: s.visitStart || '', hours: h, crew: liveCrew(s).length, status: 'scheduled' };
         var o = ovFor(s.code, d), b = blockFor(s, d);
         if (o && o.type === 'cancel') { v.status = 'cancelled'; v.reason = o.reason; }
         else if (o && o.type === 'move') { v.status = 'moved'; v.movedTo = o.newDate; v.movedStart = o.newStart; }
@@ -82,7 +84,7 @@
     ov().forEach(function (o) {
       if (o.type !== 'move' || o.newDate < from || o.newDate > to || codes.indexOf(o.site) < 0) return;
       var s = site(o.site); if (!s) return;
-      var v = { id: o.site + '|' + o.date, site: o.site, name: s.name, date: o.newDate, orig: o.date, start: o.newStart || s.visitStart || '', hours: reg(s, o.date), crew: (s.crew || []).length, status: 'scheduled', movedFrom: o.date };
+      var v = { id: o.site + '|' + o.date, site: o.site, name: s.name, date: o.newDate, orig: o.date, start: o.newStart || s.visitStart || '', hours: reg(s, o.date), crew: liveCrew(s).length, status: 'scheduled', movedFrom: o.date };
       var b = blockFor(s, o.newDate); if (b) { v.status = 'blocked'; v.reason = b.note; }
       if (v.status === 'scheduled' && o.newDate < today()) v.done = doneFor(o.site, o.newDate) || 'Not marked';
       out.push(v);
@@ -94,7 +96,7 @@
   window.calVisits = function (from, to) { return visits(from, to, mySites()); };
   function viewSites() { var l = mySites(); return ST.site ? l.filter(function (s) { return s.code === ST.site; }) : l; }
   function findVisit(id, date) { var p = id.split('|'), s = site(p[0]); if (!s) return null; var l = visits(addDays(date, -1), addDays(date, 1), [s]).filter(function (v) { return v.id === id && v.date === date; }); return l[0] || null; }
-  function crewIds(code) { var s = site(code); return s ? (s.crew || []).slice() : []; }
+  function crewIds(code) { return liveCrew(site(code)); }
   function firmOf(code) { var s = site(code); return s ? s.firmId : null; }
   function reqNo() { DB.calSeq = (DB.calSeq || 0) + 1; return 'CR-' + String(DB.calSeq).padStart(4, '0'); }
   function setOv(o) { DB.calOv = ov().filter(function (x) { return !(x.site === o.site && x.date === o.date); }); if (o.type) DB.calOv.push(o); }
@@ -340,7 +342,7 @@
   /* ---------- sheets (modals) ---------- */
   function sheetVisit(v) {
     var s = site(v.site), firm = ME.type === 'firm', h = '<div class="calsheet" id="calsheet"><div class="calsheet-k c-' + cls(v) + '">' + esc(label(v)) + '</div><h2>' + esc(v.site) + ' · ' + esc(v.name) + '</h2>' +
-      '<div class="calfacts"><div><small>Date</small><b>' + dLong(v.date) + '</b></div><div><small>Time</small><b>' + (v.start ? t12(v.start) + (firm ? '' : ' – ' + t12(addH(v.start, v.hours))) : 'Not set') + '</b></div><div><small>' + (firm ? 'Service' : 'Crew hours') + '</small><b>' + (firm ? 'Regular cleaning' : hh(v.hours) + ' h') + '</b></div>' + (!firm || v.crew ? '<div><small>Cleaners</small><b>' + (firm ? v.crew + ' assigned' : (s.crew || []).map(function (i) { var u = user(i); return u ? esc(u.name) : '?'; }).join(', ') || 'None assigned') + '</b></div>' : '') + '</div>';
+      '<div class="calfacts"><div><small>Date</small><b>' + dLong(v.date) + '</b></div><div><small>Time</small><b>' + (v.start ? t12(v.start) + (firm ? '' : ' – ' + t12(addH(v.start, v.hours))) : 'Not set') + '</b></div><div><small>' + (firm ? 'Service' : 'Crew hours') + '</small><b>' + (firm ? 'Regular cleaning' : hh(v.hours) + ' h') + '</b></div>' + (!firm || v.crew ? '<div><small>Cleaners</small><b>' + (firm ? v.crew + ' assigned' : liveCrew(s).map(function (i) { var u = user(i); return u ? esc(u.name) : '?'; }).join(', ') || 'None assigned') + '</b></div>' : '') + '</div>';
     if (v.reason) h += '<p class="small muted">' + esc(v.reason) + '</p>';
     if (v.pending) h += '<p class="calmsg pend">Request ' + esc(v.pending.no) + ' is waiting for the office: ' + esc(desc(v.pending)) + '.</p>';
     if (firm) {
