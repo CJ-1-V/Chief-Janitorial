@@ -130,11 +130,16 @@
   /* re-draw the page in place (keeps the scroll position and the search box) */
   function refresh() {
     var el = document.getElementById('asg'); if (!el) return;
-    var focusQ = document.activeElement && document.activeElement.id === 'asgq', ol = document.getElementById('asglist'), op = document.getElementById('asgpeople');
+    var wx = window.scrollX || window.pageXOffset || 0, wy = window.scrollY || window.pageYOffset || 0;
+    var ae = document.activeElement, focusQ = ae && ae.id === 'asgq';
+    /* dropping the focused Put here / × button makes some browsers jump the window to the top */
+    if (ae && ae !== document.body && ae.blur && el.contains(ae)) { try { ae.blur(); } catch (e) {} }
+    var ol = document.getElementById('asglist'), op = document.getElementById('asgpeople');
     var sl = ol ? ol.scrollLeft : 0, pst = op ? op.scrollTop : 0;
     var t = document.createElement('div'); t.innerHTML = page(); el.parentNode.replaceChild(t.firstElementChild, el);
     var nl = document.getElementById('asglist'), pp = document.getElementById('asgpeople'); if (nl) nl.scrollLeft = sl; if (pp) pp.scrollTop = pst;
-    if (focusQ) { var q = document.getElementById('asgq'); if (q) { q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) {} } }
+    if (Math.abs((window.scrollY || 0) - wy) > 1 || Math.abs((window.scrollX || 0) - wx) > 1) window.scrollTo(wx, wy);
+    if (focusQ) { var q = document.getElementById('asgq'); if (q) { try { q.focus({ preventScroll: true }); } catch (e) { q.focus(); } try { q.setSelectionRange(q.value.length, q.value.length); } catch (e2) {} } }
   }
   function refreshList() { var l = document.getElementById('asglist'); if (l) l.innerHTML = peopleList(); }
 
