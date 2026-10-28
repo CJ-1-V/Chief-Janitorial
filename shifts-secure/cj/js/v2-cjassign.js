@@ -31,8 +31,9 @@
     var l = typeof companySites === 'function' ? companySites({ skipPractice: true }) : (DB.sites || []).filter(function (s) { return s.code !== 'TEST-PRACTICE'; });
     return l.slice().sort(function (a, b) { var x = a.active === false ? 1 : 0, y = b.active === false ? 1 : 0; return x - y || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0); });
   }
-  /* the cleaners who can be put on a site: active employees (cleaners) and subcontractor workers, no testers */
-  function listed(u) { return isCleaner(u) && !u.test && !u.anonymous && u.active !== false && !u.suspended && u.companyId !== 'us'; }
+  /* the cleaners who can be put on a site: employees and subcontractor workers the office has ticked Active
+     (v2-cjactive.js). Testers stay out. Someone already on a site but not active still renders (grey "not active"). */
+  function listed(u) { return isCleaner(u) && !u.test && !u.anonymous && u.active !== false && !u.suspended && (typeof window.cjActiveCleaner !== 'function' || window.cjActiveCleaner(u)); }
   function cleaners() { return (DB.users || []).filter(listed).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); }); }
   function crewOf(s) { return (s && Array.isArray(s.crew)) ? s.crew.slice() : []; }
   function sitesOf(uid) { return allSites().filter(function (s) { return crewOf(s).indexOf(uid) >= 0; }); }
@@ -226,7 +227,7 @@
           var code = (f.querySelector('input[name="site"]') || {}).value, s = site(code); if (!s) return;
           var lab = [].filter.call(f.querySelectorAll('label'), function (l) { return (l.textContent || '').trim() === 'Assigned cleaners'; })[0], box = lab && lab.parentNode; if (!box) return;
           var crew = crewOf(s);
-          box.innerHTML = '<label>Assigned cleaners</label><div class="asg-ro">' + (crew.length ? crew.map(function (id) { return '<span class="pill s-ok">' + E(nm(id)) + '</span>'; }).join(' ') : '<span class="pill s-warn">No cleaner yet</span>') + '</div><a class="small" href="' + ROUTE + '">Change on Site assignments →</a>' +
+          box.innerHTML = '<label>Assigned cleaners</label><div class="asg-ro">' + (crew.length ? crew.map(function (id) { var uu = U(id), off = uu && typeof window.cjActiveCleaner === 'function' && !window.cjActiveCleaner(uu); return '<span class="pill ' + (off ? 's-mut' : 's-ok') + '">' + E(nm(id)) + (off ? ' · not active' : '') + '</span>'; }).join(' ') : '<span class="pill s-warn">No cleaner yet</span>') + '</div><a class="small" href="' + ROUTE + '">Change on Site assignments →</a>' +
             crew.map(function (id) { return '<input type="hidden" name="crew[]" value="' + E(id) + '">'; }).join('');
         });
         x = t.innerHTML.replace('visit, and which cleaners are assigned to the site. One task per line.', 'visit. One task per line. Who cleans each site is set on <a href="' + ROUTE + '">Site assignments</a>.');
