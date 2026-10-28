@@ -61,7 +61,7 @@
       if (lab) lab.textContent = 'Your site';
       if (typeof ACT.picksite === 'function') ACT.picksite(tiles[0]);
     } else if (tiles.length <= 6) hide(search);
-    if (h1 && my.length) h1.insertAdjacentHTML('afterend', '<div class="small muted" id="mysite-line">' + (my.length === 1 ? 'Your site: <b>' + esc(my[0].code) + '</b>' + (my[0].name && my[0].name !== my[0].code ? ' · ' + esc(my[0].name) : '') + (summary(my[0]) ? ' · ' + esc(summary(my[0])) : '') : 'Your sites: <b>' + my.map(function (s) { return esc(s.code); }).join('</b>, <b>') + '</b>') + '</div>');
+    if (h1 && my.length) h1.insertAdjacentHTML('afterend', '<div class="small muted" id="mysite-line">' + (my.length === 1 ? 'Your site: <b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(my[0]) : my[0].code) + '</b>' + (summary(my[0]) ? ' · ' + esc(summary(my[0])) : '') : 'Your sites: <b>' + my.map(function (s) { return esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code); }).join('</b>, <b>') + '</b>') + '</div>');
   }
   var oar = afterRender;
   afterRender = function (root) { oar.apply(this, arguments); try { if (root && root.id === 'app' && emp(ME)) tidyClock(root); } catch (e) { try { console.warn('[cjmysite]', e); } catch (z) {} } };

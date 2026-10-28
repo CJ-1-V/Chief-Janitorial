@@ -211,12 +211,24 @@
     if (v.done) return v.done === 'Not marked' ? 'Past visit' : v.done;
     return 'Scheduled';
   }
+  function siteLab(v) {
+    var code = v && v.site ? v.site : (v && v.code ? v.code : v);
+    if (typeof cjSiteLabel === 'function') return cjSiteLabel(code);
+    var name = v && v.name;
+    return (name && name !== code) ? code + ' · ' + name : code;
+  }
+  function visHead(v) {
+    var lab = siteLab(v);
+    if (v.wax) return lab + ' · Waxing';
+    if (isCl()) return lab + ' · Regular cleaning';
+    return lab;
+  }
   function chip(v, big) {
-    return '<button type="button" class="calchip c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '"><b>' + esc(v.site) + '</b>' + (big ? '<span>' + (v.start ? t12(v.start) + ' · ' : '') + amt(v) + '</span><em>' + esc(label(v)) + '</em>' : (v.start && cls(v) !== 'off' ? '<span>' + t12(v.start) + '</span>' : '')) + '</button>';
+    return '<button type="button" class="calchip c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '"><b>' + esc(siteLab(v)) + '</b>' + (big ? '<span>' + (v.start ? t12(v.start) + ' · ' : '') + amt(v) + '</span><em>' + esc(label(v)) + '</em>' : (v.start && cls(v) !== 'off' ? '<span>' + t12(v.start) + '</span>' : '')) + '</button>';
   }
   function agendaRow(v) {
     return '<button type="button" class="calrow c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '"><span class="calbar"></span><span class="caltime">' + (v.start ? t12(v.start) : '–') + '<small>' + (isCl() ? '' : hh(v.hours) + ' h') + '</small></span>' +
-      '<span class="calwhat"><b>' + esc(v.site) + ' · ' + (v.wax ? 'Waxing' : isCl() ? 'Regular cleaning' : esc(v.name)) + '</b><small>' + esc(label(v)) + (v.crew && ME.type !== 'firm' ? '' : '') + '</small></span><span class="calgo">›</span></button>';
+      '<span class="calwhat"><b>' + esc(visHead(v)) + '</b><small>' + esc(label(v)) + (v.crew && ME.type !== 'firm' ? '' : '') + '</small></span><span class="calgo">›</span></button>';
   }
   function header(title) {
     var vs = [['month', 'Month'], ['week', 'Week'], ['day', 'Day']];
@@ -233,7 +245,7 @@
       if (i === 35 && out) break;
       g += '<button type="button" class="calcell' + (out ? ' out' : '') + (d === today() ? ' today' : '') + (d === ST.sel ? ' sel' : '') + '" data-act="calday" data-date="' + d + '" data-n="' + esc(l.length) + '"><span class="calnum">' + parseD(d).getDate() + '</span>' +
         '<span class="caldots">' + l.slice(0, 4).map(function (v) { return '<i class="c-' + cls(v) + '"></i>'; }).join('') + '</span>' +
-        '<span class="calchips">' + l.slice(0, 3).map(function (v) { return '<em class="c-' + cls(v) + '">' + esc(v.site) + '</em>'; }).join('') + (l.length > 3 ? '<em class="more">+' + (l.length - 3) + '</em>' : '') + '</span></button>';
+        '<span class="calchips">' + l.slice(0, 3).map(function (v) { return '<em class="c-' + cls(v) + '">' + esc(siteLab(v)) + '</em>'; }).join('') + (l.length > 3 ? '<em class="more">+' + (l.length - 3) + '</em>' : '') + '</span></button>';
     }
     g += '</div></div>';
     var sel = (by[ST.sel] || []);
@@ -258,7 +270,7 @@
     for (var h = h0; h < h1; h++) x += '<div class="calhr" style="top:' + ((h - h0) * px) + 'px"><span>' + t12(pad(h % 24) + ':00') + '</span></div>';
     if (d === today()) { var n = new Date(), nm = n.getHours() + n.getMinutes() / 60; if (nm >= h0 && nm <= h1) x += '<div class="calnow" style="top:' + ((nm - h0) * px) + 'px"></div>'; }
     var lanes = timed.filter(function (v) { return cls(v) !== 'off' && v.status !== 'moved'; });
-    lanes.forEach(function (v, i) { var a = +v.start.slice(0, 2) + (+v.start.slice(3, 5)) / 60; x += '<button type="button" class="calev c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '" style="top:' + ((a - h0) * px) + 'px;height:' + Math.max(28, v.hours * px - 4) + 'px;left:calc(64px + ' + (i % 3) * 4 + '%)"><b>' + esc(v.site) + ' · ' + (v.wax ? 'Waxing' : isCl() ? 'Regular cleaning' : esc(v.name)) + '</b><span>' + t12(v.start) + (v.wax ? ' · Waxing' : isCl() ? ' · Regular cleaning' : ' – ' + t12(addH(v.start, v.hours)) + ' · ' + hh(v.hours) + ' h') + (v.movedFrom ? ' · moved from ' + dShort(v.movedFrom) : '') + (v.pending ? ' · request pending' : '') + '</span></button>'; });
+    lanes.forEach(function (v, i) { var a = +v.start.slice(0, 2) + (+v.start.slice(3, 5)) / 60; x += '<button type="button" class="calev c-' + cls(v) + '" data-act="calvisit" data-id="' + esc(v.id) + '" data-date="' + esc(v.date) + '" style="top:' + ((a - h0) * px) + 'px;height:' + Math.max(28, v.hours * px - 4) + 'px;left:calc(64px + ' + (i % 3) * 4 + '%)"><b>' + esc(visHead(v)) + '</b><span>' + t12(v.start) + (v.wax ? ' · Waxing' : isCl() ? ' · Regular cleaning' : ' – ' + t12(addH(v.start, v.hours)) + ' · ' + hh(v.hours) + ' h') + (v.movedFrom ? ' · moved from ' + dShort(v.movedFrom) : '') + (v.pending ? ' · request pending' : '') + '</span></button>'; });
     if (!l.length) x += '<p class="muted calempty" style="position:absolute;top:40%;left:0;right:0;text-align:center">No cleaning scheduled.</p>';
     return x + '</div></div>';
   }
@@ -271,7 +283,7 @@
     else if (ST.view === 'week') { var s = addDays(ST.cur, -dIdx(ST.cur)), e = addDays(s, 6); title = MON[parseD(s).getMonth()].slice(0, 3) + ' ' + parseD(s).getDate() + ' – ' + (s.slice(5, 7) !== e.slice(5, 7) ? MON[parseD(e).getMonth()].slice(0, 3) + ' ' : '') + parseD(e).getDate() + ' <span>' + e.slice(0, 4) + '</span>'; }
     else title = DOW[dIdx(ST.cur)] + ' ' + MON[c.getMonth()].slice(0, 3) + ' ' + c.getDate() + ' <span>' + c.getFullYear() + '</span>';
     var filt = '';
-    if (ME.type === 'admin' || mySites().length > 1) filt = '<div class="calfilter"><label class="small muted" for="calsite">Site</label><select id="calsite" data-calsite="1"><option value="">All ' + (ME.type === 'admin' ? 'sites' : 'my sites') + ' (' + mySites().length + ')</option>' + mySites().map(function (s) { return '<option value="' + esc(s.code) + '"' + (ST.site === s.code ? ' selected' : '') + '>' + esc(s.code + ' – ' + s.name) + '</option>'; }).join('') + '</select></div>';
+    if (ME.type === 'admin' || mySites().length > 1) filt = '<div class="calfilter"><label class="small muted" for="calsite">Site</label><select id="calsite" data-calsite="1"><option value="">All ' + (ME.type === 'admin' ? 'sites' : 'my sites') + ' (' + mySites().length + ')</option>' + mySites().map(function (s) { return '<option value="' + esc(s.code) + '"' + (ST.site === s.code ? ' selected' : '') + '>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)) + '</option>'; }).join('') + '</select></div>';
     var body = ST.view === 'month' ? monthView() : ST.view === 'week' ? weekView() : dayView();
     return '<div class="card calwrap cal-' + esc(ST.view) + '" id="calwrap" data-view="' + esc(ST.view) + '">' + header(title) + filt + '<div class="calbody" id="calbody">' + body + '</div>' + legend() + (opts.foot || '') + '</div>';
   }
@@ -292,7 +304,7 @@
     var plan = live.filter(function (v) { return cls(v) !== 'off'; }).reduce(function (a, v) { return a + v.hours; }, 0), got = done.reduce(function (a, v) { return a + v.hours; }, 0), pct = plan ? Math.min(100, Math.round(got / plan * 100)) : 0;
     var open = reqs().filter(function (r) { return r.firmId === ME.id; });
     var x = '<div class="caldash" id="caldash">';
-    x += '<div class="calhero" id="calnext"><div class="calhero-k">Next cleaning ' + testTag() + '</div>' + (nx ? '<div class="calhero-d">' + dLong(nx.date) + '</div><div class="calhero-t">' + (nx.start ? t12(nx.start) : 'Time not set') + '</div><div class="calhero-m"><span>' + esc(nx.site) + ' · ' + esc(nx.name) + '</span><span>Regular cleaning</span>' + (nx.crew ? '<span>' + nx.crew + ' cleaner' + (nx.crew > 1 ? 's' : '') + ' assigned</span>' : '') + (lead(nx.date) === 0 ? '<span>Today</span>' : lead(nx.date) === 1 ? '<span>Tomorrow</span>' : '<span>in ' + lead(nx.date) + ' days</span>') + '</div>' + (nx.movedFrom ? '<div class="calhero-n">Moved from ' + dShort(nx.movedFrom) + '</div>' : '') : '<div class="calhero-d">No cleaning scheduled</div><div class="calhero-m"><span>' + (my.length ? 'Your sites have no upcoming regular visits.' : 'No sites on your account yet.') + '</span></div>') +
+    x += '<div class="calhero" id="calnext"><div class="calhero-k">Next cleaning ' + testTag() + '</div>' + (nx ? '<div class="calhero-d">' + dLong(nx.date) + '</div><div class="calhero-t">' + (nx.start ? t12(nx.start) : 'Time not set') + '</div><div class="calhero-m"><span>' + esc(siteLab(nx)) + '</span><span>Regular cleaning</span>' + (nx.crew ? '<span>' + nx.crew + ' cleaner' + (nx.crew > 1 ? 's' : '') + ' assigned</span>' : '') + (lead(nx.date) === 0 ? '<span>Today</span>' : lead(nx.date) === 1 ? '<span>Tomorrow</span>' : '<span>in ' + lead(nx.date) + ' days</span>') + '</div>' + (nx.movedFrom ? '<div class="calhero-n">Moved from ' + dShort(nx.movedFrom) + '</div>' : '') : '<div class="calhero-d">No cleaning scheduled</div><div class="calhero-m"><span>' + (my.length ? 'Your sites have no upcoming regular visits.' : 'No sites on your account yet.') + '</span></div>') +
       '<div class="calhero-a"><button type="button" class="small" data-act="calblock">No cleaners on these dates</button></div></div>';
     x += '<div class="caltiles">';
     var sched = live.filter(function (v) { return cls(v) !== 'off'; }).length, vp = sched ? Math.min(100, Math.round(done.length / sched * 100)) : 0;
@@ -341,7 +353,7 @@
 
   /* ---------- sheets (modals) ---------- */
   function sheetVisit(v) {
-    var s = site(v.site), firm = ME.type === 'firm', h = '<div class="calsheet" id="calsheet"><div class="calsheet-k c-' + cls(v) + '">' + esc(label(v)) + '</div><h2>' + esc(v.site) + ' · ' + esc(v.name) + '</h2>' +
+    var s = site(v.site), firm = ME.type === 'firm', h = '<div class="calsheet" id="calsheet"><div class="calsheet-k c-' + cls(v) + '">' + esc(label(v)) + '</div><h2>' + esc(visHead(v)) + '</h2>' +
       '<div class="calfacts"><div><small>Date</small><b>' + dLong(v.date) + '</b></div><div><small>Time</small><b>' + (v.start ? t12(v.start) + (firm ? '' : ' – ' + t12(addH(v.start, v.hours))) : 'Not set') + '</b></div><div><small>' + (firm ? 'Service' : 'Crew hours') + '</small><b>' + (firm ? 'Regular cleaning' : hh(v.hours) + ' h') + '</b></div>' + (!firm || v.crew ? '<div><small>Cleaners</small><b>' + (firm ? v.crew + ' assigned' : liveCrew(s).map(function (i) { var u = user(i); return u ? esc(u.name) : '?'; }).join(', ') || 'None assigned') + '</b></div>' : '') + '</div>';
     if (v.reason) h += '<p class="small muted">' + esc(v.reason) + '</p>';
     if (v.pending) h += '<p class="calmsg pend">Request ' + esc(v.pending.no) + ' is waiting for the office: ' + esc(desc(v.pending)) + '.</p>';
@@ -371,14 +383,14 @@
     var min = addDays(today(), LEAD), my = mySites(); from = from && from >= min ? from : '';
     return '<div class="calsheet" id="calsheet"><h2>No cleaners on these dates</h2><p class="small muted">Pick one day or a range. At least ' + LEAD + ' days’ notice (earliest ' + dLong(min) + ').</p>' +
       '<form data-form="calreq" id="calblockform"><input type="hidden" name="kind" value="block"><div class="calfacts2"><label>First day<input type="date" name="from" min="' + min + '" value="' + from + '" required data-callead="1"></label><label>Last day<input type="date" name="to" min="' + min + '" value="' + from + '" data-callead="1"></label></div>' +
-      '<fieldset class="calsites"><legend class="small muted">Sites</legend>' + my.map(function (s) { return '<label class="calck"><input type="checkbox" name="site_' + esc(s.code) + '" value="1" checked> ' + esc(s.code + ' – ' + s.name) + '</label>'; }).join('') + '</fieldset>' +
+      '<fieldset class="calsites"><legend class="small muted">Sites</legend>' + my.map(function (s) { return '<label class="calck"><input type="checkbox" name="site_' + esc(s.code) + '" value="1" checked> ' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)) + '</label>'; }).join('') + '</fieldset>' +
       '<label>Reason (optional)<textarea name="note" maxlength="300" placeholder="e.g. holiday closure"></textarea></label><p class="calmsg bad" id="callead" hidden></p><p class="calmsg info" id="calpricenote">Your monthly price stays the same.</p>' +
       '<p class="small muted">' + (auto() ? 'This applies right away and the office and cleaners are told.' : 'The office will approve or decline it.') + '</p><div class="calacts"><button type="submit">Save – no cleaners</button><button type="button" class="sec" data-act="closeModal">Back</button></div></form></div>';
   }
   function sheetPick() {
     var t = today(), l = visits(addDays(t, LEAD), addDays(t, 60), mySites()).filter(function (v) { return v.status === 'scheduled' && !v.pending; }).slice(0, 80);
     return '<div class="calsheet" id="calsheet"><h2>Request a day change of cleaning</h2><p class="small muted">Pick the cleaning to move, then the new day. At least ' + LEAD + ' days’ notice. The office approves day changes. For anything sooner, contact the office: ' + esc(CO().phoneShort || '902-200-4888') + '.</p>' +
-      '<form data-form="calreq" id="calpickform"><input type="hidden" name="kind" value="change"><label>Cleaning to move<select name="visit" required>' + (l.length ? l.map(function (v) { return '<option value="' + esc(v.site + '|' + v.orig) + '">' + esc(dShort(v.date) + (v.start ? ' ' + t12(v.start) : '') + ' – ' + v.site + ' · ' + v.name) + '</option>'; }).join('') : '<option value="">No cleanings 3+ days ahead</option>') + '</select></label>' +
+      '<form data-form="calreq" id="calpickform"><input type="hidden" name="kind" value="change"><label>Cleaning to move<select name="visit" required>' + (l.length ? l.map(function (v) { return '<option value="' + esc(v.site + '|' + v.orig) + '">' + esc(dShort(v.date) + (v.start ? ' ' + t12(v.start) : '') + ' – ' + siteLab(v)) + '</option>'; }).join('') : '<option value="">No cleanings 3+ days ahead</option>') + '</select></label>' +
       '<div class="calfacts2"><label>New day<input type="date" name="newDate" min="' + addDays(t, LEAD) + '" required data-callead="1"></label><label>Start time<input type="time" name="newStart"></label></div>' +
       '<label>Note to the office (optional)<textarea name="note" maxlength="300"></textarea></label><p class="calmsg bad" id="callead" hidden></p>' +
       '<div class="calacts"><button type="submit">Send request</button><button type="button" class="sec" data-act="closeModal">Back</button></div></form></div>';

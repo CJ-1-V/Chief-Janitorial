@@ -73,7 +73,7 @@ var DOCS={
 };
 var JOB_TITLES=['Cleaner','Lead cleaner','Supervisor','Site lead','Driver'];
 var SITES=['CJC101','CJC102','CJC110','CJC120'];  /* Good\'s, Kinlock, Shoppers, TD – fake coverage names */
-function siteName(code){var s=(DB.sites||[]).filter(function(x){return x.code===code;})[0];return s?s.code+' – '+s.name:code;}
+function siteName(code){if(typeof cjSiteLabel==='function')return cjSiteLabel(code);var s=(DB.sites||[]).filter(function(x){return x.code===code;})[0];if(!s)return code;return (s.name&&s.name!==s.code)?(s.code+' – '+s.name):s.code;}
 function siteFirm(code){var s=(DB.sites||[]).filter(function(x){return x.code===code;})[0];return s?user(s.firmId):null;}
 function firmName(code){var f=siteFirm(code);return f?f.name:(code==='TEST-PRACTICE'?'Practice client (TEST)':'');}
 var LANGS=['English','French','Spanish','Tagalog','Other'];

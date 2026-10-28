@@ -30,7 +30,7 @@
   function jobsToBill(firm, m) { return (DB.cleanRequests || []).filter(function (r) { return r.firmId === firm.id && r.special && r.status === 'Done' && r.actual && !r.billedInv && (r.doneDate || '') <= mEnd(m); }); }
   function spLine(r) { return { id: r.id, no: r.no, kind: r.kind, site: r.site, date: r.doneDate, people: r.actual.people, hoursPer: r.actual.hoursPer, rate: r.actual.rate, amount: r.actual.amount }; }
   function spText(l) { return 'Special job ' + l.no + ' – ' + l.kind + ', ' + l.site + ', ' + l.date + ': ' + l.people + ' × ' + shH(l.hoursPer) + ' h × ' + money(l.rate); }
-  function siteLineLabel(l) { return l.site + ' – Regular cleaning, ' + l.month; }   // calendar1 Oct 21: owner wording
+  function siteLineLabel(l) { var lab = (typeof cjSiteLabel === 'function') ? cjSiteLabel(l.site) : l.site; return lab + ' – Regular cleaning, ' + l.month; }   // owner sees CODE · ownerName; everyone else the code
   function calc(firm, m) {
     // golive2: switched-off sites (active === false, e.g. not started yet / on hold) are NOT billed
     var all = fSites(firm), off = all.filter(function (s) { return s.active === false; }).map(function (s) { return s.code; });
@@ -84,7 +84,7 @@
       x = x.replace('<th>Bill rate</th>', '<th>Monthly amounts</th>');
       x = x.replace(/<td><form data-form="firmrate" class="row"><input type="hidden" name="id" value="([^"]+)">[\s\S]*?<\/form><\/td>/g, function (all, id) {
         var f = user(id), S = f ? fSites(f) : [];
-        return '<td class="small cjm-firmamts">' + (S.length ? S.map(function (s) { return esc(s.code) + ': ' + amtHtml(s); }).join('<br>') : '<span class="muted">No sites</span>') + '<div><a href="#/sitehours">Set →</a></div></td>';
+        return '<td class="small cjm-firmamts">' + (S.length ? S.map(function (s) { return esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + ': ' + amtHtml(s); }).join('<br>') : '<span class="muted">No sites</span>') + '<div><a href="#/sitehours">Set →</a></div></td>';
       });
       x = x.replace(/<button class="small sec" data-act="farmbilling" data-id="[^"]+">Billing by day<\/button>/g, '');
       x = x.replace(/Set regular hours per site →/g, 'Set regular hours &amp; monthly amounts per site →');
@@ -111,7 +111,7 @@
     else { var C = calc(firm, m); S = C.sites; J = C.jobs; sub = C.sub; hst = C.hst; total = C.total; on = C.on; note = m === cur ? 'Estimate – your invoice is made after the month ends. Special jobs are added once they are done.' : 'Not invoiced yet.'; }
     x += S.map(function (l) {
       var val = l.unset && !(l.adjNote) ? '<span class="pill s-warn">Not set</span>' : money(l.amount) + (l.test ? ' <span class="pill s-test">TEST</span>' : '');
-      return row(esc(l.site) + ' – ' + esc(l.name), (l.mode === 'flat_monthly' ? 'Flat monthly contract price · ' : 'Regular cleaning · ') + esc(l.month) + (l.adjNote ? ' · adjusted: ' + esc(l.adjNote) : '') + (l.unset && !l.adjNote ? ' · the office has not set this amount yet' : ''), val, 'cjm-site');
+      return row(esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(l.site) : (l.name && l.name !== l.site ? l.site + ' – ' + l.name : l.site)), (l.mode === 'flat_monthly' ? 'Flat monthly contract price · ' : 'Regular cleaning · ') + esc(l.month) + (l.adjNote ? ' · adjusted: ' + esc(l.adjNote) : '') + (l.unset && !l.adjNote ? ' · the office has not set this amount yet' : ''), val, 'cjm-site');
     }).join('');
     x += J.map(function (l) { return row('Special job ' + esc(l.no) + ' – ' + esc(l.kind), esc(l.site) + ' · ' + esc(shortDay(l.date)) + ' · ' + l.people + ' ' + (l.people === 1 ? 'person' : 'people') + ' × ' + shH(l.hoursPer) + ' h × ' + money(l.rate), money(l.amount), 'cjm-sp'); }).join('');
     x += (inv && inv.siteLines ? inv.extraLines || [] : []).map(function (l) { return row(esc(l.desc), 'Extra work · ' + l.qty + ' × ' + money(l.unit), money(l.amount), 'cjm-sp cjf-extra'); }).join('');  // flatmonthly1
@@ -211,7 +211,7 @@
         if (!i.siteLines || (firm && i.firmId !== firm.id)) return;
         var cells = i.siteLines.map(function (l, k) {
           var unset = l.unset && !l.adjNote;
-          return '<span class="cjm-line' + (unset ? ' unset' : '') + '" data-site="' + esc(l.site) + '">' + esc(l.site) + ': ' + (unset ? '<span class="pill s-warn">Not set</span>' : '<b>' + money(l.amount) + '</b>') + (l.adjNote ? ' <span class="pill s-pend" title="' + esc(l.adjNote) + '">adjusted</span>' : '') +
+          return '<span class="cjm-line' + (unset ? ' unset' : '') + '" data-site="' + esc(l.site) + '">' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(l.site) : l.site) + ': ' + (unset ? '<span class="pill s-warn">Not set</span>' : '<b>' + money(l.amount) + '</b>') + (l.adjNote ? ' <span class="pill s-pend" title="' + esc(l.adjNote) + '">adjusted</span>' : '') +
             (i.paidAt ? '' : ' <button type="button" class="small sec" data-act="cjmadj" data-id="' + esc(i.id) + '" data-k="' + k + '">Adjust</button>') + '</span>';
         }).join('');
         var extra = '<tr class="cjmlines"><td colspan="12" class="small"><b>' + esc(mLabel(i.month || i.periodStart.slice(0, 7))) + ' – site lines:</b> ' + cells +
