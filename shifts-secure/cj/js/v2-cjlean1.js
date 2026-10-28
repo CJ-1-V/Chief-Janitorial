@@ -85,7 +85,7 @@
   VIEWS['admin:dayvisits'] = function () {
     var d = PAGE_STATE.lnDay || today(), rows = [];
     sites().forEach(function (s) {
-      var r = reg(s.code, d), crew = s.crew || [], ls = logs().filter(function (l) { return l.site === s.code && l.date === d; });
+      var r = reg(s.code, d), crew = (s.crew || []).filter(function (id) { var u = user(id); return typeof window.cjActiveCleaner !== 'function' || window.cjActiveCleaner(u); }), ls = logs().filter(function (l) { return l.site === s.code && l.date === d; });
       if (!r && !ls.length) return;
       var ids = crew.slice(); ls.forEach(function (l) { if (ids.indexOf(l.userId) < 0) ids.push(l.userId); });
       if (!ids.length) rows.push({ s: s, r: r, uid: null, l: null });
@@ -103,7 +103,7 @@
   ACT.lndayset = function (el) { PAGE_STATE.lnDay = el.dataset.d; render(); };
   document.addEventListener('change', function (e) { if (e.target && e.target.id === 'lnday' && e.target.value) { PAGE_STATE.lnDay = e.target.value; render(); } });
   VIEWS['admin:checklists'] = function () {
-    var cl = DB.users.filter(function (u) { return isCleaner(u) && !u.test && u.companyId !== 'us'; });
+    var cl = DB.users.filter(function (u) { return isCleaner(u) && !u.test && (typeof window.cjActiveCleaner !== 'function' || window.cjActiveCleaner(u)); });
     return '<h1>Site checklists</h1><p class="muted">The short checklist a cleaner sees for each visit, and which cleaners are assigned to the site. One task per line. Leave empty to use the default list.</p>' +
       sites().map(function (s) {
         return '<div class="card lnedit" data-site="' + esc(s.code) + '"><form data-form="lnsave"><input type="hidden" name="site" value="' + esc(s.code) + '"><h3 style="margin-top:0">' + esc(s.code) + ' · ' + esc(s.name) + '</h3>' +
@@ -116,6 +116,7 @@
     var s = site(d.site); if (!s) return;
     var t = String(d.tasks || '').split('\n').map(function (x) { return x.trim().slice(0, 120); }).filter(Boolean).slice(0, 15);
     var crew = (d.crew || []).filter(function (id) { return isCleaner(user(id)); });
+    (s.crew || []).forEach(function (id) { var u = user(id); if (u && typeof window.cjActiveCleaner === 'function' && !window.cjActiveCleaner(u) && crew.indexOf(id) < 0) crew.push(id); });
     s.checklist = t.length && t.join('|') !== LN_DEFAULT.join('|') ? t : null; s.crew = crew;
     audit('Site checklist saved', s.code, tasks(s).length + ' tasks, ' + crew.length + ' cleaner(s) assigned'); save(); toast(s.code + ' checklist saved ✓'); render();
   };
