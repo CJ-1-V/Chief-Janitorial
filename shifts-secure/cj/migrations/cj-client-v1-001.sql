@@ -482,7 +482,12 @@ as $$
       end as marked_at,
       left(coalesce(v.data->>'note', ''), 500) as note,
       coalesce(nullif(v.data->>'userId', ''), 'log:' || v.id::text) as person_ref,
-      v.data->'tasks' as ticked,
+      -- A plain string (or any non-array) must not be expanded. jsonb_array_elements
+      -- errors with "cannot extract elements from a scalar" on those values.
+      case
+        when jsonb_typeof(v.data->'tasks') = 'array' then v.data->'tasks'
+        else '[]'::jsonb
+      end as ticked,
       case
         when jsonb_typeof(site.checklist) = 'array' and jsonb_array_length(site.checklist) > 0
           then site.checklist

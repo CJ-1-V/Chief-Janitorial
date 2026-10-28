@@ -219,6 +219,22 @@ test('extra name, pay and rate fields on a payload are dropped', function () {
   assert.ok(blob.indexOf('27.65') < 0);
 });
 
+test('a checklist tasks value that is a plain string is an empty list', function () {
+  const data = demo.dataset(ASOF);
+  const row = data.checklists.filter(function (c) { return c.id === 'c-n3'; })[0];
+  row.tasks = 'Pat Hiddenworker left this in the tasks field';
+  const north = model.buildPortal(data, 'demo-north');
+  const partial = north.checklists.filter(function (c) { return c.checklist_id === 'c-n3'; })[0];
+  assert.ok(partial);
+  assert.deepEqual(partial.tasks, []);
+  const html = model.renderData(north, 'checklists');
+  assert.ok(html.indexOf('Pat Hiddenworker') < 0);
+  assert.ok(html.indexOf('cannot extract elements from a scalar') < 0);
+  const sql = fs.readFileSync(SQL, 'utf8');
+  assert.ok(/jsonb_typeof\(v\.data->'tasks'\) = 'array'/.test(sql));
+  assert.ok(/else '\[\]'::jsonb/.test(sql));
+});
+
 test('a new invoice shows the stored email copy, and an older invoice is not rewritten', function () {
   const data = demo.dataset(ASOF);
   const north = model.buildPortal(data, 'demo-north');

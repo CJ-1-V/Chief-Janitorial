@@ -219,7 +219,7 @@
           marked_at: c.at || null,
           crew_label: crew[c.site + '|' + c.date + '|' + c.workerId] || 'Cleaner',
           note: scrubNames(c.note, data),
-          tasks: (c.tasks || []).map(function (t) {
+          tasks: (Array.isArray(c.tasks) ? c.tasks : []).map(function (t) {
             return { label: t.label, result: t.done ? 'Done' : 'Not done' };
           })
         };
