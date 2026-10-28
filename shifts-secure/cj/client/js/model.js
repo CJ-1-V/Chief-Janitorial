@@ -17,6 +17,7 @@
     'cj_client_v1_whoami',
     'cj_client_v1_sites',
     'cj_client_v1_visits',
+    'cj_client_v1_supervisor_checks',
     'cj_client_v1_hours',
     'cj_client_v1_checklists',
     'cj_client_v1_requests',
@@ -166,9 +167,28 @@
           visit_date: v.date,
           start_time: v.start,
           end_time: v.end,
+          hours_on_site: hoursOnSite(v.start, v.end),
           crew_label: crew[v.site + '|' + v.date + '|' + v.workerId] || 'Cleaner'
         };
       }).sort(sortVisits);
+    }
+
+    if (name === 'cj_client_v1_supervisor_checks') {
+      return (data.supervisorChecks || []).filter(function (c) {
+        return c.clientId === clientId && inRange(c.date, period) && siteOf(client, c.site);
+      }).map(function (c) {
+        var site = siteOf(client, c.site);
+        return {
+          check_id: c.id,
+          site_code: site.code,
+          site_name: site.name,
+          visit_date: c.date,
+          role_label: 'Supervisor'
+        };
+      }).sort(function (a, b) {
+        if (a.visit_date !== b.visit_date) return a.visit_date < b.visit_date ? 1 : -1;
+        return a.site_code < b.site_code ? -1 : a.site_code > b.site_code ? 1 : 0;
+      });
     }
 
     if (name === 'cj_client_v1_hours') {
@@ -302,6 +322,7 @@
       sites: [],
       visits: [],
       hours: [],
+      supervisor_checks: [],
       checklists: [],
       requests: [],
       invoices: []
@@ -325,7 +346,20 @@
         visit_date: day,
         start_time: start,
         end_time: end,
+        hours_on_site: hoursOnSite(start, end),
         crew_label: crewOk(r.crew_label)
+      });
+    });
+
+    (bundle.supervisor_checks || []).forEach(function (r) {
+      var code = siteCode(r && r.site_code), day = dateOk(r && r.visit_date);
+      if (!code || !day) return;
+      view.supervisor_checks.push({
+        check_id: textOk(r.check_id, 40),
+        site_code: code,
+        site_name: textOk(r.site_name || code, 160),
+        visit_date: day,
+        role_label: 'Supervisor'
       });
     });
 
@@ -491,9 +525,14 @@
         '<div class="card-top"><div><p class="kicker">' + esc(longDay(r.visit_date)) + '</p>' +
         '<h2>' + esc(r.site_code) + ' · ' + esc(r.site_name) + '</h2></div>' +
         '<b class="when">' + esc(r.start_time) + '–' + esc(r.end_time) + '</b></div>' +
-        '<p class="meta"><span class="role">' + esc(r.crew_label) + '</span></p></article>';
+        '<p class="meta"><span class="role">' + esc(r.crew_label) + '</span><span class="onsite" data-hours="' + esc(hoursText(r.hours_on_site)) + '">' + esc(hoursText(r.hours_on_site)) + ' on site</span></p></article>';
     }).join('') : empty('No visits in this period.');
-    return '<h1>Visits</h1><p class="lead">Arrival and departure at your sites. ' + periodLine(view) + '.</p>' + body;
+    var checks = view.supervisor_checks || [];
+    var list = checks.length ? '<ul class="sup-list" id="supervisor-checks">' + checks.map(function (c) {
+      return '<li data-site="' + esc(c.site_code) + '" data-role="Supervisor"><span>' + esc(longDay(c.visit_date)) + '</span><span>' + esc(c.site_code) + ' · ' + esc(c.site_name) + '</span><b class="role">Supervisor</b></li>';
+    }).join('') + '</ul>' : empty('No supervisor check visits in this period.');
+    return '<h1>Visits</h1><p class="lead">Arrival, departure, and time on site (clock-in to clock-out). ' + periodLine(view) + '.</p>' + body +
+      '<h2>Supervisor check visits</h2><p class="lead">Each row is the date and the role Supervisor.</p>' + list;
   }
 
   function renderHours(view) {
@@ -651,6 +690,11 @@
       if (w.name) list.push(w.name);
       if (w.payCode) list.push(w.payCode);
       moneyForms(w.payRate).forEach(function (x) { list.push(x); });
+    });
+    (data.supervisorChecks || []).forEach(function (c) {
+      if (c.supervisorName) list.push(c.supervisorName);
+      if (c.payCode) list.push(c.payCode);
+      moneyForms(c.payRate).forEach(function (x) { list.push(x); });
     });
     (data.clients || []).forEach(function (c) {
       if (c.rateCode) list.push(c.rateCode);

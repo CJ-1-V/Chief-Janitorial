@@ -303,6 +303,7 @@ returns table(
   visit_date date,
   start_time text,
   end_time text,
+  hours_on_site numeric,
   crew_label text
 )
 language sql
@@ -345,6 +346,7 @@ as $$
       and (t.data->>'date')::date between w.d1 and w.d2
       and public.cj_client_v1_hhmm(t.data->>'in') is not null
       and public.cj_client_v1_hhmm(t.data->>'out') is not null
+      and coalesce(t.data->>'visitKind', '') <> 'supervisor-check'
   )
   select
     c.visit_id,
@@ -353,6 +355,13 @@ as $$
     c.visit_date,
     c.start_time,
     c.end_time,
+    round((
+      case
+        when public.cj_client_v1_minutes(c.end_time) >= public.cj_client_v1_minutes(c.start_time)
+          then public.cj_client_v1_minutes(c.end_time) - public.cj_client_v1_minutes(c.start_time)
+        else public.cj_client_v1_minutes(c.end_time) - public.cj_client_v1_minutes(c.start_time) + 1440
+      end
+    )::numeric / 60, 2),
     coalesce(k.crew_label, 'Cleaner')
   from clocked c
   left join public.cj_client_v1_crew_labels((select w.d1 from win w), (select w.d2 from win w)) k
@@ -379,9 +388,6 @@ stable
 security definer
 set search_path = public
 as $$
-  with visits as (
-    select * from public.cj_client_v1_visits(p_from, p_to)
-  )
   select
     v.visit_id,
     v.site_code,
@@ -389,16 +395,50 @@ as $$
     v.visit_date,
     v.start_time,
     v.end_time,
-    round((
-      case
-        when public.cj_client_v1_minutes(v.end_time) >= public.cj_client_v1_minutes(v.start_time)
-          then public.cj_client_v1_minutes(v.end_time) - public.cj_client_v1_minutes(v.start_time)
-        else public.cj_client_v1_minutes(v.end_time) - public.cj_client_v1_minutes(v.start_time) + 1440
-      end
-    )::numeric / 60, 2) as hours_on_site,
+    v.hours_on_site,
     v.crew_label
-  from visits v
-  order by v.visit_date desc, v.site_code, v.start_time, v.visit_id;
+  from public.cj_client_v1_visits(p_from, p_to) v;
+$$;
+
+-- Supervisor checks are time rows with data.visitKind = 'supervisor-check'.
+-- The function returns the date, the site, and the label Supervisor.
+-- It does not return the person's name, id, clock times, or pay.
+create or replace function public.cj_client_v1_supervisor_checks(p_from date default null, p_to date default null)
+returns table(
+  check_id text,
+  site_code text,
+  site_name text,
+  visit_date date,
+  role_label text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select coalesce(p_from, (current_date - 21)) as d1, coalesce(p_to, current_date) as d2
+  ),
+  win as (
+    select d1, d2 from bounds where d1 <= d2 and (d2 - d1) <= 400
+  )
+  select
+    t.id::text,
+    s.site_code,
+    s.site_name,
+    (t.data->>'date')::date,
+    'Supervisor'::text
+  from public.reg_time_entries t
+  join win w on true
+  join public.cj_client_v1_own_sites() s
+    on s.site_code = coalesce(nullif(t.data->>'site', ''), '')
+  where t.company_id = 'cj'
+    and t.data->>'visitKind' = 'supervisor-check'
+    and coalesce(t.data->>'test', '') <> 'true'
+    and (t.data->>'date') ~ '^\d{4}-\d{2}-\d{2}$'
+    and (t.data->>'date')::date between w.d1 and w.d2
+  order by (t.data->>'date')::date desc, s.site_code, t.id::text
+  limit 500;
 $$;
 
 create or replace function public.cj_client_v1_checklists(p_from date default null, p_to date default null)
@@ -636,7 +676,9 @@ comment on function public.cj_client_v1_whoami() is
 comment on function public.cj_client_v1_sites() is
   'CJ client portal v1. Site code and site name for the caller only. Omits ownerName.';
 comment on function public.cj_client_v1_visits(date, date) is
-  'CJ client portal v1. Visit date and clock times. Crew label only, no person id.';
+  'CJ client portal v1. Visit date, clock times, and hours on site. Crew label only, no person id. Skips supervisor-check rows.';
+comment on function public.cj_client_v1_supervisor_checks(date, date) is
+  'CJ client portal v1. Supervisor check visits for the caller''s sites: date and the label Supervisor. No name and no pay.';
 comment on function public.cj_client_v1_hours(date, date) is
   'CJ client portal v1. Hours on site from clock in to clock out. No pay and no rates.';
 comment on function public.cj_client_v1_checklists(date, date) is
@@ -655,6 +697,7 @@ revoke all on function public.cj_client_v1_crew_labels(date, date) from public, 
 revoke all on function public.cj_client_v1_whoami() from public, anon, authenticated;
 revoke all on function public.cj_client_v1_sites() from public, anon, authenticated;
 revoke all on function public.cj_client_v1_visits(date, date) from public, anon, authenticated;
+revoke all on function public.cj_client_v1_supervisor_checks(date, date) from public, anon, authenticated;
 revoke all on function public.cj_client_v1_hours(date, date) from public, anon, authenticated;
 revoke all on function public.cj_client_v1_checklists(date, date) from public, anon, authenticated;
 revoke all on function public.cj_client_v1_requests() from public, anon, authenticated;
@@ -663,6 +706,7 @@ revoke all on function public.cj_client_v1_invoices() from public, anon, authent
 grant execute on function public.cj_client_v1_whoami() to authenticated;
 grant execute on function public.cj_client_v1_sites() to authenticated;
 grant execute on function public.cj_client_v1_visits(date, date) to authenticated;
+grant execute on function public.cj_client_v1_supervisor_checks(date, date) to authenticated;
 grant execute on function public.cj_client_v1_hours(date, date) to authenticated;
 grant execute on function public.cj_client_v1_checklists(date, date) to authenticated;
 grant execute on function public.cj_client_v1_requests() to authenticated;

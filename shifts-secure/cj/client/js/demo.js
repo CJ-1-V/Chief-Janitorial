@@ -113,6 +113,11 @@
         { id: 'v-old', clientId: 'demo-north', site: 'NSP-01', date: old, start: '09:00', end: '10:00', workerId: 'w-hidden-1', payRate: 18.75, billRate: 24.50 },
         { id: 'v-h1', clientId: 'demo-harbour', site: 'HSC-01', date: d2, start: '19:00', end: '22:30', workerId: 'w-hidden-2', payRate: 19.40, billRate: 31.75 }
       ],
+      supervisorChecks: [
+        { id: 'sc-n1', clientId: 'demo-north', site: 'NSP-01', date: d2, supervisorName: 'Alex Hiddensupervisor', payRate: 27.65, payCode: 'SUP-PAY-2765' },
+        { id: 'sc-n2', clientId: 'demo-north', site: 'NSP-02', date: d1, supervisorName: 'Alex Hiddensupervisor', payRate: 27.65, payCode: 'SUP-PAY-2765' },
+        { id: 'sc-h1', clientId: 'demo-harbour', site: 'HSC-01', date: d2, supervisorName: 'Alex Hiddensupervisor', payRate: 27.65, payCode: 'SUP-PAY-2765' }
+      ],
       checklists: [
         { id: 'c-n1', clientId: 'demo-north', site: 'NSP-01', date: d2, workerId: 'w-hidden-1', status: 'Done', at: d2 + 'T21:28:00', note: 'Supply closet was low on liners.', tasks: tasks([0, 1, 2, 3, 4, 5]) },
         { id: 'c-n2', clientId: 'demo-north', site: 'NSP-01', date: d2, workerId: 'w-hidden-2', status: 'Done', at: d2 + 'T21:10:00', note: 'Mats at the side door vacuumed.', tasks: tasks([0, 1, 2, 3, 4, 5]) },

@@ -100,7 +100,9 @@ async function main() {
       check(page + ' pay hidden', data.indexOf('18.75') < 0 && data.indexOf('PAY-SECRET') < 0);
       check(page + ' rate hidden', data.indexOf('24.50') < 0 && data.indexOf('RATE-SECRET') < 0);
       check(page + ' other invoice hidden', data.indexOf('HB-SMC-008') < 0);
-      await chrome(['--screenshot=' + shot, url(north + '&page=' + page, '#/' + page)]);
+      var shotArgs = ['--screenshot=' + shot, url(north + '&page=' + page, '#/' + page)];
+      if (page === 'visits') shotArgs.unshift('--window-size=1280,1500');
+      await chrome(shotArgs);
       check(page + ' screenshot', fs.existsSync(shot) && fs.statSync(shot).size > 1000);
     }
 
@@ -108,6 +110,9 @@ async function main() {
     check('visits show times', visits.indexOf('18:00') >= 0 && visits.indexOf('21:30') >= 0);
     check('visits show crew numbers', visits.indexOf('Crew 1') >= 0 && visits.indexOf('Crew 2') >= 0 && visits.indexOf('Cleaner') >= 0);
     check('visits show both own sites', visits.indexOf('NSP-02') >= 0 && visits.indexOf('North lobby') >= 0);
+    check('visits show time on site', visits.indexOf('3.50 h on site') >= 0 && visits.indexOf('3.00 h on site') >= 0);
+    check('supervisor check list', visits.indexOf('Supervisor check visits') >= 0 && visits.indexOf('>Supervisor<') >= 0);
+    check('supervisor name and pay hidden', visits.indexOf('Hiddensupervisor') < 0 && visits.indexOf('27.65') < 0);
 
     const hours = portalData(await chrome(['--dump-dom', url(north, '#/hours')]));
     check('hours total', hours.indexOf('9.50 h') >= 0);

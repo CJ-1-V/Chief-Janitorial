@@ -100,7 +100,7 @@ button, select { font: inherit; }
 
 main { max-width: 960px; margin: 0 auto; padding: 18px 16px 40px; }
 h1 { font-size: 28px; margin: 0 0 6px; }
-h2 { font-size: 18px; margin: 0; }
+h2 { font-size: 18px; margin: 22px 0 6px; }
 .lead { margin: 0 0 16px; color: var(--mut); }
 .kicker { margin: 0 0 2px; color: var(--mut); font-size: 13px; font-weight: 600; }
 
@@ -162,6 +162,23 @@ tr:last-child td { border-bottom: 0; }
 
 .empty { background: #fff; border: 1px dashed var(--bd); border-radius: 14px; padding: 18px; color: var(--mut); }
 .inv-open { font-weight: 700; }
+.onsite { font-weight: 700; color: var(--ink); }
+.sup-list { list-style: none; margin: 0; padding: 0; }
+.sup-list li {
+  display: grid;
+  grid-template-columns: 1.3fr 1.4fr auto;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 8px;
+}
+@media (max-width: 720px) {
+  .sup-list li { display: block; }
+  .sup-list li span, .sup-list li b { display: block; }
+}
 
 .paper {
   background: #fff;

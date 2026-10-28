@@ -14,6 +14,7 @@
       'cj_client_v1_whoami',
       'cj_client_v1_sites',
       'cj_client_v1_visits',
+      'cj_client_v1_supervisor_checks',
       'cj_client_v1_hours',
       'cj_client_v1_checklists',
       'cj_client_v1_requests',

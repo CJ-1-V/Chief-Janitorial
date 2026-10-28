@@ -9,6 +9,7 @@ drop function if exists public.cj_client_v1_invoices();
 drop function if exists public.cj_client_v1_requests();
 drop function if exists public.cj_client_v1_checklists(date, date);
 drop function if exists public.cj_client_v1_hours(date, date);
+drop function if exists public.cj_client_v1_supervisor_checks(date, date);
 drop function if exists public.cj_client_v1_visits(date, date);
 drop function if exists public.cj_client_v1_sites();
 drop function if exists public.cj_client_v1_whoami();

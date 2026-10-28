@@ -109,6 +109,15 @@ test('a demo client sees only their sites, with crew labels and no worker names'
   assert.ok(north.visits.every(function (v) { return v.visit_date >= '2026-10-07' && v.visit_date <= ASOF; }));
   assert.ok(!north.visits.some(function (v) { return v.start_time === '09:00'; }), 'visit outside the period stays hidden');
 
+  assert.deepEqual(north.visits.map(function (v) { return v.hours_on_site; }), [3, 3.5, 3]);
+  assert.ok(html.indexOf('3.50 h on site') >= 0);
+  assert.deepEqual(north.supervisor_checks.map(function (c) { return c.visit_date + ' ' + c.site_code + ' ' + c.role_label; }), [
+    '2026-10-27 NSP-02 Supervisor',
+    '2026-10-26 NSP-01 Supervisor'
+  ]);
+  assert.ok(html.indexOf('Supervisor check visits') >= 0);
+  assert.ok(html.indexOf('Alex Hiddensupervisor') < 0);
+  assert.ok(html.indexOf('27.65') < 0);
   assert.deepEqual(north.hours.map(function (h) { return h.hours_on_site; }), [3, 3.5, 3]);
   assert.ok(html.indexOf('9.50 h') >= 0);
   assert.ok(html.indexOf('3.50 h') >= 0);
@@ -189,18 +198,25 @@ test('extra name, pay and rate fields on a payload are dropped', function () {
   clone.hours[0].hours_on_site = 18.75;
   clone.hours[0].bill_rate = 24.50;
   clone.invoices[0].ownerName = 'Fictional Owner Label';
+  clone.supervisor_checks[0].role_label = 'Alex Hiddensupervisor';
+  clone.supervisor_checks[0].supervisor_name = 'Alex Hiddensupervisor';
+  clone.supervisor_checks[0].pay_rate = 27.65;
   const view = model.mapBundle(clone);
   assert.equal(view.visits[0].crew_label, 'Cleaner');
   assert.equal(view.hours[0].hours_on_site, model.hoursOnSite(view.hours[0].start_time, view.hours[0].end_time));
   assert.notEqual(view.hours[0].hours_on_site, 18.75);
   assert.ok(!Object.prototype.hasOwnProperty.call(view.visits[0], 'worker_name'));
   assert.ok(!Object.prototype.hasOwnProperty.call(view.invoices[0], 'ownerName'));
+  assert.equal(view.supervisor_checks[0].role_label, 'Supervisor');
+  assert.ok(!Object.prototype.hasOwnProperty.call(view.supervisor_checks[0], 'supervisor_name'));
   const blob = JSON.stringify(view) + model.renderAllData(view);
   assert.ok(blob.indexOf('Pat Hiddenworker') < 0);
   assert.ok(blob.indexOf('w-hidden-1') < 0);
   assert.ok(blob.indexOf('18.75') < 0);
   assert.ok(blob.indexOf('24.50') < 0);
   assert.ok(blob.indexOf('Fictional Owner Label') < 0);
+  assert.ok(blob.indexOf('Alex Hiddensupervisor') < 0);
+  assert.ok(blob.indexOf('27.65') < 0);
 });
 
 test('a new invoice shows the stored email copy, and an older invoice is not rewritten', function () {
