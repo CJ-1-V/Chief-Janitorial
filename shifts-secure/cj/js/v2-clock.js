@@ -20,7 +20,7 @@ function fmtDur(h){var m=Math.max(0,Math.round(h*60));return Math.floor(m/60)+'h
 function openEntry(u){return DB.time.filter(function(t){return t.userId===u.id&&t.clock&&!t.out&&!t.test;})[0]||null;}
 function readyForClock(u){return u.accountApproved!==false&&blockers(u,today()).length===0;}
 function clockSites(){return (typeof companySites==='function'?companySites({withFirm:true}):DB.sites.filter(function(s){return s.firmId;}));}
-function siteTile(s){return '<button type="button" class="site-tile" data-act="picksite" data-code="'+esc(s.code)+'">'+esc(s.code)+'<small class="tile-co">'+esc(s.name)+'</small></button>';}
+function siteTile(s){var lab=(typeof cjSiteLabel==='function')?cjSiteLabel(s):((s.name&&s.name!==s.code)?s.code+' – '+s.name:s.code);return '<button type="button" class="site-tile" data-act="picksite" data-code="'+esc(s.code)+'">'+esc(lab)+'</button>';}
 ACT.picksite=function(el){PAGE_STATE.site=el.dataset.code;[].forEach.call(document.querySelectorAll('.site-tile'),function(x){x.classList.toggle('sel',x.dataset.code===PAGE_STATE.site);});clockInLabel();};
 var PRIVACY_TXT='📍 <b>Privacy:</b> your phone location is checked <b>once, when you tap Clock in</b>, to confirm you are at the site (simulated in this test). It is not tracked during your shift or after you clock out.';
 function passBoxFor(u){return u.type==='worker'?(tempActive(u)?tempBox(u):tempBox(subOf(u))):'';}

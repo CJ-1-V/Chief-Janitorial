@@ -43,7 +43,7 @@
   function st() { return PAGE_STATE.asg = PAGE_STATE.asg || { q: '', f: 'all', sel: null, undo: null }; }
 
   /* ---------- the changes (one at a time, saved at once, audited, cleaner told) ---------- */
-  function siteLabel(s) { return s.code + (s.name && s.name !== s.code ? ' · ' + s.name : ''); }
+  function siteLabel(s) { return (typeof cjSiteLabel === 'function') ? cjSiteLabel(s) : (s.code + (s.name && s.name !== s.code ? ' · ' + s.name : '')); }
   function tell(uid, text, key) { try { if (typeof notify === 'function') notify(uid, text, 'asg|' + key + '|' + Date.now()); } catch (e) {} }
   function remember(label, before) { st().undo = { label: label, before: before }; }
   function snapshot(codes) { return codes.map(function (c) { var s = site(c); return { code: c, crew: crewOf(s) }; }); }
@@ -102,7 +102,7 @@
   function siteCard(s) {
     var S = st(), crew = crewOf(s), sel = S.sel, here = sel && crew.indexOf(sel.uid) >= 0;
     var x = '<div class="asg-site card' + (s.active === false ? ' inactive' : '') + (sel && !here ? ' can-put' : '') + '" data-site="' + E(s.code) + '">';
-    x += '<div class="asg-site-h"><div><b>' + E(s.code) + '</b>' + (s.name && s.name !== s.code ? ' <span class="asg-sname">' + E(s.name) + '</span>' : '') + '</div><span class="pill ' + (crew.length ? 's-ok' : (hasHours(s) && s.active !== false ? 's-warn' : 's-mut')) + '">' + crew.length + ' cleaner' + (crew.length === 1 ? '' : 's') + '</span></div>';
+    x += '<div class="asg-site-h"><div><b>' + E(siteLabel(s)) + '</b></div><span class="pill ' + (crew.length ? 's-ok' : (hasHours(s) && s.active !== false ? 's-warn' : 's-mut')) + '">' + crew.length + ' cleaner' + (crew.length === 1 ? '' : 's') + '</span></div>';
     x += '<div class="asg-site-m small muted">' + (s.active === false ? '<span class="pill s-mut">Inactive</span> ' : '') + E(summary(s)) + (s.visitStart ? ' · from ' + E(s.visitStart) : '') + '</div>';
     if (s.note) x += '<div class="asg-site-n small muted">' + E(String(s.note).slice(0, 120)) + '</div>';
     x += '<div class="asg-crew">' + (crew.length ? crew.map(function (id) { var u = U(id); return u ? chip(u, s) : '<div class="asg-chip off" data-uid="' + E(id) + '" data-site="' + E(s.code) + '"><span class="asg-body"><span class="asg-nm">Unknown person</span></span>' + (canManage() ? '<button type="button" class="asg-x" data-act="asgremove" data-uid="' + E(id) + '" data-site="' + E(s.code) + '" aria-label="Remove">×</button>' : '') + '</div>'; }).join('') : '<div class="asg-empty">' + (canManage() ? 'Drop a cleaner here' : 'No cleaner assigned') + '</div>') + '</div>';

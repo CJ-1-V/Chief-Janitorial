@@ -41,7 +41,7 @@
   function visitCard(u, s, d) {
     var l = logFor(u.id, s.code, d), t = tasks(s), done = (l && l.tasks) || [];
     return '<div class="crcard lnvisit' + (l ? ' st-' + l.status.toLowerCase() : '') + '" data-site="' + esc(s.code) + '"><form class="lnform" onsubmit="return false">' +
-      '<div class="cr-head"><b>' + esc(s.code) + ' · ' + esc(s.name) + '</b><span class="pill ' + LN_PILL[l ? l.status : ''] + '">' + (l ? esc(l.status) + ' · ' + hm(l.at) : 'Not marked yet') + '</span></div>' +
+      '<div class="cr-head"><b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</b><span class="pill ' + LN_PILL[l ? l.status : ''] + '">' + (l ? esc(l.status) + ' · ' + hm(l.at) : 'Not marked yet') + '</span></div>' +
       '<div class="small muted">' + hh(reg(s.code, d)) + ' h regular clean today</div>' +
       '<div class="lntasks">' + t.map(function (x, i) { return chk('t' + i, esc(x), l ? done.indexOf(x) >= 0 : false, { value: '1' }); }).join('') + '</div>' +
       '<div><label>Note (optional)</label><textarea name="note" maxlength="500" placeholder="e.g. back room locked, could not mop">' + esc(l ? l.note || '' : '') + '</textarea></div>' +
@@ -97,7 +97,7 @@
       '<p id="lnsum"><b>' + esc(shortDay(d)) + '</b> · <span class="pill s-ok">Done ' + c('Done') + '</span> <span class="pill s-warn">Partial ' + c('Partial') + '</span> <span class="pill s-bad">Missed ' + c('Missed') + '</span> <span class="pill s-pend">Not marked ' + c(null) + '</span></p>' +
       (rows.length ? '<div class="tw"><table id="lndaytable"><tr><th>Site</th><th>Cleaner</th><th>Status</th><th>Tasks</th><th>Time</th><th>Note</th></tr>' + rows.map(function (x) {
         var u = x.uid ? user(x.uid) : null, l = x.l;
-        return '<tr data-site="' + esc(x.s.code) + '"><td><b>' + esc(x.s.code) + '</b><div class="small muted">' + esc(x.s.name) + ' · ' + hh(x.r) + ' h</div></td><td>' + (u ? esc(u.name) : '<span class="pill s-bad">No cleaner assigned</span>') + '</td><td><span class="pill ' + LN_PILL[l ? l.status : ''] + '">' + (l ? esc(l.status) : 'Not marked') + '</span></td><td>' + (l ? esc(l.tasks.length) + '/' + esc(l.taskCount || tasks(x.s).length) : '–') + '</td><td>' + (l ? hm(l.at) : '–') + '</td><td class="small">' + (l && l.note ? esc(l.note) : '') + '</td></tr>';
+        return '<tr data-site="' + esc(x.s.code) + '"><td><b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(x.s) : x.s.code) + '</b><div class="small muted">' + hh(x.r) + ' h</div></td><td>' + (u ? esc(u.name) : '<span class="pill s-bad">No cleaner assigned</span>') + '</td><td><span class="pill ' + LN_PILL[l ? l.status : ''] + '">' + (l ? esc(l.status) : 'Not marked') + '</span></td><td>' + (l ? esc(l.tasks.length) + '/' + esc(l.taskCount || tasks(x.s).length) : '–') + '</td><td>' + (l ? hm(l.at) : '–') + '</td><td class="small">' + (l && l.note ? esc(l.note) : '') + '</td></tr>';
       }).join('') + '</table></div>' : '<p class="muted" id="lndaytable">No regular cleans that day.</p>');
   };
   ACT.lndayset = function (el) { PAGE_STATE.lnDay = el.dataset.d; render(); };
@@ -106,7 +106,7 @@
     var cl = DB.users.filter(function (u) { return isCleaner(u) && !u.test && (typeof window.cjActiveCleaner !== 'function' || window.cjActiveCleaner(u)); });
     return '<h1>Site checklists</h1><p class="muted">The short checklist a cleaner sees for each visit, and which cleaners are assigned to the site. One task per line. Leave empty to use the default list.</p>' +
       sites().map(function (s) {
-        return '<div class="card lnedit" data-site="' + esc(s.code) + '"><form data-form="lnsave"><input type="hidden" name="site" value="' + esc(s.code) + '"><h3 style="margin-top:0">' + esc(s.code) + ' · ' + esc(s.name) + '</h3>' +
+        return '<div class="card lnedit" data-site="' + esc(s.code) + '"><form data-form="lnsave"><input type="hidden" name="site" value="' + esc(s.code) + '"><h3 style="margin-top:0">' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</h3>' +
           '<div class="small muted">' + esc(typeof shSummary === 'function' ? shSummary(s) : '') + '</div><div class="grid2"><div><label>Checklist (one task per line)</label><textarea name="tasks" rows="6" maxlength="1500">' + esc(tasks(s).join('\n')) + '</textarea></div>' +
           '<div><label>Assigned cleaners</label>' + cl.map(function (u) { return chk('crew[]', esc(u.name), (s.crew || []).indexOf(u.id) >= 0, { value: u.id }); }).join('') + '</div></div><button class="small">Save ' + esc(s.code) + '</button></form></div>';
       }).join('');
@@ -139,7 +139,7 @@
   function soDoc(code, wk) {
     var s = site(code), f = s && s.firmId ? user(s.firmId) : null, rows = weekRows(code, wk), so = soFor(code, wk), L = [];
     cjCompanyHead(L); if (cjMockInv()) L.push(['s', 'TEST VERSION – sample sign-off made by the test app with fake data']); L.push(['g']);
-    L.push(['b', 'Weekly cleaning sign-off']); L.push(['t', 'Client: ' + (f ? f.name : '')]); L.push(['t', 'Site: ' + code + ' – ' + (s ? s.name : '')]);
+    L.push(['b', 'Weekly cleaning sign-off']); L.push(['t', 'Client: ' + (f ? f.name : '')]); L.push(['t', 'Site: ' + (typeof cjSiteLabel === 'function' ? cjSiteLabel(s || code) : ((s && s.name && s.name !== code) ? code + ' – ' + s.name : code))]);
     L.push(['t', 'Week: ' + shortDay(wk) + ' to ' + shortDay(addDays(wk, 6)) + ' (' + wk + ' to ' + addDays(wk, 6) + ')']); L.push(['g']);
     var CLX = ME && ME.type === 'firm';   // owner Oct 21: clients see no hours
     L.push(['r', 'Date – status', CLX ? 'Service' : 'Crew hours']);
@@ -178,7 +178,7 @@
     var wk = PAGE_STATE.soWeek || weekStart(addDays(today(), -7)), rows = weekRows(code, wk), so = soFor(code, wk), me = ME;
     var x = '<h1>Weekly sign-off</h1><p class="muted">Cleaning visits for one site and one week (Monday to Sunday). ' + (me.type === 'firm' ? 'Please check them and sign off with your name, initials and the date.' : 'The client (or you, the office) signs off with name, initials and date.') + ' Print or save it as a PDF for your records.</p>';
     if (PAGE_STATE.soDone) { x += '<div class="alert ok small" id="sodone">' + PAGE_STATE.soDone + '</div>'; PAGE_STATE.soDone = null; }
-    x += '<div class="row sopick">' + '<label>Site <select id="sosite" data-act="sopick">' + opt(my.map(function (s) { return [s.code, s.code + ' – ' + s.name]; }), code) + '</select></label>' +
+    x += '<div class="row sopick">' + '<label>Site <select id="sosite" data-act="sopick">' + opt(my.map(function (s) { return typeof cjSiteOpt === 'function' ? cjSiteOpt(s) : [s.code, (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)]; }), code) + '</select></label>' +
       '<button class="small sec" data-act="soweek" data-w="' + addDays(wk, -7) + '">◀ Week before</button><b id="soweeklbl">' + esc(shortDay(wk)) + ' – ' + esc(shortDay(addDays(wk, 6))) + '</b><button class="small sec" data-act="soweek" data-w="' + addDays(wk, 7) + '"' + (addDays(wk, 7) > today() ? ' disabled' : '') + '>Next week ▶</button></div>';
     var tot = rows.reduce(function (a, r) { return a + r.hours; }, 0);
     x += '<div class="card"><div class="tw"><table id="sotable"><tr><th>Date</th><th>Status</th><th>' + (me.type === 'firm' ? 'Service' : 'Crew hours') + '</th>' + (me.type === 'admin' ? '<th>Notes</th>' : '') + '</tr>' + rows.map(function (r) {

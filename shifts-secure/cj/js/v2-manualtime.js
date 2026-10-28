@@ -30,7 +30,7 @@ function mtEntry(id){return DB.time.filter(function(t){return t.id===id;})[0]||n
 function mtTag(){return '<span class="pill s-manual">Manual</span>';}
 /* office-only label: site code + client name (real name if the client record has one). Never used on worker screens. */
 function mtClientName(code){var f=siteFirm(code);if(!f)return '';var real=f.realName||f.clientRealName||(f.firm&&(f.firm.realName||f.firm.clientRealName))||'';return real||f.name||'';}
-function mtOfficeSite(code){var n=mtClientName(code);return code+(n?' – '+n:'');}
+function mtOfficeSite(code){if(typeof cjSiteLabel==='function')return cjSiteLabel(code);var n=mtClientName(code);return (n&&n!==code)?code+' – '+n:code;}
 function mtSites(){return (typeof companySites==='function'?companySites({withFirm:true,skipPractice:true,activeOnly:true}):DB.sites.filter(function(s){return s.firmId&&s.code!=='TEST-PRACTICE'&&s.active!==false;}));}
 function mtPeople(){return DB.users.filter(function(u){return (u.type==='employee'||u.type==='worker')&&u.accountApproved!==false;}).sort(function(a,b){return a.name<b.name?-1:1;});}
 function mtWho(u){return u.type==='employee'?'Chief Janitorial employee':employerName(u);}

@@ -96,7 +96,7 @@
   /* ---------- setting the flag: client card / task list, office Site tasks page ---------- */
   function flagList(codes) {
     return codes.map(function (c) { var s = site(c); if (!s || typeof cjTasksDaily !== 'function') return ''; var all = cjTasksDaily(s).map(function (t) { return [typeof t === 'string' ? t : t.t || t.label, 'Daily']; }).concat(cjTasksWeekly(s).map(function (w) { return [w.t, 'Weekly']; }));
-      return '<div class="phflags" data-site="' + esc(c) + '"><h3>' + esc(c + ' · ' + s.name) + '</h3>' + all.map(function (a) { return '<label class="phflag"><input type="checkbox" data-phflag="1" data-site="' + esc(c) + '" data-t="' + esc(a[0]) + '"' + (cjPhotoNeeded(c, a[0]) ? ' checked' : '') + (cjPhotoCanSet(c) ? '' : ' disabled') + '> 📷 <span>' + esc(a[0]) + '</span> <span class="pill s-mut">' + a[1] + '</span></label>'; }).join('') + '</div>';
+      return '<div class="phflags" data-site="' + esc(c) + '"><h3>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : c) + '</h3>' + all.map(function (a) { return '<label class="phflag"><input type="checkbox" data-phflag="1" data-site="' + esc(c) + '" data-t="' + esc(a[0]) + '"' + (cjPhotoNeeded(c, a[0]) ? ' checked' : '') + (cjPhotoCanSet(c) ? '' : ' disabled') + '> 📷 <span>' + esc(a[0]) + '</span> <span class="pill s-mut">' + a[1] + '</span></label>'; }).join('') + '</div>';
     }).join('');
   }
   ACT.cjphotoset = function () {

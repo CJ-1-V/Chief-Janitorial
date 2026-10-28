@@ -56,7 +56,7 @@
       '<div class="tw"><table id="shedit" class="shedit"><tr><th>Site</th>' + SH_DAYS.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '<th>Week</th><th></th></tr>' +
       sites.map(function (s) {
         var r = s.regHours || [0, 0, 0, 0, 0, 0, 0], f = s.firmId ? user(s.firmId) : null, wk = r.reduce(function (a, b) { return a + (+b || 0); }, 0);
-        return '<tr data-site="' + esc(s.code) + '"><td><b>' + esc(s.code) + '</b><div class="small muted">' + esc(s.name) + (f ? ' · ' + esc(f.name) : '') + '</div></td>' +
+        return '<tr data-site="' + esc(s.code) + '"><td><b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</b>' + (f ? '<div class="small muted">' + esc(f.name) + '</div>' : '') + '</td>' +
           r.map(function (h, i) { return '<td><input class="shh" type="number" min="0" max="24" step="0.25" name="d' + i + '" form="shf-' + esc(s.code) + '" value="' + (+h || 0) + '" aria-label="' + esc(s.code) + ' ' + SH_DAYS[i] + ' hours"></td>'; }).join('') +
           '<td><b>' + shH(wk) + ' h</b></td><td><form data-form="shsave" id="shf-' + esc(s.code) + '"><input type="hidden" name="code" value="' + esc(s.code) + '"><button class="small">Save</button></form></td></tr>';
       }).join('') + '</table></div><p class="small muted">Quarter-hour steps (0.25 = 15 minutes). 0 = no regular clean that day.</p>';
@@ -72,7 +72,7 @@
     VIEWS['admin:firms'] = function () {
       var x = ofi();
       (DB.sites || []).forEach(function (s) {
-        var key = esc(s.code + ' – ' + s.name), tag = '<span class="shsum small" data-site="' + esc(s.code) + '"> · Regular: ' + esc(shSummary(s)) + '</span>';
+        var key = esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)), tag = '<span class="shsum small" data-site="' + esc(s.code) + '"> · Regular: ' + esc(shSummary(s)) + '</span>';
         x = x.split(key + '<br>').join(key + tag + '<br>').split(key + '<form').join(key + tag + '<form');
       });
       return x.replace('<h1>Clients &amp; sites</h1>', '<h1>Clients &amp; sites</h1><p class="small"><a href="#/sitehours">Set regular hours per site →</a></p>').replace('<h1>Clients & sites</h1>', '<h1>Clients & sites</h1><p class="small"><a href="#/sitehours">Set regular hours per site →</a></p>');
@@ -87,7 +87,7 @@
     var kinds = [['unusual', 'Unusual day at a regular site']].concat(sj.map(function (r) { return ['sp:' + r.id, 'Special job ' + r.no + ' – ' + r.kind + ' at ' + r.site + ' (' + shortDay(r.schedDate || r.date) + ')']; }));
     return '<form data-form="shunusual" id="shform" class="shform"><h3>Unusual day – log my hours</h3>' +
       '<p class="small muted">Use this when today was not a normal clean (more work, an event, short-staffed). The office checks it; once approved it replaces your split hours for that site and day.</p>' +
-      '<div class="grid2">' + sel('kind', 'What was it?', kinds, d.kind || 'unusual', { req: true }) + sel('site', 'Site', sites.map(function (s) { return [s.code, s.code + ' – ' + s.name]; }), d.site || PAGE_STATE.shSite || '', { req: true }) +
+      '<div class="grid2">' + sel('kind', 'What was it?', kinds, d.kind || 'unusual', { req: true }) + sel('site', 'Site', sites.map(function (s) { return typeof cjSiteOpt === 'function' ? cjSiteOpt(s) : [s.code, (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)]; }), d.site || PAGE_STATE.shSite || '', { req: true }) +
       inp('date', 'Day', d.date || today(), { type: 'date', req: true, extra: ' max="' + today() + '" min="' + addDays(today(), -7) + '"' }) +
       inp('in', 'Start (quarter hour)', d['in'] || '', { type: 'time', req: true, extra: ' step="900"' }) + inp('out', 'Finish (quarter hour)', d.out || '', { type: 'time', req: true, extra: ' step="900"' }) + '</div>' +
       '<div id="shreasonbox">' + sel('reason', 'Reason', SH_REASONS, d.reason || '', { req: true }) + '</div>' +
@@ -101,7 +101,7 @@
     if (!sites.length) x += '<p class="muted small">No site has regular hours today. Worked anyway? Use “Unusual day – log my hours”.</p>';
     x += sites.map(function (s) {
       var reg = shReg(s.code, d), att = shAttend(s.code, d), me = att.indexOf(u.id) >= 0, n = att.length, c = me ? shCredit(u.id, s.code, d) : null;
-      return '<div class="shsite' + (me ? ' done' : '') + '" data-site="' + esc(s.code) + '"><div class="shsite-h"><b>' + esc(s.code) + '</b> <span class="small muted">' + esc(s.name) + '</span><span class="shreg">' + shH(reg) + ' h today</span></div>' +
+      return '<div class="shsite' + (me ? ' done' : '') + '" data-site="' + esc(s.code) + '"><div class="shsite-h"><b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</b><span class="shreg">' + shH(reg) + ' h today</span></div>' +
         (me ? '<div class="shsplit" id="shsplit-' + esc(s.code) + '">✓ You cleaned this site today · <b>' + esc(shSplitText(reg, n)) + '</b></div>' +
           (c.flag === 'pending' ? '<div class="small"><span class="pill s-pend">Unusual day sent – waiting for the office</span> Until it is approved, the split hours count.</div>' : c.flag === 'unusual' ? '<div class="small"><span class="pill s-ok">' + esc(c.how) + '</span></div>' : '')
           : '<div class="row"><button class="small" data-act="shregular" data-site="' + esc(s.code) + '">I cleaned this site today</button><span class="small muted">' + (n ? n + ' cleaner' + (n === 1 ? '' : 's') + ' checked in so far – the ' + shH(reg) + ' h will be split ' + (n + 1) + ' ways.' : 'You will get the ' + shH(reg) + ' h unless someone else cleans it too.') + '</span></div>') + '</div>';

@@ -143,7 +143,7 @@ function orderForm(firm){var sites=DB.sites.filter(function(s){return s.firmId==
   '<fieldset class="ordlen" id="ordlen"><legend>How long?</legend><div class="ordlen-opts">'+
     '<label class="ordlen-opt"><input type="radio" name="span" value="one" checked> <span>One day</span></label>'+
     '<label class="ordlen-opt"><input type="radio" name="span" value="multi"> <span>Several days <small>(up to '+ORDER_MAX_DAYS+')</small></span></label></div></fieldset>'+
-  '<div class="grid2">'+(sites.length>1?sel('site','Site',sites.map(function(s){return [s.code,s.code+' – '+s.name];}),'',{req:true,blank:true}):'')+
+  '<div class="grid2">'+(sites.length>1?sel('site','Site',sites.map(function(s){return typeof cjSiteOpt==='function'?cjSiteOpt(s):[s.code,(s.name&&s.name!==s.code?s.code+' – '+s.name:s.code)];}),'',{req:true,blank:true}):'')+
   '<div class="orddate"><label class="req" id="orddatelab">Date</label><input type="date" name="date" value="'+first+'" required min="'+today()+'"></div></div>'+
   '<div class="ordrep" id="ordrep" hidden><div class="grid2">'+
     '<div><label class="req">Last day</label><input type="date" name="until" value="" min="'+first+'" max="'+addDays(first,ORDER_MAX_DAYS-1)+'"><div class="hint">Up to '+ORDER_MAX_DAYS+' days from the first day.</div></div>'+

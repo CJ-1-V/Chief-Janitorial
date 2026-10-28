@@ -30,7 +30,7 @@
   }
   ACT.cwtall = function () {
     var my = calMySitesFull();
-    modal('<div class="calsheet"><h2>Tasks at your sites</h2>' + my.map(function (s) { return '<h3>' + esc(s.code + ' · ' + s.name) + '</h3><b class="small">Every visit</b><ol class="small">' + daily(s).map(li).join('') + '</ol>' + (weekly(s).length ? '<b class="small">Weekly</b><ul class="small">' + weekly(s).map(function (x) { return '<li>' + (x.day === -1 ? 'Any day' : DOW[x.day]) + ': ' + esc(x.t) + '</li>'; }).join('') + '</ul>' : ''); }).join('') + '<div class="row"><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
+    modal('<div class="calsheet"><h2>Tasks at your sites</h2>' + my.map(function (s) { return '<h3>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</h3><b class="small">Every visit</b><ol class="small">' + daily(s).map(li).join('') + '</ol>' + (weekly(s).length ? '<b class="small">Weekly</b><ul class="small">' + weekly(s).map(function (x) { return '<li>' + (x.day === -1 ? 'Any day' : DOW[x.day]) + ': ' + esc(x.t) + '</li>'; }).join('') + '</ul>' : ''); }).join('') + '<div class="row"><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
   };
   /* inject: visit sheet (everyone who can open it), client home card, Schedule site list */
   var ocv = ACT.calvisit; ACT.calvisit = function (el) {
@@ -53,7 +53,7 @@
     return '<h1>Site tasks</h1><p class="muted">Daily tasks are done at every visit. Weekly tasks are done once a week on the day you pick. Clients see them on their calendar and home page; the assigned cleaners see the same list.' + (ed ? '' : ' <b>Read-only</b> – only the owner, admin or operations can edit.') + '</p>' +
       sites().map(function (s) {
         var w = weekly(s).concat([{ t: '', day: -1 }, { t: '', day: -1 }]);
-        return '<div class="card cjtaskedit" data-site="' + esc(s.code) + '"><form data-form="cjtasks"><input type="hidden" name="site" value="' + esc(s.code) + '"><h3 style="margin-top:0">' + esc(s.code) + ' · ' + esc(s.name) + '</h3><div class="grid2"><div><label>Daily tasks (one per line)</label><textarea name="daily" rows="7" maxlength="1500"' + (ed ? '' : ' disabled') + '>' + esc(daily(s).join('\n')) + '</textarea></div>' +
+        return '<div class="card cjtaskedit" data-site="' + esc(s.code) + '"><form data-form="cjtasks"><input type="hidden" name="site" value="' + esc(s.code) + '"><h3 style="margin-top:0">' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</h3><div class="grid2"><div><label>Daily tasks (one per line)</label><textarea name="daily" rows="7" maxlength="1500"' + (ed ? '' : ' disabled') + '>' + esc(daily(s).join('\n')) + '</textarea></div>' +
           '<div><label>Weekly tasks</label>' + w.map(function (x, i) { return '<div class="cjwrow"><input name="wt' + i + '" value="' + esc(x.t) + '" maxlength="120" placeholder="Weekly task"' + (ed ? '' : ' disabled') + '><select name="wd' + i + '"' + (ed ? '' : ' disabled') + '><option value="-1">Any day</option>' + DOW.map(function (d, k) { return '<option value="' + k + '"' + (x.day === k ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>'; }).join('') + '<input type="hidden" name="wn" value="' + esc(w.length) + '"></div></div>' + (ed ? '<button class="small">Save ' + esc(s.code) + ' tasks</button>' : '') + '</form></div>';
       }).join('');
   };

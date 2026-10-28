@@ -76,7 +76,7 @@
     var months = []; for (var i = 0; i < 12; i++) { var d = new Date(+today().slice(0, 4), +today().slice(5, 7) - 1 + i, 1); months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); }
     return '<div class="calsheet" id="calwaxsheet"><h2>Schedule waxing</h2><p id="calwaxtext">' + TEXT + '</p>' +
       '<form data-form="calwax">' +
-      (my.length > 1 ? '<label>Site<select name="site"><option value="">Pick the site…</option>' + my.map(function (s) { return '<option value="' + esc(s.code) + '">' + esc(s.code + ' – ' + s.name) + '</option>'; }).join('') + '</select></label>' : '<p class="small muted">Site: <b>' + esc(my[0] ? my[0].code + ' – ' + my[0].name : '–') + '</b></p>') +
+      (my.length > 1 ? '<label>Site<select name="site"><option value="">Pick the site…</option>' + my.map(function (s) { return '<option value="' + esc(s.code) + '">' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : (s.name && s.name !== s.code ? s.code + ' – ' + s.name : s.code)) + '</option>'; }).join('') + '</select></label>' : '<p class="small muted">Site: <b>' + esc(my[0] ? (typeof cjSiteLabel === 'function' ? cjSiteLabel(my[0]) : my[0].code) : '–') + '</b></p>') +
       '<label>Preferred month<select name="month" data-calwaxmonth="1">' + months.map(function (x) { return '<option value="' + x + '"' + (x === m ? ' selected' : '') + '>' + mLabel(x) + '</option>'; }).join('') + '</select></label>' +
       '<div><b class="small">Preferred weekdays</b><div class="calwaxdays" id="calwaxwd">' + DOWL.map(function (d) { return '<label><input type="checkbox" name="wd" value="' + d + '"> ' + d.slice(0, 3) + '</label>'; }).join('') + '</div></div>' +
       '<div><b class="small">…or preferred dates in ' + mLabel(m) + '</b><div class="calwaxdays" id="calwaxdates">' + daysIn(m).filter(function (d) { return d >= today(); }).map(function (d) { return '<label><input type="checkbox" name="dt" value="' + d + '"> ' + +d.slice(8) + '</label>'; }).join('') + '</div></div>' +
@@ -98,7 +98,7 @@
     var id = el.dataset.id || ''; if (id.indexOf('WAX:') !== 0) return ocv.apply(this, arguments);
     var w = WV().filter(function (x) { return 'WAX:' + x.no === id; })[0]; if (!w || !calCanSite(w.site)) { toast('Not allowed – you can only see your own sites.'); return; }
     var s = site(w.site) || {};
-    modal('<div class="calsheet" id="calsheet"><h2>Waxing</h2><p class="small muted">' + esc(w.site) + ' · ' + esc(s.name || '') + '</p><div class="calfacts"><div><small>Date</small><b>' + dLong(w.date) + '</b></div><div><small>Time</small><b>' + t12(w.start) + '</b></div><div><small>Service</small><b>Waxing</b></div></div><p class="small muted">Confirmed by the office (' + esc(w.no) + '). To change it, contact the office.</p><div class="row"><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
+    modal('<div class="calsheet" id="calsheet"><h2>Waxing</h2><p class="small muted">' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s.code ? s : w.site) : w.site) + '</p><div class="calfacts"><div><small>Date</small><b>' + dLong(w.date) + '</b></div><div><small>Time</small><b>' + t12(w.start) + '</b></div><div><small>Service</small><b>Waxing</b></div></div><p class="small muted">Confirmed by the office (' + esc(w.no) + '). To change it, contact the office.</p><div class="row"><button type="button" class="sec" data-act="closeModal">Close</button></div></div>');
   };
 
   /* ---------- office inbox ---------- */

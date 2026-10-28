@@ -55,10 +55,10 @@
     var flat = (i.siteLines || []).filter(function (l) { return l.mode === FLAT; }), std = (i.siteLines || []).filter(function (l) { return l.mode !== FLAT; });
     if (flat.length) L.push(['t', 'Janitorial services – flat monthly contract price:']);
     flat.forEach(function (l) {
-      L.push(['r', '  ' + l.site + ' – Regular cleaning, ' + l.month, money(l.amount)]);   // calendar1 Oct 21: owner wording
+      L.push(['r', '  ' + (typeof cjSiteLabel === 'function' ? cjSiteLabel(l.site) : l.site) + ' – Regular cleaning, ' + l.month, money(l.amount)]);   // owner sees CODE · ownerName
       if (l.adjNote) L.push(['s', '  Adjusted' + (l.base != null ? ' from ' + money(l.base) : '') + ': ' + l.adjNote]);
     });
-    if (std.length) { L.push(['t', 'Regular cleaning – fixed monthly amount per site:']); std.forEach(function (l) { var u = l.unset && !l.adjNote; L.push(['r', '  ' + l.site + ' – Regular cleaning, ' + l.month, u ? 'Not set' : money(l.amount)]); if (l.adjNote) L.push(['s', '  Adjusted' + (l.base != null ? ' from ' + money(l.base) : '') + ': ' + l.adjNote]); }); }
+    if (std.length) { L.push(['t', 'Regular cleaning – fixed monthly amount per site:']); std.forEach(function (l) { var u = l.unset && !l.adjNote; L.push(['r', '  ' + (typeof cjSiteLabel === 'function' ? cjSiteLabel(l.site) : l.site) + ' – Regular cleaning, ' + l.month, u ? 'Not set' : money(l.amount)]); if (l.adjNote) L.push(['s', '  Adjusted' + (l.base != null ? ' from ' + money(l.base) : '') + ': ' + l.adjNote]); }); }
     if ((i.specialLines || []).length) { L.push(['t', 'Special jobs:']); i.specialLines.forEach(function (l) { L.push(['r', '  Special job ' + l.no + ' – ' + l.kind + ', ' + l.site + ', ' + l.date + ': ' + l.people + ' × ' + shH(l.hoursPer) + ' h × ' + money(l.rate), money(l.amount)]); }); }
     if ((i.extraLines || []).length) { L.push(['t', 'Extra work:']); i.extraLines.forEach(function (l) { L.push(['r', '  ' + l.desc + ' – ' + fmtQty(l.qty) + ' × ' + money(l.unit), money(l.amount)]); }); }
     L.push(['g']);
@@ -212,14 +212,14 @@
       (blocked.length ? '<div class="alert warn" id="cjfunsetall"><b>Price not set:</b> ' + blocked.map(function (s) { return esc(s.code); }).join(', ') + ' – flat monthly with no price. No invoice can be made for ' + (blocked.length === 1 ? 'this site\'s' : 'these sites\'') + ' client until a price is entered.</div>' : '') +
       '<div class="tw"><table id="cjfsites"><tr><th>Site</th><th>Client</th><th>Billing</th><th>Monthly price</th><th>Status</th><th></th></tr>' + S.map(function (s) {
         var f = s.firmId ? user(s.firmId) : null;
-        return '<tr data-site="' + esc(s.code) + '"' + (focus === s.code ? ' class="cjf-focus"' : '') + '><td><b>' + esc(s.code) + '</b><div class="small muted">' + esc(s.name) + '</div></td><td class="small">' + (f ? esc(f.name) : '<span class="muted">No client login</span>') + '</td>' +
+        return '<tr data-site="' + esc(s.code) + '"' + (focus === s.code ? ' class="cjf-focus"' : '') + '><td><b>' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</b></td><td class="small">' + (f ? esc(f.name) : '<span class="muted">No client login</span>') + '</td>' +
           '<td><span class="pill ' + (isFlat(s) ? 's-ok' : 's-test') + '">' + modeText(s) + '</span></td><td>' + priceCell(s) + '</td><td class="small">' + (s.active === false ? 'Switched off' : 'Active') + '</td>' +
           '<td><button type="button" class="small sec" data-act="cjfsite" data-site="' + esc(s.code) + '">Edit</button></td></tr>';
       }).join('') + '</table></div><p class="small muted">Prices are stored before HST. HST is ' + (RATE() * 100) + '% (' + esc(CO().taxNo || '') + '). Every change is written to the audit log.</p>';
   };
   function siteModal(s) {
     var p = price(s);
-    modal('<h2>Billing – ' + esc(s.code) + '</h2><p class="small muted">' + esc(s.name) + (s.firmId && user(s.firmId) ? ' · ' + esc(user(s.firmId).name) : '') + '</p>' +
+    modal('<h2>Billing – ' + esc(typeof cjSiteLabel === 'function' ? cjSiteLabel(s) : s.code) + '</h2><p class="small muted">' + (s.firmId && user(s.firmId) ? esc(user(s.firmId).name) : '') + '</p>' +
       '<form data-form="cjfsite" id="cjfsiteform"><input type="hidden" name="code" value="' + esc(s.code) + '">' +
       '<fieldset class="cjf-modes"><legend>How is this site billed?</legend>' +
       '<label class="cjf-opt"><input type="radio" name="mode" value="flat_monthly"' + (isFlat(s) ? ' checked' : '') + '> <b>Flat monthly</b> – one line a month at the contract price</label>' +
