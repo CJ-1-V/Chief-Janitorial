@@ -67,9 +67,9 @@
   }
   function totalsHtml(list, id) {
     var s = sums(list);
-    return '<p class="small cjx-totals" id="' + id + '" data-amount="' + s.amount.toFixed(2) + '" data-hst="' + s.hst.toFixed(2) + '" data-total="' + s.total.toFixed(2) + '" data-owing="' + s.owing.toFixed(2) + '"><b>Totals:</b> amount ' + money(s.amount) + ' · HST ' + money(s.hst) + ' · total ' + money(s.total) + ' · now owing ' + money(s.owing) + '</p>';
+    return '<p class="cjx-totals" id="' + id + '" data-amount="' + s.amount.toFixed(2) + '" data-hst="' + s.hst.toFixed(2) + '" data-total="' + s.total.toFixed(2) + '" data-owing="' + s.owing.toFixed(2) + '"><b>Totals:</b> amount ' + money(s.amount) + ' · HST ' + money(s.hst) + ' · total ' + money(s.total) + ' · now owing ' + money(s.owing) + '</p>';
   }
-  function lineBits(i) { return (i.workLines || []).map(function (l) { return esc(l.desc) + ' <b>' + money(l.amount) + '</b>'; }).join('; '); }
+  function lineBits(i) { return (i.workLines || []).map(function (l) { return esc(l.desc) + ' <b>' + money(l.amount) + '</b>'; }).join('<br>'); }
   function owingOf(i) { var it = typeof clientInvInterest === 'function' ? clientInvInterest(i) : { amount: 0 }; return i.paidAt ? 0 : r2((+i.total || 0) + (+it.amount || 0)); }
 
   /* an extra-work day must not count as the monthly invoice already being issued */
@@ -153,7 +153,7 @@
   function formHtml() {
     var S = sites();
     return '<form data-form="cjxinv" id="cjxform">' +
-      '<p class="small muted">A separate invoice for additional work at one site. It does not change the monthly invoice. Amounts are before HST.</p>' +
+      '<p class="cjx-hint">Amounts are before HST. This does not change the monthly invoice.</p>' +
       '<div><label class="req">Site</label><select name="site" id="cjxsite" required data-calc="cjx" aria-label="Site"><option value="">Choose a site…</option>' +
       S.map(function (s) { var f = user(s.firmId); return '<option value="' + esc(s.code) + '">' + esc(s.code + ' – ' + s.name + (f ? ' – ' + f.name : '')) + '</option>'; }).join('') +
       '</select></div>' +
@@ -256,10 +256,10 @@
     var list = extras(null);
     var rows = list.map(function (i) {
       var f = user(i.firmId), st = typeof invPlain === 'function' ? invPlain(i) : { t: '', c: '' };
-      return '<tr data-extra="' + esc(i.number) + '" data-id="' + esc(i.id) + '"><td>' + esc(f ? f.name : '') + '</td><td><b>' + esc(i.number) + '</b></td><td>' + esc(longDate(i.workDate || i.issued)) + '</td><td>' + esc(i.site || '') + '</td><td class="small cjxdetail">' + (lineBits(i) || '–') + (i.note ? '<div class="muted">Note: ' + esc(i.note) + '</div>' : '') + '</td><td>' + money(i.amount) + '</td><td>' + money(i.hst) + '</td><td><b>' + money(i.total) + '</b></td><td class="owing"><b>' + money(owingOf(i)) + '</b></td><td><span class="pill ' + esc(st.c || '') + '">' + esc(st.t || '') + '</span></td><td><button type="button" class="small sec" data-act="civview" data-id="' + esc(i.id) + '">View</button></td></tr>';
+      return '<tr data-extra="' + esc(i.number) + '" data-id="' + esc(i.id) + '"><td>' + esc(f ? f.name : '') + '</td><td><b>' + esc(i.number) + '</b></td><td>' + esc(longDate(i.workDate || i.issued)) + '</td><td>' + esc(i.site || '') + '</td><td class="small"><div class="cjxdetail">' + (lineBits(i) || '–') + (i.note ? '<div class="muted">Note: ' + esc(i.note) + '</div>' : '') + '</div></td><td>' + money(i.amount) + '</td><td>' + money(i.hst) + '</td><td><b>' + money(i.total) + '</b></td><td class="owing"><b>' + money(owingOf(i)) + '</b></td><td><span class="pill ' + esc(st.c || '') + '">' + esc(st.t || '') + '</span></td><td><button type="button" class="small sec" data-act="civview" data-id="' + esc(i.id) + '">View</button></td></tr>';
     }).join('');
     return '<div class="card" id="cjxinv"><h2 style="margin-top:0">Extra work invoice</h2>' +
-      '<p class="small">A separate invoice for additional work at any site. Add the details and the amount for each line. It is not part of the monthly invoice. HST is added the same way as on other client invoices.</p>' +
+      '<p class="cjx-hint">Separate from the monthly invoice. Add the work and the amount.</p>' +
       '<p><button type="button" class="small" id="cjxchoice" data-act="cjxopenform">Extra work invoice</button></p>' +
       (list.length ? '<div class="tw"><table id="cjxinvtable"><tr><th>Client</th><th>Invoice #</th><th>Date</th><th>Site</th><th>Details</th><th>Amount</th><th>HST</th><th>Total</th><th>Now owing</th><th>Status</th><th></th></tr>' + rows + '</table></div>' + totalsHtml(list, 'cjxtotals') : '<p class="small muted" id="cjxnone">No extra work invoices yet.</p>') +
       '</div>';

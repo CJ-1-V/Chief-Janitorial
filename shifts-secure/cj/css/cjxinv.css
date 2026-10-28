@@ -5,7 +5,8 @@
 .cjx-line .small.sec, .cjx-line button { margin-bottom: 2px; }
 .cjx-sum { background: #f7f7fb; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
 .cjx-sum.bad { background: #fdecec; }
-.cjx-totals { margin: 8px 0 0; }
+.cjx-totals, .cjx-hint { margin: 8px 0; }
+.cjx-hint { color: var(--mut, #5c6570); font-size: 14px; }
 tr.cjxlines td { background: #fafaff; }
 .cjxdetail { display: block; line-height: 1.35; }
 #cjxform textarea { width: 100%; }
