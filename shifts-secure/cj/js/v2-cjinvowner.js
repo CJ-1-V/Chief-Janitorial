@@ -22,7 +22,9 @@ function sjMask(){var m=DB.__sjReal;if(!m){m={};Object.defineProperty(DB,'__sjRe
   (DB.cleanRequests||[]).forEach(function(r){if(r.special&&r.billedInv&&r.billedInv!=='billed'){m[r.id]=r.billedInv;r.billedInv='billed';}});}
 function sjUnmask(){var m=DB.__sjReal;if(!m)return;(DB.cleanRequests||[]).forEach(function(r){if(r.billedInv==='billed'&&m[r.id])r.billedInv=m[r.id];});}
 function mask(){if(live()||typeof DB==='undefined'||!DB)return;var real=DB.__ivReal;
-  if(ivBlocked()){if(!real){Object.defineProperty(DB,'__ivReal',{value:DB.clientInvoices||[],writable:true,configurable:true,enumerable:false});DB.clientInvoices=[];}sjMask();}
+  if(ivBlocked()){if(!real){Object.defineProperty(DB,'__ivReal',{value:DB.clientInvoices||[],writable:true,configurable:true,enumerable:false});real=DB.__ivReal;}
+    /* extrainv: admin/ops may see extra-work invoices only; monthly invoices stay owner-only */
+    DB.clientInvoices=(typeof cjxCan==='function'&&cjxCan())?real.filter(function(i){return i&&i.extraWork;}):[];sjMask();}
   else{if(real){DB.clientInvoices=real;delete DB.__ivReal;}if(DB.__sjReal){sjUnmask();delete DB.__sjReal;}}}
 function seed(){if(live()||typeof DB==='undefined'||!DB||!DB.users)return;var off=DB.users.filter(function(u){return u.username==='office';})[0];if(!off)return;var add=0;
   [['u_ivadmin','officeadmin','Olive Admin','admin'],['u_ivbill','billing','Bill Ing','billing']].forEach(function(a){if(DB.users.some(function(u){return u.id===a[0]||u.username===a[1];}))return;
@@ -50,7 +52,9 @@ if(typeof mtInvoiced==='function'){var mi=mtInvoiced;mtInvoiced=function(site,da
 
 /* ---------- actions and forms: refused for non-owner office (incl. the CJ monthly invoice + Adjust) ---------- */
 ['clientinvpaid','civview','civpdf','civprint','pastinvdel','pastinvdelok','pastinvedit','vsinvok','scinvgo','scinvadj','scadjgo','scinvok','cjmadj'].forEach(function(k){
-  var o=ACT[k];if(typeof o!=='function')return;ACT[k]=function(){if(ivBlocked()){deny();return;}return o.apply(this,arguments);};});
+  var o=ACT[k];if(typeof o!=='function')return;ACT[k]=function(){if(ivBlocked()){
+    if((k==='civview'||k==='civpdf'||k==='civprint')&&typeof cjxCan==='function'&&cjxCan()){var el=arguments[0],id=el&&el.dataset&&el.dataset.id,inv=id&&typeof invById==='function'?invById(id):null;if(inv&&inv.extraWork)return o.apply(this,arguments);}
+    deny();return;}return o.apply(this,arguments);};});
 ['clientinv','pastinv','cjmadj'].forEach(function(k){var o=FORMS[k];if(typeof o!=='function')return;FORMS[k]=function(){if(ivBlocked()){deny();return;}return o.apply(this,arguments);};});
 
 /* outbox + audit log: the database hides invoice texts from non-owner CJ office (005 reg_cjiv_outbox_ok / reg_cjiv_audit_ok,
