@@ -1,0 +1,22 @@
+/* Visit-hour limits: flags only. Clocked time, pay and invoices are not changed. */
+#shedit td,#shedit th{vertical-align:top}
+@media(min-width:701px){#shedit td:first-child{min-width:280px}}
+.vl-edit{margin-top:8px;padding-top:6px;border-top:1px dashed #e3e5f0;max-width:340px}
+.vl-edit .vl-k{font-size:12px;font-weight:700;color:#332E57;margin:0 0 4px}
+.vl-labs{display:flex;flex-wrap:wrap;gap:8px}
+.vl-lab{margin:0;flex:1 1 130px;min-width:0;font-size:12px}
+.vl-lab input{width:100%;max-width:9rem;padding:7px 8px}
+.vl-hint{margin-top:4px}
+.vl-flags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.vl-flags.vl-inline{display:inline;margin-top:0}
+.vl-flag{white-space:normal;line-height:1.3}
+.vl-card h2{margin-top:0}
+.vl-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:0}
+.vl-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.7fr) auto;gap:8px 10px;align-items:center;padding:8px 0;border-top:1px solid #eee}
+.vl-row span{min-width:0;overflow-wrap:anywhere}
+.vl-hrs{font-weight:700;color:#332E57}
+@media(max-width:700px){
+  .vl-row{grid-template-columns:1fr 1fr}
+  .vl-row .vl-flag{grid-column:1 / -1;justify-self:start}
+  .vl-edit{max-width:none}
+}
