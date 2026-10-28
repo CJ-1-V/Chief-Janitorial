@@ -161,6 +161,24 @@ tr:last-child td { border-bottom: 0; }
 .facts.money dd { font-variant-numeric: tabular-nums; }
 
 .empty { background: #fff; border: 1px dashed var(--bd); border-radius: 14px; padding: 18px; color: var(--mut); }
+.inv-open { font-weight: 700; }
+
+.paper {
+  background: #fff;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  padding: 28px 32px 22px;
+  max-width: 720px;
+  box-shadow: 0 1px 2px rgba(25, 25, 25, 0.04);
+}
+.paper .co { margin: 0; font-size: 22px; font-weight: 700; }
+.paper h1 { margin: 16px 0 8px; font-size: 26px; }
+.paper .fine, .paper .line { margin: 0 0 4px; }
+.paper .fine { color: var(--mut); font-size: 14px; }
+.paper hr { border: 0; border-top: 1px solid var(--bd); margin: 14px 0; }
+.paper .rowline { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--bd); }
+.paper .rowline.total { font-size: 18px; border-bottom: 0; }
+.paper .rowline b { font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .gate { padding-top: 28px; }
 .gate h1 { margin-bottom: 8px; }

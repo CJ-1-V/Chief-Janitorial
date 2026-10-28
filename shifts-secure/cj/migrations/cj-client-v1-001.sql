@@ -566,6 +566,10 @@ as $$
   limit 500;
 $$;
 
+-- sent_copy is the email body stored when the invoice was sent. This function
+-- returns that copy unchanged. It does not write payment terms onto an older invoice.
+-- Interest (2% a month, only after more than 60 days overdue) is calculated only
+-- when data.terms is cj-2026-10, the marker stored on invoices that used that wording.
 create or replace function public.cj_client_v1_invoices()
 returns table(
   invoice_no text,
@@ -576,7 +580,10 @@ returns table(
   total numeric,
   issued date,
   due date,
-  status text
+  status text,
+  new_terms boolean,
+  sent_copy jsonb,
+  interest numeric
 )
 language sql
 stable
@@ -596,6 +603,23 @@ as $$
       when coalesce(i.data->>'paidAt', '') ~ '^\d{4}-\d{2}-\d{2}' then 'Paid'
       when i.data->>'due' ~ '^\d{4}-\d{2}-\d{2}$' and (i.data->>'due')::date < current_date then 'Overdue'
       else 'Unpaid'
+    end,
+    (i.data->>'terms' = 'cj-2026-10'),
+    case when jsonb_typeof(i.data->'sentCopy') = 'array' then i.data->'sentCopy' else null end,
+    case
+      when coalesce(i.data->>'paidAt', '') ~ '^\d{4}-\d{2}-\d{2}' then null
+      when i.data->>'terms' is distinct from 'cj-2026-10' then null
+      when coalesce(i.data->>'total', '') !~ '^-?\d+(\.\d+)?$' then null
+      when coalesce(i.data->>'due', '') !~ '^\d{4}-\d{2}-\d{2}$' then null
+      when current_date <= (i.data->>'due')::date + coalesce(nullif(i.data->>'interestAfterDays', '')::int, 60) then null
+      else round(
+        (i.data->>'total')::numeric
+        * coalesce(nullif(i.data->>'interestPct', '')::numeric, 2) / 100
+        * ceil((
+          (current_date - (i.data->>'due')::date)
+          - coalesce(nullif(i.data->>'interestAfterDays', '')::int, 60)
+        )::numeric / 30)
+      , 2)
     end
   from public.reg_client_invoices i
   where i.company_id = 'cj'
@@ -620,7 +644,7 @@ comment on function public.cj_client_v1_checklists(date, date) is
 comment on function public.cj_client_v1_requests() is
   'CJ client portal v1. Plain cleaning requests for the caller''s sites. No rates.';
 comment on function public.cj_client_v1_invoices() is
-  'CJ client portal v1. Invoice header totals for the caller. No line items and no rates.';
+  'CJ client portal v1. Stored invoice number and sentCopy for the caller. Terms are not rewritten. Interest only when data.terms is cj-2026-10.';
 
 revoke all on function public.cj_client_v1_hhmm(text) from public, anon, authenticated;
 revoke all on function public.cj_client_v1_minutes(text) from public, anon, authenticated;

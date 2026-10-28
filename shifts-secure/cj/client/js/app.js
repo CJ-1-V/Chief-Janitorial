@@ -32,9 +32,11 @@
     return known ? known.key : '';
   }
 
-  function pageName() {
+  function route() {
     var h = (location.hash || '').replace(/^#\/?/, '');
-    return V.PAGES.indexOf(h) >= 0 ? h : 'visits';
+    var m = /^invoice\/([A-Za-z0-9-]+)$/.exec(h);
+    if (m) return { page: 'invoice', no: m[1].toUpperCase() };
+    return { page: V.PAGES.indexOf(h) >= 0 ? h : 'visits', no: '' };
   }
 
   function setApp(html) {
@@ -60,7 +62,7 @@
     return '<a class="brand" href="#/visits"><img src="../assets/cj_Logo.png" alt="Chief Janitorial" width="168" height="44"></a>';
   }
 
-  function shell(view, active) {
+  function shell(view, active, invoiceNo) {
     var demos = D.clients();
     var current = demoKey();
     var options = demos.map(function (c) {
@@ -70,8 +72,8 @@
       '<div class="who"><b>' + V.esc(view.client_label) + '</b><span>' + V.esc(view.role || 'Client') + '</span></div></header>' +
       '<div class="banner"><p><b>Demo client.</b> Sample data as of ' + V.esc(V.shortDay(asOf())) + '. People on site are shown as Cleaner or a crew number.</p>' +
       '<label>Demo client <select id="demo-client">' + options + '</select></label></div>' +
-      nav(active) +
-      '<main id="portal-data">' + V.renderData(view, active) + '</main>' +
+      nav(active === 'invoice' ? 'invoices' : active) +
+      '<main id="portal-data">' + V.renderData(view, active, invoiceNo) + '</main>' +
       '<footer>Client portal · ' + V.esc(C.version) + '</footer>';
   }
 
@@ -102,8 +104,9 @@
     var rec = D.clients().filter(function (c) { return c.key === key; })[0];
     var data = D.dataset(asOf());
     var view = V.buildPortal(data, rec.id);
+    var here = route();
     window.CJ_CLIENT_VIEW = view;
-    setApp(shell(view, pageName()));
+    setApp(shell(view, here.page, here.no));
     document.title = view.client_label + ' · Client portal';
   }
 

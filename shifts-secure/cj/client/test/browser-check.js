@@ -99,7 +99,7 @@ async function main() {
       check(page + ' worker name hidden', data.indexOf('Hiddenworker') < 0);
       check(page + ' pay hidden', data.indexOf('18.75') < 0 && data.indexOf('PAY-SECRET') < 0);
       check(page + ' rate hidden', data.indexOf('24.50') < 0 && data.indexOf('RATE-SECRET') < 0);
-      check(page + ' other invoice hidden', data.indexOf('CJ-DEMO-HARB') < 0);
+      check(page + ' other invoice hidden', data.indexOf('HB-SMC-008') < 0);
       await chrome(['--screenshot=' + shot, url(north + '&page=' + page, '#/' + page)]);
       check(page + ' screenshot', fs.existsSync(shot) && fs.statSync(shot).size > 1000);
     }
@@ -127,6 +127,22 @@ async function main() {
     const closed = await chrome(['--dump-dom', ORIGIN]);
     check('closed screen', closed.indexOf('does not call the database') >= 0);
     check('closed hides demo sites', closed.indexOf('NSP-01') < 0 && closed.indexOf('Hiddenworker') < 0 && closed.indexOf('id="portal-data"') < 0);
+
+    const doc = portalData(await chrome(['--dump-dom', url(north, '#/invoice/NS-PLZ-035')]));
+    check('invoice number', doc.indexOf('NS-PLZ-035') >= 0 && doc.indexOf('<h1>Invoice NS-PLZ-035</h1>') >= 0);
+    check('tax line', doc.indexOf('GST/HST 755653946 RT0001 at 15%') >= 0);
+    check('contact email', doc.indexOf('admin@chiefjanitorial.com') >= 0);
+    check('e-transfer', doc.indexOf('e-transfer to admin@chiefjanitorial.com') >= 0);
+    check('cheque address', doc.indexOf('cheque payable to Chief Janitorial Inc., mailed to Unit I, 56 Burns Avenue, Charlottetown PE C1E 2G1') >= 0);
+    check('interest wording', doc.indexOf('2% a month') >= 0);
+    check('invoice hides other client', doc.indexOf('HB-SMC-008') < 0 && doc.indexOf('Hiddenworker') < 0 && doc.indexOf('24.50') < 0);
+    const shot = path.join(SHOTS, 'cj_client_invoice.png');
+    await chrome(['--window-size=1280,1120', '--screenshot=' + shot, url(north, '#/invoice/NS-PLZ-035')]);
+    check('invoice screenshot', fs.existsSync(shot) && fs.statSync(shot).size > 1000);
+
+    const oldInv = portalData(await chrome(['--dump-dom', url(north, '#/invoice/NS-PLZ-033')]));
+    check('stored older invoice', oldInv.indexOf('Invoice NS-PLZ-033') >= 0 && oldInv.indexOf('Payable within 30 days.') >= 0);
+    check('older invoice is not rewritten', oldInv.indexOf('e-transfer') < 0 && oldInv.indexOf('755653946') < 0 && oldInv.indexOf('2% a month') < 0 && oldInv.indexOf('admin@chiefjanitorial.com') < 0);
 
     const chooser = await chrome(['--dump-dom', url('store=mock')]);
     check('chooser', chooser.indexOf('North Sample Plaza') >= 0 && chooser.indexOf('Harbour Sample Clinic') >= 0);

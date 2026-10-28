@@ -32,6 +32,36 @@
     });
   }
 
+  /* Stored email body for an invoice sent under the current template. Older invoices
+     keep their own sentCopy and do not pass through this function. */
+  function newInvoiceCopy(number, billedTo, monthLabel, from, to, issued, due, lines, subtotal, tax, total) {
+    var copy = [
+      { k: 'h', t: 'Chief Janitorial Inc.' },
+      { k: 's', t: 'Unit I, 56 Burns Avenue, Charlottetown PE C1E 2G1' },
+      { k: 's', t: '902-200-4888 | admin@chiefjanitorial.com | www.chiefjanitorial.com' },
+      { k: 's', t: 'GST/HST 755653946 RT0001' },
+      { k: 's', t: 'Sample invoice for the demo client. Not a real invoice.' },
+      { k: 'g' },
+      { k: 'b', t: 'Invoice ' + number },
+      { k: 't', t: 'Billed to: ' + billedTo },
+      { k: 't', t: 'Invoice date: ' + issued },
+      { k: 't', t: 'For: ' + monthLabel + ' (' + from + ' to ' + to + ')' },
+      { k: 't', t: 'Due: ' + due },
+      { k: 'g' }
+    ];
+    lines.forEach(function (line) { copy.push({ k: 'r', t: line[0], v: line[1] }); });
+    copy.push({ k: 'g' });
+    copy.push({ k: 'r', t: 'Subtotal', v: subtotal });
+    copy.push({ k: 'r', t: 'GST/HST 755653946 RT0001 at 15%', v: tax });
+    copy.push({ k: 'rb', t: 'Total', v: total });
+    copy.push({ k: 'g' });
+    copy.push({ k: 's', t: 'Payment is due within one month of the date this invoice is received.' });
+    copy.push({ k: 's', t: 'Payment options: e-transfer to admin@chiefjanitorial.com, or a cheque payable to Chief Janitorial Inc., mailed to Unit I, 56 Burns Avenue, Charlottetown PE C1E 2G1.' });
+    copy.push({ k: 's', t: 'Late payment: interest of 2% a month applies to balances more than 2 months overdue.' });
+    copy.push({ k: 's', t: 'Please contact us at admin@chiefjanitorial.com with any questions about this invoice.' });
+    return copy;
+  }
+
   function dataset(asOf) {
     asOf = asOf || '2026-10-28';
     var d2 = addDays(asOf, -2);
@@ -48,6 +78,7 @@
           id: 'demo-north',
           key: 'north',
           label: 'North Sample Plaza',
+          invoicePrefix: 'NS-PLZ',
           billRate: 24.50,
           rateCode: 'RATE-SECRET-2450',
           sites: [
@@ -59,6 +90,7 @@
           id: 'demo-harbour',
           key: 'harbour',
           label: 'Harbour Sample Clinic',
+          invoicePrefix: 'HB-SMC',
           billRate: 31.75,
           rateCode: 'RATE-SECRET-3175',
           sites: [
@@ -93,10 +125,42 @@
         { id: 'r-h1', clientId: 'demo-harbour', no: 'CR-4499', site: 'HSC-01', kind: 'Deep clean', date: addDays(asOf, 4), when: 'Morning (before noon)', freq: 'One time only', status: 'Declined', note: 'Sam Hiddenworker asked for a deep clean.' }
       ],
       invoices: [
-        { id: 'i-n1', clientId: 'demo-north', number: 'CJ-DEMO-104', periodStart: '2026-09-01', periodEnd: '2026-09-30', amount: 1860, hst: 279, total: 2139, issued: '2026-10-02', due: '2026-11-01', paidAt: '', billRate: 24.50 },
-        { id: 'i-n2', clientId: 'demo-north', number: 'CJ-DEMO-098', periodStart: '2026-08-01', periodEnd: '2026-08-31', amount: 1420, hst: 213, total: 1633, issued: '2026-09-02', due: '2026-10-02', paidAt: '2026-10-01', billRate: 24.50 },
-        { id: 'i-n3', clientId: 'demo-north', number: 'CJ-DEMO-090', periodStart: '2026-07-01', periodEnd: '2026-07-31', amount: 980, hst: 147, total: 1127, issued: '2026-08-02', due: '2026-09-01', paidAt: '', billRate: 24.50 },
-        { id: 'i-h1', clientId: 'demo-harbour', number: 'CJ-DEMO-HARB', periodStart: '2026-09-01', periodEnd: '2026-09-30', amount: 7026.78, hst: 1054.02, total: 8080.80, issued: '2026-10-02', due: '2026-11-01', paidAt: '', billRate: 31.75 }
+        /* Numbers are the client prefix plus a 3-digit running number (the same shape as DC-CST-035).
+           sentCopy is the email body stored when the invoice was sent. The portal prints that copy.
+           It does not write today's payment terms onto an older copy. */
+        { id: 'i-n1', clientId: 'demo-north', number: 'NS-PLZ-035', periodStart: '2026-09-01', periodEnd: '2026-09-30', amount: 1860, hst: 279, total: 2139, issued: '2026-10-02', due: '2026-11-01', paidAt: '', terms: 'cj-2026-10', billRate: 24.50,
+          sentCopy: newInvoiceCopy('NS-PLZ-035', 'North Sample Plaza', 'September 2026', '1 Sep 2026', '30 Sep 2026', '2 Oct 2026', '1 Nov 2026', [
+            ['North lobby – Regular cleaning, September 2026', '$1,200.00'],
+            ['North washroom wing – Regular cleaning, September 2026', '$660.00']
+          ], '$1,860.00', '$279.00', '$2,139.00') },
+        { id: 'i-n2', clientId: 'demo-north', number: 'NS-PLZ-034', periodStart: '2026-08-01', periodEnd: '2026-08-31', amount: 1420, hst: 213, total: 1633, issued: '2026-09-02', due: '2026-10-02', paidAt: '2026-10-01', terms: 'cj-2026-10', billRate: 24.50,
+          sentCopy: newInvoiceCopy('NS-PLZ-034', 'North Sample Plaza', 'August 2026', '1 Aug 2026', '31 Aug 2026', '2 Sep 2026', '2 Oct 2026', [
+            ['North lobby – Regular cleaning, August 2026', '$900.00'],
+            ['North washroom wing – Regular cleaning, August 2026', '$520.00']
+          ], '$1,420.00', '$213.00', '$1,633.00') },
+        { id: 'i-n3', clientId: 'demo-north', number: 'NS-PLZ-033', periodStart: '2026-03-01', periodEnd: '2026-03-31', amount: 980, hst: 147, total: 1127, issued: '2026-04-02', due: '2026-05-02', paidAt: '', billRate: 24.50,
+          sentCopy: [
+            { k: 'b', t: 'Invoice NS-PLZ-033' },
+            { k: 't', t: 'Billed to: North Sample Plaza' },
+            { k: 't', t: 'Period: 1 Mar 2026 to 31 Mar 2026' },
+            { k: 't', t: 'Issued: 2 Apr 2026    Due: 2 May 2026' },
+            { k: 'g' },
+            { k: 'r', t: 'Regular cleaning', v: '$980.00' },
+            { k: 'r', t: 'HST', v: '$147.00' },
+            { k: 'rb', t: 'Invoice total', v: '$1,127.00' },
+            { k: 'g' },
+            { k: 's', t: 'Payable within 30 days.' }
+          ] },
+        { id: 'i-h1', clientId: 'demo-harbour', number: 'HB-SMC-008', periodStart: '2026-09-01', periodEnd: '2026-09-30', amount: 7026.78, hst: 1054.02, total: 8080.80, issued: '2026-10-02', due: '2026-11-01', paidAt: '', billRate: 31.75,
+          sentCopy: [
+            { k: 'b', t: 'Invoice HB-SMC-008' },
+            { k: 't', t: 'Billed to: Harbour Sample Clinic' },
+            { k: 't', t: 'Period: 1 Sep 2026 to 30 Sep 2026' },
+            { k: 'r', t: 'Regular cleaning', v: '$7,026.78' },
+            { k: 'r', t: 'HST', v: '$1,054.02' },
+            { k: 'rb', t: 'Invoice total', v: '$8,080.80' },
+            { k: 's', t: 'Payable within 30 days.' }
+          ] }
       ]
     };
   }

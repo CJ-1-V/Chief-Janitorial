@@ -99,6 +99,27 @@
     return 'Unpaid';
   }
 
+  function daysBetween(from, to) {
+    if (!dateOk(from) || !dateOk(to)) return 0;
+    var a = Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10));
+    var b = Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10));
+    return Math.round((b - a) / 86400000);
+  }
+
+  /* 2% a month only after the balance is more than 2 months (60 days) overdue,
+     and only when the stored invoice is on the current terms. */
+  function invoiceInterest(inv, asOf) {
+    if (!inv || inv.new_terms !== true || inv.status === 'Paid') return null;
+    var over = daysBetween(inv.due, asOf);
+    var gate = inv.interest_after_days || 60;
+    if (!(over > gate)) return null;
+    var pct = inv.interest_pct == null ? 2 : +inv.interest_pct;
+    var months = Math.ceil((over - gate) / 30);
+    var amount = Math.round((+inv.total || 0) * pct / 100 * months * 100) / 100;
+    if (!(amount > 0)) return null;
+    return { months: months, pct: pct, amount: amount };
+  }
+
   function requestStatus(status) {
     return { Requested: 1, Scheduled: 1, Declined: 1, Cancelled: 1 }[status] ? status : 'Closed';
   }
@@ -214,6 +235,9 @@
 
     if (name === 'cj_client_v1_invoices') {
       return (data.invoices || []).filter(function (i) { return i.clientId === clientId; }).map(function (i) {
+        var copy = Array.isArray(i.sentCopy) ? i.sentCopy.map(function (line) {
+          return { k: line.k, t: scrubNames(line.t, data), v: line.v == null ? '' : String(line.v) };
+        }) : null;
         return {
           invoice_no: i.number,
           period_start: i.periodStart,
@@ -223,7 +247,11 @@
           total: i.total,
           issued: i.issued,
           due: i.due,
-          status: invoiceStatus(i, data.asOf)
+          status: invoiceStatus(i, data.asOf),
+          new_terms: i.terms === 'cj-2026-10',
+          interest_pct: i.terms === 'cj-2026-10' ? 2 : null,
+          interest_after_days: i.terms === 'cj-2026-10' ? 60 : null,
+          sent_copy: copy
         };
       }).sort(function (a, b) {
         if (a.issued !== b.issued) return a.issued < b.issued ? 1 : -1;
@@ -243,7 +271,7 @@
 
   function demoBundle(data, clientId, period) {
     period = period || defaultPeriod(data.asOf);
-    var bundle = { period: { from: period.from, to: period.to } };
+    var bundle = { period: { from: period.from, to: period.to }, asOf: data.asOf };
     RPCS.forEach(function (name) {
       var key = name.replace('cj_client_v1_', '');
       bundle[key] = demoCall(data, clientId, name, period);
@@ -357,10 +385,18 @@
     });
 
     (bundle.invoices || []).forEach(function (r) {
-      var no = textOk(r && r.invoice_no, 24);
+      var no = textOk(r && r.invoice_no, 32);
       if (!no) return;
       var status = { Paid: 1, Unpaid: 1, Overdue: 1 }[r.status] ? r.status : 'Unpaid';
-      view.invoices.push({
+      var kinds = { h: 1, s: 1, b: 1, t: 1, r: 1, rb: 1, g: 1 };
+      var copy = null;
+      if (Array.isArray(r.sent_copy)) {
+        copy = r.sent_copy.map(function (line) {
+          var k = kinds[line && line.k] ? line.k : 't';
+          return { k: k, t: textOk(line && line.t, 400), v: textOk(line && line.v, 40) };
+        }).filter(function (line) { return line.k === 'g' || line.t; }).slice(0, 80);
+      }
+      var row = {
         invoice_no: no,
         period_start: dateOk(r.period_start) || '',
         period_end: dateOk(r.period_end) || '',
@@ -369,8 +405,14 @@
         total: moneyOk(r.total),
         issued: dateOk(r.issued) || '',
         due: dateOk(r.due) || '',
-        status: status
-      });
+        status: status,
+        new_terms: r.new_terms === true,
+        interest_pct: r.new_terms === true ? 2 : null,
+        interest_after_days: r.new_terms === true ? 60 : null,
+        sent_copy: copy
+      };
+      row.interest = invoiceInterest(row, dateOk(bundle.asOf) || '');
+      view.invoices.push(row);
     });
 
     return view;
@@ -514,22 +556,68 @@
       }).join('');
   }
 
+  function invoicePrefix(rows) {
+    var prefs = {};
+    (rows || []).forEach(function (r) {
+      var m = /^([A-Z0-9]+(?:-[A-Z0-9]+)*)-\d{3}$/.exec(r.invoice_no || '');
+      if (m) prefs[m[1]] = 1;
+    });
+    var keys = Object.keys(prefs);
+    return keys.length === 1 ? keys[0] : '';
+  }
+
   function renderInvoices(view) {
     var rows = view.invoices || [];
     if (!rows.length) {
       return '<h1>Invoices</h1><p class="lead">Invoices for your sites.</p>' + empty('No invoices.');
     }
-    return '<h1>Invoices</h1><p class="lead">Invoices for your sites.</p>' +
+    var prefix = invoicePrefix(rows);
+    return '<h1>Invoices</h1><p class="lead">Your invoice numbers use the prefix ' + esc(prefix || 'on the invoice') + ' and a 3-digit running number.</p>' +
       rows.map(function (r) {
         return '<article class="card inv" data-invoice="' + esc(r.invoice_no) + '">' +
           '<div class="card-top"><div><p class="kicker">' + esc(r.invoice_no) + '</p>' +
           '<h2>' + esc(shortDay(r.period_start)) + ' – ' + esc(shortDay(r.period_end)) + '</h2></div>' + pill(r.status) + '</div>' +
           '<dl class="facts money">' +
           '<div><dt>Amount</dt><dd>' + esc(money(r.amount)) + '</dd></div>' +
-          '<div><dt>HST</dt><dd>' + esc(money(r.hst)) + '</dd></div>' +
+          '<div><dt>Tax</dt><dd>' + esc(money(r.hst)) + '</dd></div>' +
           '<div><dt>Total</dt><dd><b>' + esc(money(r.total)) + '</b></dd></div>' +
-          '</dl><p class="meta"><span>Issued ' + esc(shortDay(r.issued) || '—') + '</span><span>Due ' + esc(shortDay(r.due) || '—') + '</span></p></article>';
+          '</dl><p class="meta"><span>Issued ' + esc(shortDay(r.issued) || '—') + '</span><span>Due ' + esc(shortDay(r.due) || '—') + '</span>' +
+          '<a class="inv-open" href="#/invoice/' + esc(r.invoice_no) + '">View invoice</a></p></article>';
       }).join('');
+  }
+
+  function renderCopyLine(line) {
+    if (line.k === 'g') return '<hr>';
+    if (line.k === 'h') return '<p class="co">' + esc(line.t) + '</p>';
+    if (line.k === 'b') return '<h1>' + esc(line.t) + '</h1>';
+    if (line.k === 's') return '<p class="fine">' + esc(line.t) + '</p>';
+    if (line.k === 't') return '<p class="line">' + esc(line.t) + '</p>';
+    return '<div class="rowline' + (line.k === 'rb' ? ' total' : '') + '"><span>' + esc(line.t) + '</span><b>' + esc(line.v || '') + '</b></div>';
+  }
+
+  /* Prints the stored email copy. Payment terms are not added here. */
+  function renderInvoiceDoc(view, no) {
+    var rows = (view && view.invoices) || [];
+    var inv = rows.filter(function (r) { return r.invoice_no === no; })[0];
+    if (!inv) {
+      return '<h1>Invoice</h1><p class="empty">That invoice is not on this account.</p><p><a href="#/invoices">All invoices</a></p>';
+    }
+    var stored = inv.sent_copy && inv.sent_copy.length ? inv.sent_copy.map(renderCopyLine).join('') : (
+      '<h1>Invoice ' + esc(inv.invoice_no) + '</h1>' +
+      '<div class="rowline"><span>Amount</span><b>' + esc(money(inv.amount)) + '</b></div>' +
+      '<div class="rowline"><span>Tax</span><b>' + esc(money(inv.hst)) + '</b></div>' +
+      '<div class="rowline total"><span>Total</span><b>' + esc(money(inv.total)) + '</b></div>'
+    );
+    var extra = '';
+    if (inv.interest) {
+      var owing = Math.round(((+inv.total || 0) + inv.interest.amount) * 100) / 100;
+      extra = '<div class="rowline"><span>Interest on a balance more than 2 months overdue (' + esc(String(inv.interest.months)) +
+        (inv.interest.months === 1 ? ' month' : ' months') + ' × ' + esc(String(inv.interest.pct)) + '%)</span><b>' + esc(money(inv.interest.amount)) + '</b></div>' +
+        '<div class="rowline total"><span>Now owing</span><b>' + esc(money(owing)) + '</b></div>';
+    }
+    return '<p class="lead"><a href="#/invoices">All invoices</a></p>' +
+      '<article class="paper" id="invoice-doc" data-invoice="' + esc(inv.invoice_no) + '" data-new-terms="' + (inv.new_terms ? 'true' : 'false') + '">' +
+      stored + extra + '</article>';
   }
 
   var RENDER = {
@@ -540,7 +628,8 @@
     invoices: renderInvoices
   };
 
-  function renderData(view, page) {
+  function renderData(view, page, invoiceNo) {
+    if (page === 'invoice') return renderInvoiceDoc(view || { ok: false }, invoiceNo || '');
     var fn = RENDER[page] || renderVisits;
     return fn(view || { ok: false });
   }
@@ -615,6 +704,8 @@
     mapBundle: mapBundle,
     buildPortal: buildPortal,
     renderData: renderData,
+    renderInvoiceDoc: renderInvoiceDoc,
+    invoiceInterest: invoiceInterest,
     renderAllData: renderAllData,
     needles: needles,
     privacyFindings: privacyFindings,

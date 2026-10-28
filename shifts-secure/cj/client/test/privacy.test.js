@@ -123,16 +123,17 @@ test('a demo client sees only their sites, with crew labels and no worker names'
 
   assert.deepEqual(north.requests.map(function (r) { return r.request_no + ' ' + r.site_code; }), ['CR-4401 NSP-02', 'CR-4408 NSP-01']);
   assert.deepEqual(north.invoices.map(function (i) { return i.invoice_no + ' ' + i.status; }), [
-    'CJ-DEMO-104 Unpaid',
-    'CJ-DEMO-098 Paid',
-    'CJ-DEMO-090 Overdue'
+    'NS-PLZ-035 Unpaid',
+    'NS-PLZ-034 Paid',
+    'NS-PLZ-033 Overdue'
   ]);
+  assert.ok(north.invoices.every(function (i) { return /^NS-PLZ-\d{3}$/.test(i.invoice_no); }));
 
   assert.deepEqual(model.privacyFindings(north, html, data, 'demo-north'), []);
   assert.ok(html.indexOf('Pat Hiddenworker') < 0);
   assert.ok(html.indexOf('Sam Hiddenworker') < 0);
   assert.ok(html.indexOf('HSC-01') < 0);
-  assert.ok(html.indexOf('CJ-DEMO-HARB') < 0);
+  assert.ok(html.indexOf('HB-SMC-008') < 0);
   assert.ok(JSON.stringify(north).indexOf('w-hidden') < 0);
 });
 
@@ -148,7 +149,8 @@ test('the other demo client cannot see North sites, and an empty client sees not
   assert.ok(harbour.checklists[0].note.indexOf('Cleaner') >= 0);
   assert.ok(harbourHtml.indexOf('NSP-01') < 0);
   assert.ok(harbourHtml.indexOf('North lobby') < 0);
-  assert.ok(harbourHtml.indexOf('CJ-DEMO-104') < 0);
+  assert.ok(/^HB-SMC-\d{3}$/.test(harbour.invoices[0].invoice_no));
+  assert.ok(harbourHtml.indexOf('NS-PLZ-035') < 0);
   assert.deepEqual(model.privacyFindings(harbour, harbourHtml, data, 'demo-harbour'), []);
 
   const quiet = model.buildPortal(data, 'demo-quiet');
@@ -199,4 +201,46 @@ test('extra name, pay and rate fields on a payload are dropped', function () {
   assert.ok(blob.indexOf('18.75') < 0);
   assert.ok(blob.indexOf('24.50') < 0);
   assert.ok(blob.indexOf('Fictional Owner Label') < 0);
+});
+
+test('a new invoice shows the stored email copy, and an older invoice is not rewritten', function () {
+  const data = demo.dataset(ASOF);
+  const north = model.buildPortal(data, 'demo-north');
+  const current = model.renderInvoiceDoc(north, 'NS-PLZ-035');
+  const older = model.renderInvoiceDoc(north, 'NS-PLZ-033');
+  assert.ok(current.indexOf('GST/HST 755653946 RT0001 at 15%') >= 0);
+  assert.ok(current.indexOf('admin@chiefjanitorial.com') >= 0);
+  assert.ok(current.indexOf('e-transfer to admin@chiefjanitorial.com') >= 0);
+  assert.ok(current.indexOf('cheque payable to Chief Janitorial Inc., mailed to Unit I, 56 Burns Avenue, Charlottetown PE C1E 2G1') >= 0);
+  assert.ok(current.indexOf('2% a month') >= 0);
+  assert.ok(current.indexOf('Now owing') < 0);
+  assert.ok(older.indexOf('Payable within 30 days.') >= 0);
+  assert.ok(older.indexOf('e-transfer') < 0);
+  assert.ok(older.indexOf('755653946') < 0);
+  assert.ok(older.indexOf('2% a month') < 0);
+  assert.ok(older.indexOf('admin@chiefjanitorial.com') < 0);
+  assert.equal(north.invoices.filter(function (i) { return i.invoice_no === 'NS-PLZ-034'; })[0].interest, null);
+  assert.equal(north.invoices.filter(function (i) { return i.invoice_no === 'NS-PLZ-033'; })[0].interest, null);
+  const late = model.invoiceInterest({
+    new_terms: true, status: 'Overdue', due: '2026-06-02', total: 1150,
+    interest_pct: 2, interest_after_days: 60
+  }, ASOF);
+  assert.equal(late.months, 3);
+  assert.equal(late.amount, 69);
+  assert.equal(model.invoiceInterest({
+    new_terms: false, status: 'Overdue', due: '2026-06-02', total: 1150,
+    interest_pct: 2, interest_after_days: 60
+  }, ASOF), null);
+  const stripped = JSON.parse(JSON.stringify(north));
+  const row = stripped.invoices.filter(function (i) { return i.invoice_no === 'NS-PLZ-035'; })[0];
+  row.sent_copy = row.sent_copy.filter(function (line) {
+    return !/e-transfer|2% a month|755653946|admin@chiefjanitorial.com/.test(line.t || '');
+  });
+  row.new_terms = false;
+  row.interest = null;
+  const rewritten = model.renderInvoiceDoc(stripped, 'NS-PLZ-035');
+  assert.ok(rewritten.indexOf('e-transfer') < 0);
+  assert.ok(rewritten.indexOf('755653946') < 0);
+  assert.ok(rewritten.indexOf('2% a month') < 0);
+  assert.deepEqual(model.privacyFindings(north, current + older, data, 'demo-north'), []);
 });
