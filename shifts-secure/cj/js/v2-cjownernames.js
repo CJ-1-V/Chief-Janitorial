@@ -141,10 +141,9 @@
   if (typeof save === 'function') {
     var save0 = save;
     save = function () {
-      var hideAgain = !cjOwnerSeesNames();
-      if (hideAgain) reveal();
+      reveal();
       try { return save0.apply(this, arguments); }
-      finally { if (hideAgain) conceal(); }
+      finally { if (!cjOwnerSeesNames()) conceal(); }
     };
     try { window.save = save; } catch (e) {}
   }
