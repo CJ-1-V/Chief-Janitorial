@@ -276,7 +276,7 @@
     /* cj-sec-002 (draft, not applied here): switched-off / unconfirmed CJ accounts get no app data. */
     if (s.role === 'account-blocked') {
       PAGE_STATE.loginMsg = s.reason === 'email'
-        ? 'Confirm your email before you can use Chief Janitorial. Open the message we sent you, then sign in.'
+        ? 'Confirm your email with the 6-digit code before you can use Chief Janitorial. Email sending is not wired yet.'
         : 'This account is switched off or inactive, so you cannot sign in or use the app. Please contact the Chief Janitorial office.';
       try { await sb.auth.signOut(); } catch (e) {}
       SIGNED_IN = false;
@@ -607,15 +607,11 @@
       var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
         full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null } } });
       if (r.error) { toast(friendly(r.error)); return; }
-      /* A new sign-up with no confirmed email does not get a session. Do not sign in with the password to skip that. */
-      if (!r.data.session || (r.data.user && r.data.user.email_confirmed_at === null)) {
-        try { await sb.auth.signOut(); } catch (e) {}
-        SIGNED_IN = false;
-        PAGE_STATE.loginMsg = 'Confirm your email before you can use Chief Janitorial. Open the message we sent you, then sign in.';
-        toast(PAGE_STATE.loginMsg);
-        go('#/');
-        return;
-      }
+      /* Supabase "Confirm email" stays OFF (shared with UnScramble). CJ uses its own 6-digit
+         code (draft migrations/cj-sec-002.sql), not auth.users.email_confirmed_at.
+         TODO(cj-email-code): after the draft is applied, call cj_email_code_issue and pass the
+         returned code to CJ_EMAIL_CODE_SEND. That hook is not wired and does not send mail. */
+      if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
       SIGNED_IN = true;
       if (!(await loadSnapshot())) { toast('Account created, but it is not ready yet. Please contact the office.'); return; }
       var u = ME;

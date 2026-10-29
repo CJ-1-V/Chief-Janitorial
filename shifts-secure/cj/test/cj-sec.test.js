@@ -38,8 +38,29 @@ test('only a new sign-up with emailConfirmed false waits for a code', function (
   assert.equal(good.ok, true);
   assert.equal(u.emailConfirmed, true);
   assert.equal(u.emailConfirmCode, undefined);
+  assert.equal(u.emailConfirmHash, undefined);
   assert.equal(gate.cjEmailPending(u), false);
   assert.equal(gate.cjUseBlock(u), '');
+  assert.equal(u.companyId, 'cj');
+  assert.notEqual(gate.cjEmailCodeHash(code), code);
+});
+
+test('the code expires, locks after five tries, skips other companies, and does not send mail', function () {
+  const hook = gate.CJ_EMAIL_CODE_SEND('person@example.com', '123456');
+  assert.deepEqual(hook, { sent: false, todo: true });
+  const expired = { active: true, companyId: 'cj', emailConfirmed: false, emailConfirmHash: gate.cjEmailCodeHash('111111'), emailConfirmExpiresAt: new Date(Date.now() - 1000).toISOString(), emailConfirmAttempts: 0, emailConfirmMax: 5 };
+  assert.match(gate.cjAcceptEmailCode(expired, '111111').msg, /expired/);
+  assert.equal(expired.emailConfirmed, false);
+  const locked = { active: true, companyId: 'cj', emailConfirmed: false, emailConfirmHash: gate.cjEmailCodeHash('222222'), emailConfirmExpiresAt: new Date(Date.now() + 60000).toISOString(), emailConfirmAttempts: 0, emailConfirmMax: 5 };
+  for (let i = 0; i < 4; i++) assert.match(gate.cjAcceptEmailCode(locked, '000000').msg, /not right/);
+  assert.match(gate.cjAcceptEmailCode(locked, '000000').msg, /Too many tries/);
+  assert.equal(locked.emailConfirmAttempts, 5);
+  assert.match(gate.cjAcceptEmailCode(locked, '222222').msg, /Too many tries/);
+  assert.equal(locked.emailConfirmed, false);
+  const other = { active: true, companyId: 'us', emailConfirmed: false };
+  assert.equal(gate.cjEmailPending(other), false);
+  assert.equal(gate.cjIssueEmailCode(other), '');
+  assert.equal(other.emailConfirmHash, undefined);
 });
 
 test('mock wiring holds new sign-ups and refuses a switched-off password', function () {
@@ -121,16 +142,28 @@ test('draft SQL blocks CJ use and leaves UnScramble alone, and is not applied he
   assert.match(sql, /p_company is distinct from 'cj' then true/);
   assert.match(sql, /not public\.cj_caller_is_cj\(p_user\) then true/);
   assert.match(sql, /cj_account_is_off/);
-  assert.match(sql, /email_confirmed_at is null/);
+  assert.match(sql, /Confirm email[\s\S]{0,120}stays OFF/);
+  assert.doesNotMatch(sql, /Turn Confirm email on/);
+  assert.doesNotMatch(sql, /email_confirmed_at/);
+  assert.match(sql, /code_hash/);
+  assert.match(sql, /expires_at/);
+  assert.match(sql, /max_attempts/);
+  assert.match(sql, /company = 'cj'/);
+  assert.match(sql, /cj_email_code_issue/);
+  assert.match(sql, /cj_email_code_check/);
+  assert.match(sql, /TODO\(cj-email-code\)/);
+  assert.doesNotMatch(sql, /net\.smtp|pg_net|invoke\(/i);
   assert.match(sql, /'role', 'account-blocked'/);
   assert.match(sql, /reg_snapshot\(\) is not replaced|Do not add it to public\.reg_snapshot\(\)/);
   assert.doesNotMatch(sql, /create or replace function public\.reg_snapshot/i);
   assert.match(sql, /cj_sec_guard_write/);
-  assert.match(sql, /cj_signup_gate/);
+  assert.match(sql, /cj_email_code/);
   assert.match(back, /drop function if exists public\.cj_may_use_app\(text, uuid\)/);
-  assert.match(back, /drop table if exists public\.cj_signup_gate/);
+  assert.match(back, /drop function if exists public\.cj_email_code_issue\(uuid, text\)/);
+  assert.match(back, /drop function if exists public\.cj_email_code_check\(text\)/);
+  assert.match(back, /drop table if exists public\.cj_email_code/);
+  assert.match(back, /stays off/);
   assert.match(back, /cj_sec_guard_write/);
-  assert.match(back, /cj_sec_signup_gate/);
   const registerDir = path.join(root, '..', 'register');
   ['js/cj-sec-gate.js', 'js/v2-cjsec.js'].forEach(function (rel) {
     assert.equal(fs.existsSync(path.join(registerDir, rel)), false);

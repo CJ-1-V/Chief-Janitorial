@@ -1,7 +1,9 @@
 /* v2-cjsec.js – mock only (?store=mock). Switched-off / inactive accounts cannot sign in
    or keep using the app, and a new sign-up must confirm an email before any screen opens.
-   Live enforcement is the draft in migrations/cj-sec-002.sql. This file does not run that SQL
-   and does not call Supabase. Sample accounts with no emailConfirmed flag stay confirmed. */
+   Live enforcement is the draft in migrations/cj-sec-002.sql (a CJ 6-digit code, hashed).
+   This file does not run that SQL and does not call Supabase.
+   Supabase "Confirm email" stays off. CJ_EMAIL_CODE_SEND is the TODO hook and does not send.
+   Sample accounts with no emailConfirmed flag stay confirmed. */
 (function () {
   'use strict';
   if (typeof window === 'undefined') return;
@@ -89,8 +91,8 @@
       x += '<div class="card"><form data-form="confirmemailset">' + inp('email', 'Email', '', { type: 'email', req: true, extra: ' data-autofocus autocomplete="email"' }) + '<button type="submit">Email me a code</button></form><p class="small muted">Test copy: nothing is emailed. The code appears on this screen.</p></div>';
       return x;
     }
-    x += '<div class="card"><p>We would send a 6-digit code to <b>' + esc(email) + '</b>.</p>';
-    x += '<div class="alert info" id="cj-email-code"><b>Test copy:</b> nothing was emailed. Your code is <b>' + esc(ME.emailConfirmCode || '') + '</b></div>';
+    x += '<div class="card"><p>A 6-digit code for <b>' + esc(email) + '</b>. It expires in 15 minutes. Five wrong tries and you need a new code.</p>';
+    x += '<div class="alert info" id="cj-email-code"><b>Test copy:</b> nothing was emailed (sending is not wired). Your code is <b>' + esc(ME.emailConfirmCode || '') + '</b></div>';
     x += '<form data-form="confirmemail">' + inp('code', '6-digit code', '', { req: true, extra: ' inputmode="numeric" maxlength="6" data-autofocus autocomplete="one-time-code"' }) + '<button type="submit">Confirm email</button></form>';
     x += '<p><button type="button" class="sec" data-act="resendconfirm">Send a new code</button></p>';
     x += '<p class="small muted">Test copy only. The office still has to approve a new account after the email is confirmed.</p></div>';
