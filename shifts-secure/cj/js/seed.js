@@ -60,6 +60,9 @@ function seedData(){
   acc(e3,'employee_terms',2);acc(e3,'privacy',2);doc(e3,'eligibility',{meta:{docType:'citizen'}});doc(e3,'driver_licence',{expiry:A(700),meta:{cls:'DZ / Class 3',airBrake:true}});
 
   var t1=U({type:'tester',name:'Terry Tester',username:'tester1',email:'tester1@example.com',approved:true,lastLogin:new Date(Date.now()-86400000).toISOString()});
+  /* Fake person, already switched off. Sign-in is refused (mock stand-in for cj-sec-002). Not on any site. */
+  U({type:'employee',name:'Riley Switchedoff',username:'switchedoff',email:'switchedoff@example.com',active:false,status:'inactive',approved:true,accountApproved:true,
+    profile:{firstName:'Riley',lastName:'Switchedoff',jobTitle:'Cleaner'}});
   acc(t1,'app_testing',5);db.consents.push({id:uid('c'),userId:t1.id,choice:true,version:'1.0',at:new Date(Date.now()-86400000*5).toISOString(),tz:'America/Toronto'});
   var t2=U({type:'tester',name:'Quinn Feedback',username:'tester2',email:'',approved:true});
   acc(t2,'app_testing',4);db.consents.push({id:uid('c'),userId:t2.id,choice:false,version:'1.0',at:new Date(Date.now()-86400000*4).toISOString(),tz:'America/Toronto'});

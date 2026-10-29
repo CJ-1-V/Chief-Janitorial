@@ -58,11 +58,25 @@ function layout(content){
 function render(){
   var app=document.getElementById('app');var h=(location.hash||'#/').split('?')[0];var html;
   try{
+    /* Server draft (migrations/cj-sec-002.sql) is the real lock. This still drops a switched-off
+       session on every paint so a leftover browser session cannot keep using the app. */
+    if(ME&&typeof cjAccountOff==='function'){
+      var offWhy=cjAccountOff(ME);
+      if(offWhy){
+        try{logLogin(ME,ME.username||ME.email,false,'Blocked: account switched off or inactive');}catch(e){}
+        try{audit('Blocked app use (account switched off or inactive)',ME.name,'');}catch(e){}
+        ME=null;try{sessionStorage.removeItem('us-test-me');}catch(e){}
+        PAGE_STATE.loginMsg=offWhy;
+        try{save();}catch(e){}
+        h='#/';
+        try{if((location.hash||'#/').split('?')[0]!=='#/'){location.hash='#/';return;}}catch(e){}
+      }
+    }
     if(!ME){var pub={'#/signup':VIEWS.signup,'#/forgot':VIEWS.forgot,'#/2fa':VIEWS.twofa};html=(pub[h]||(h.indexOf('#/signup/')===0?VIEWS.signupForm:VIEWS.login))(h);}
     else{
       if(processTemp())save();if(sweepBookings())save();
       h=gateRoute(h);
-      var navOk=(NAV[ME.type]||[]).some(function(n){return n[0]===h;})||['#/terms','#/profile','#/alerts','#/pending','#/changepw'].indexOf(h)>=0||(['#/quiz','#/quizresult'].indexOf(h)>=0&&!!VIEWS[ME.type+':'+h.slice(2)]);if(!navOk)h='#/home';
+      var navOk=(NAV[ME.type]||[]).some(function(n){return n[0]===h;})||['#/terms','#/profile','#/alerts','#/pending','#/changepw','#/confirm-email'].indexOf(h)>=0||(['#/quiz','#/quizresult'].indexOf(h)>=0&&!!VIEWS[ME.type+':'+h.slice(2)]);if(!navOk)h='#/home';
       var v=VIEWS[ME.type+':'+h.slice(2)]||VIEWS[h.slice(2)]||VIEWS[ME.type+':home'];
       html=v(h);track('screen',h);save();
     }
@@ -197,5 +211,8 @@ ACT.feedback=function(){modal('<h2>Send feedback</h2><div class="alert warn">Ple
 FORMS.feedback=function(f,d){readUpload(f.shot.files[0],function(file){DB.feedback.unshift({id:uid('f'),userId:ME.id,rating:+d.rating,comment:d.comment,screen:d.screen,screenshot:file,status:'New',at:new Date().toISOString()});track('feedback',d.screen);audit('Sent feedback',ME.name);save();closeModal();toast('Thank you for your feedback!');});};
 
 /* ---------- Start ---------- */
-function start(){load();var id=sessionStorage.getItem('us-test-me');ME=id?user(id):null;if(ME&&!ME.active)ME=null;if(ME)runAlerts();save();render();}
+function start(){load();var id=sessionStorage.getItem('us-test-me');ME=id?user(id):null;
+  if(ME&&typeof cjAccountOff==='function'){var why=cjAccountOff(ME);if(why){ME=null;try{sessionStorage.removeItem('us-test-me');}catch(e){}PAGE_STATE.loginMsg=why;}}
+  else if(ME&&!ME.active)ME=null;
+  if(ME)runAlerts();save();render();}
 document.addEventListener('DOMContentLoaded',start);

@@ -51,6 +51,9 @@
 
   function blocked(u) {
     if (!isCleaner(u)) return false;
+    /* Switched-off accounts and unconfirmed sign-ups are a different gate (cj-sec). */
+    if (typeof window.cjAccountOff === 'function' && window.cjAccountOff(u)) return false;
+    if (u.emailConfirmed === false) return false;
     if (typeof PAGE_STATE !== 'undefined' && PAGE_STATE && PAGE_STATE.cjInactiveCrew) return true;
     return !window.cjActiveCleaner(u);
   }
