@@ -2,7 +2,8 @@
    or keep using the app, and a new sign-up must confirm an email before any screen opens.
    Live enforcement is the draft in migrations/cj-sec-002.sql (a CJ 6-digit code, hashed).
    This file does not run that SQL and does not call Supabase.
-   Supabase "Confirm email" stays off. CJ_EMAIL_CODE_SEND is the TODO hook and does not send.
+   Supabase "Confirm email" stays off. CJ_EMAIL_CODE_SEND records the code email in the
+   test outbox. It does not call Resend and does not call the edge function.
    Sample accounts with no emailConfirmed flag stay confirmed. */
 (function () {
   'use strict';
@@ -88,11 +89,11 @@
     var email = String(ME.email || '').trim();
     var x = '<h1>Confirm your email</h1><div class="alert warn" id="cj-email-gate"><b>Your account is created.</b> You cannot use Chief Janitorial until this email is confirmed.</div>';
     if (!email) {
-      x += '<div class="card"><form data-form="confirmemailset">' + inp('email', 'Email', '', { type: 'email', req: true, extra: ' data-autofocus autocomplete="email"' }) + '<button type="submit">Email me a code</button></form><p class="small muted">Test copy: nothing is emailed. The code appears on this screen.</p></div>';
+      x += '<div class="card"><form data-form="confirmemailset">' + inp('email', 'Email', '', { type: 'email', req: true, extra: ' data-autofocus autocomplete="email"' }) + '<button type="submit">Email me a code</button></form><p class="small muted">Test copy: the email is recorded in the test outbox and is not sent. The code appears on this screen.</p></div>';
       return x;
     }
     x += '<div class="card"><p>A 6-digit code for <b>' + esc(email) + '</b>. It expires in 15 minutes. Five wrong tries and you need a new code.</p>';
-    x += '<div class="alert info" id="cj-email-code"><b>Test copy:</b> nothing was emailed (sending is not wired). Your code is <b>' + esc(ME.emailConfirmCode || '') + '</b></div>';
+    x += '<div class="alert info" id="cj-email-code"><b>Test copy:</b> recorded in the test outbox, not sent. Your code is <b>' + esc(ME.emailConfirmCode || '') + '</b></div>';
     x += '<form data-form="confirmemail">' + inp('code', '6-digit code', '', { req: true, extra: ' inputmode="numeric" maxlength="6" data-autofocus autocomplete="one-time-code"' }) + '<button type="submit">Confirm email</button></form>';
     x += '<p><button type="button" class="sec" data-act="resendconfirm">Send a new code</button></p>';
     x += '<p class="small muted">Test copy only. The office still has to approve a new account after the email is confirmed.</p></div>';
@@ -106,9 +107,9 @@
     if (typeof loginTaken === 'function' && loginTaken('', email, ME.id)) { toast('That email is already used.'); return; }
     ME.email = email;
     cjIssueEmailCode(ME);
-    try { audit('Email confirmation code prepared (test copy, not sent)', ME.name, email); } catch (e) {}
+    try { audit('Email confirmation code recorded in the test outbox (not sent)', ME.name, email); } catch (e) {}
     save();
-    toast('Code ready on this screen (test copy – not sent).');
+    toast('Code recorded in the test outbox (not sent).');
     render();
   };
   FORMS.confirmemail = function (f, d) {
@@ -123,9 +124,9 @@
   ACT.resendconfirm = function () {
     if (!ME || !ME.email || !cjEmailPending(ME)) return;
     cjIssueEmailCode(ME);
-    try { audit('Email confirmation code prepared again (test copy, not sent)', ME.name, ME.email); } catch (e) {}
+    try { audit('Email confirmation code recorded again in the test outbox (not sent)', ME.name, ME.email); } catch (e) {}
     save();
-    toast('New code ready on this screen (test copy – not sent).');
+    toast('New code recorded in the test outbox (not sent).');
     render();
   };
 

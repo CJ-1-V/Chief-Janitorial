@@ -23,6 +23,17 @@
 
   var sb = window.supabase.createClient(C.url, C.key, { auth: { storageKey: C.authStorageKey, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
   window.REG_SB = sb;
+  /* CJ sign-in code email. Live only. The function refuses any company other than cj.
+     Mock mode (?store=mock) never loads this file, so it never calls the function.
+     Do not log the code. Auth "Confirm email" and project SMTP stay unchanged. */
+  if (CO === 'cj') {
+    window.CJ_EMAIL_CODE_TRANSPORT = function (mail) {
+      if (!mail || mail.company !== 'cj' || !sb.functions) return;
+      var p = sb.functions.invoke('cj-send-email', { body: { kind: 'signin_code', company: 'cj', code: mail.code } });
+      if (p && typeof p.then === 'function') p.then(function () {}, function () {});
+      return p;
+    };
+  }
   // cj-golive (Oct 21 2026): extra stores (js/cj-live-store.js) plug in here: load(db, ctx) before the data is installed,
   // flush(ctx) -> {failed, err} after the cleaning requests, baseline(ctx) whenever the saved state is taken.
   var HOOKS = window.REG_HOOKS = window.REG_HOOKS || { load: [], flush: [], baseline: [] };
@@ -609,8 +620,12 @@
       if (r.error) { toast(friendly(r.error)); return; }
       /* Supabase "Confirm email" stays OFF (shared with UnScramble). CJ uses its own 6-digit
          code (draft migrations/cj-sec-002.sql), not auth.users.email_confirmed_at.
-         TODO(cj-email-code): after the draft is applied, call cj_email_code_issue and pass the
-         returned code to CJ_EMAIL_CODE_SEND. That hook is not wired and does not send mail. */
+         The draft SQL is not applied and is not called from here.
+         When a CJ code is already on the account, CJ_EMAIL_CODE_SEND hands it to cj-send-email.
+         That function refuses any company other than cj. Mock mode never reaches this branch. */
+      if (CO === 'cj' && u && u.email && u.emailConfirmCode && typeof CJ_EMAIL_CODE_SEND === 'function') {
+        try { CJ_EMAIL_CODE_SEND(u.email, u.emailConfirmCode, 'cj'); } catch (e) {}
+      }
       if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
       SIGNED_IN = true;
       if (!(await loadSnapshot())) { toast('Account created, but it is not ready yet. Please contact the office.'); return; }
