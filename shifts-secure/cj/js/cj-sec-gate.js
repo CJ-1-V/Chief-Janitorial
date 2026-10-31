@@ -45,12 +45,72 @@
     return 'h' + (h >>> 0).toString(16);
   }
 
-  /* TODO(cj-email-code): email the 6-digit code. Not wired.
-     Do not turn on Supabase "Confirm email" — that switch is shared with UnScramble and stays off.
-     When wiring, call cj_email_code_issue (draft SQL, postgres only) and send its return value.
-     Do not log the code. This function does not send anything. */
-  function CJ_EMAIL_CODE_SEND() {
-    return { sent: false, todo: true };
+  /* Emails the 6-digit code. Supabase "Confirm email" stays off (shared with UnScramble).
+     Mock (?store=mock, or no live store) records the email and does not call the network.
+     Live mode hands the code to CJ_EMAIL_CODE_TRANSPORT (edge function cj-send-email).
+     Do not log the code. Company other than cj is refused. */
+  var CJ_EMAIL_FROM = 'Chief Janitorial Support <support@chiefjanitorial.com>';
+  var CJ_EMAIL_REPLY_TO = 'admin@chiefjanitorial.com';
+  var OUTBOX = [];
+
+  function cjSignInCodeText(code) {
+    return 'Your Chief Janitorial sign-in code is ' + code + '.\n\nThis code expires in 15 minutes.\n\nIf you did not ask for this, you can ignore this email.';
+  }
+
+  /* ?store=mock records instead of sending. On the public site that link is ignored,
+     same as the data-store switch: only this computer (file or localhost) can force it. */
+  function cjEmailMockFor(search, hostname, protocol, mode) {
+    var host = String(hostname || '');
+    var local = protocol === 'file:' || host === 'localhost' || host === '127.0.0.1';
+    if (local && /[?&]store=mock\b/.test(String(search || ''))) return true;
+    return String(mode || '') !== 'supabase';
+  }
+
+  function cjEmailIsMock() {
+    var g = typeof globalThis !== 'undefined' ? globalThis : {};
+    var w = typeof window !== 'undefined' ? window : g;
+    var loc = null;
+    try { loc = (typeof location !== 'undefined' && location) || w.location || null; } catch (e) { loc = null; }
+    var mode = '';
+    try { mode = String((w.REG_STORE && w.REG_STORE.mode) || (g.REG_STORE && g.REG_STORE.mode) || ''); } catch (e2) { mode = ''; }
+    return cjEmailMockFor(loc && loc.search, loc && loc.hostname, loc && loc.protocol, mode);
+  }
+
+  function CJ_EMAIL_CODE_SEND(email, code, company, opts) {
+    var co = String(company || '').trim().toLowerCase();
+    if (co !== 'cj') return { sent: false, refused: true, reason: 'not-cj' };
+    var to = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { sent: false, refused: true, reason: 'no-email' };
+    var digits = String(code || '').trim();
+    if (!/^\d{6}$/.test(digits)) return { sent: false, refused: true, reason: 'bad-code' };
+    var mail = {
+      to: to,
+      from: CJ_EMAIL_FROM,
+      replyTo: CJ_EMAIL_REPLY_TO,
+      subject: 'Your Chief Janitorial sign-in code',
+      text: cjSignInCodeText(digits),
+      code: digits,
+      company: 'cj',
+      at: new Date().toISOString()
+    };
+    var store = opts && opts.store;
+    var mock = store === 'mock' ? true : (store === 'supabase' ? false : cjEmailIsMock());
+    if (mock) {
+      mail.mock = true;
+      OUTBOX.push(mail);
+      try { if (typeof window !== 'undefined') window.CJ_EMAIL_OUTBOX = OUTBOX; } catch (e) {}
+      return { sent: false, mock: true, recorded: true };
+    }
+    var send = opts && opts.transport;
+    try { if (typeof send !== 'function') send = (typeof window !== 'undefined' && window.CJ_EMAIL_CODE_TRANSPORT) || (typeof globalThis !== 'undefined' && globalThis.CJ_EMAIL_CODE_TRANSPORT); } catch (e2) { send = null; }
+    if (typeof send !== 'function') return { sent: false, mock: false, reason: 'not-wired' };
+    try {
+      var pending = send(mail);
+      if (pending && typeof pending.then === 'function') pending.then(function () {}, function () {});
+      return { sent: false, pending: true, mock: false };
+    } catch (e3) {
+      return { sent: false, mock: false, reason: 'not-sent' };
+    }
   }
 
   function cjUseBlock(u) {
@@ -72,7 +132,7 @@
     u.emailConfirmAttempts = 0;
     u.emailConfirmMax = CODE_MAX;
     u.emailConfirmSentAt = new Date().toISOString();
-    CJ_EMAIL_CODE_SEND(u.email || '', code);
+    CJ_EMAIL_CODE_SEND(u.email || '', code, u.companyId || '');
     return code;
   }
 
@@ -104,6 +164,10 @@
     cjIssueEmailCode: cjIssueEmailCode,
     cjAcceptEmailCode: cjAcceptEmailCode,
     cjEmailCodeHash: cjEmailCodeHash,
+    cjSignInCodeText: cjSignInCodeText,
+    cjEmailMockFor: cjEmailMockFor,
+    cjEmailOutbox: function () { return OUTBOX.slice(); },
+    cjEmailOutboxClear: function () { OUTBOX.length = 0; },
     CJ_EMAIL_CODE_SEND: CJ_EMAIL_CODE_SEND
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

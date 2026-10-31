@@ -43,11 +43,46 @@ test('only a new sign-up with emailConfirmed false waits for a code', function (
   assert.equal(gate.cjUseBlock(u), '');
   assert.equal(u.companyId, 'cj');
   assert.notEqual(gate.cjEmailCodeHash(code), code);
+  const sent = gate.cjEmailOutbox().filter(function (m) { return m.to === 'new@example.com'; });
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].mock, true);
+  assert.match(sent[0].text, new RegExp(code));
+  assert.equal(JSON.stringify(sent[0]).includes('api.resend.com'), false);
 });
 
-test('the code expires, locks after five tries, skips other companies, and does not send mail', function () {
-  const hook = gate.CJ_EMAIL_CODE_SEND('person@example.com', '123456');
-  assert.deepEqual(hook, { sent: false, todo: true });
+test('the code expires, locks after five tries, skips other companies, and records a mock email', function () {
+  const before = gate.cjEmailOutbox().length;
+  const refused = gate.CJ_EMAIL_CODE_SEND('person@example.com', '123456', 'us');
+  assert.deepEqual(refused, { sent: false, refused: true, reason: 'not-cj' });
+  assert.equal(gate.cjEmailOutbox().length, before);
+  const hook = gate.CJ_EMAIL_CODE_SEND('person@example.com', '123456', 'cj');
+  assert.deepEqual(hook, { sent: false, mock: true, recorded: true });
+  const mail = gate.cjEmailOutbox().filter(function (m) { return m.to === 'person@example.com' && m.code === '123456'; }).pop();
+  assert.equal(mail.from, 'Chief Janitorial Support <support@chiefjanitorial.com>');
+  assert.equal(mail.replyTo, 'admin@chiefjanitorial.com');
+  assert.equal(mail.to, 'person@example.com');
+  assert.equal(mail.text, gate.cjSignInCodeText('123456'));
+  assert.match(mail.text, /15 minutes/);
+  assert.match(mail.text, /did not ask for this/);
+  assert.equal(mail.mock, true);
+  const calls = [];
+  const live = gate.CJ_EMAIL_CODE_SEND('live-person@example.com', '654321', 'cj', {
+    store: 'supabase',
+    transport: function (m) { calls.push({ company: m.company, to: m.to, code: m.code, from: m.from }); return Promise.resolve({ ok: true }); }
+  });
+  assert.deepEqual(live, { sent: false, pending: true, mock: false });
+  assert.deepEqual(calls, [{ company: 'cj', to: 'live-person@example.com', code: '654321', from: 'Chief Janitorial Support <support@chiefjanitorial.com>' }]);
+  assert.equal(gate.cjEmailOutbox().some(function (m) { return m.to === 'live-person@example.com'; }), false);
+  const mocked = gate.CJ_EMAIL_CODE_SEND('live-person@example.com', '654321', 'cj', {
+    store: 'mock',
+    transport: function () { throw new Error('mock must not send'); }
+  });
+  assert.equal(mocked.mock, true);
+  assert.equal(mocked.recorded, true);
+  assert.equal(gate.cjEmailMockFor('?store=mock', 'www.chiefjanitorial.com', 'https:', 'supabase'), false);
+  assert.equal(gate.cjEmailMockFor('?store=mock', 'localhost', 'http:', 'supabase'), true);
+  assert.equal(gate.cjEmailMockFor('', 'www.chiefjanitorial.com', 'https:', 'supabase'), false);
+  assert.equal(gate.cjEmailMockFor('', '', '', ''), true);
   const expired = { active: true, companyId: 'cj', emailConfirmed: false, emailConfirmHash: gate.cjEmailCodeHash('111111'), emailConfirmExpiresAt: new Date(Date.now() - 1000).toISOString(), emailConfirmAttempts: 0, emailConfirmMax: 5 };
   assert.match(gate.cjAcceptEmailCode(expired, '111111').msg, /expired/);
   assert.equal(expired.emailConfirmed, false);
@@ -124,6 +159,11 @@ test('mock wiring holds new sign-ups and refuses a switched-off password', funct
   const created = users[users.length - 1];
   assert.equal(created.emailConfirmed, false);
   assert.equal(String(created.emailConfirmCode).length, 6);
+  assert.equal(ctx.CJ_EMAIL_OUTBOX.length, 1);
+  assert.equal(ctx.CJ_EMAIL_OUTBOX[0].mock, true);
+  assert.equal(ctx.CJ_EMAIL_OUTBOX[0].to, 'ada@example.com');
+  assert.match(ctx.CJ_EMAIL_OUTBOX[0].text, /15 minutes/);
+  assert.match(String(ctx.VIEWS['confirm-email']()), /test outbox, not sent/);
   assert.equal(ctx.gateRoute('#/home'), '#/confirm-email');
   assert.equal(JSON.stringify(ctx.gateNav(created)), JSON.stringify([['#/confirm-email', 'Confirm email']]));
   assert.equal(ctx.actionAllowed('clockin', 'act'), false);
@@ -164,7 +204,15 @@ test('draft SQL blocks CJ use and leaves UnScramble alone, and is not applied he
   assert.match(back, /drop table if exists public\.cj_email_code/);
   assert.match(back, /stays off/);
   assert.match(back, /cj_sec_guard_write/);
+  const sender = fs.readFileSync(path.join(root, 'js', 'store-supabase.js'), 'utf8');
+  assert.match(sender, /functions\.invoke\('cj-send-email'/);
+  assert.match(sender, /CO === 'cj'/);
+  assert.match(sender, /Confirm email" stays OFF|Confirm email" stays OFF/);
+  assert.doesNotMatch(sender, /re_[A-Za-z0-9]{8,}/);
+  assert.doesNotMatch(sender, /cj_email_code_issue\(/);
   const registerDir = path.join(root, '..', 'register');
+  const unscramble = fs.readFileSync(path.join(registerDir, 'js', 'store-supabase.js'), 'utf8');
+  assert.equal(unscramble.includes('cj-send-email'), false);
   ['js/cj-sec-gate.js', 'js/v2-cjsec.js'].forEach(function (rel) {
     assert.equal(fs.existsSync(path.join(registerDir, rel)), false);
   });
