@@ -273,6 +273,16 @@
     if (r.error) throw r.error;
     var s = r.data || {};
     if (s.role === 'none') { await loadPublic(); PAGE_STATE.notReg = true; return false; }
+    /* cj-sec-002 (draft, not applied here): switched-off / unconfirmed CJ accounts get no app data. */
+    if (s.role === 'account-blocked') {
+      PAGE_STATE.loginMsg = s.reason === 'email'
+        ? 'Confirm your email with the 6-digit code before you can use Chief Janitorial. Email sending is not wired yet.'
+        : 'This account is switched off or inactive, so you cannot sign in or use the app. Please contact the Chief Janitorial office.';
+      try { await sb.auth.signOut(); } catch (e) {}
+      SIGNED_IN = false;
+      await loadPublic();
+      return false;
+    }
     /* cj-active: crew who are not in cj-main activeCleaners stay signed in only long enough to see the
        "isn't active" screen (v2-cjactive.js). role 'none' would sign them out as "no account". */
     if (s.role === 'crew-inactive') {
@@ -597,6 +607,10 @@
       var r = await sb.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: d.subId || null,
         full_name: d.name, username: d.username || null, contact_email: d.email || null, phone: digits(d.phone).slice(-10) || null } } });
       if (r.error) { toast(friendly(r.error)); return; }
+      /* Supabase "Confirm email" stays OFF (shared with UnScramble). CJ uses its own 6-digit
+         code (draft migrations/cj-sec-002.sql), not auth.users.email_confirmed_at.
+         TODO(cj-email-code): after the draft is applied, call cj_email_code_issue and pass the
+         returned code to CJ_EMAIL_CODE_SEND. That hook is not wired and does not send mail. */
       if (!r.data.session) { r = await sb.auth.signInWithPassword({ email: L.email, password: d.pw }); if (r.error) { toast('Account created. Please sign in.'); go('#/'); return; } }
       SIGNED_IN = true;
       if (!(await loadSnapshot())) { toast('Account created, but it is not ready yet. Please contact the office.'); return; }
@@ -638,7 +652,7 @@
         busy(true, 'Creating the account…');
         var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
         var r = await tmp.auth.signUp({ email: L.email, password: d.pw, options: { data: { company: (C.companyId || 'us'), reg_kind: kind, reg_sub: kind === 'worker' ? ME.id : null,
-          full_name: created.name, username: created.username || null, contact_email: created.email || null, phone: digits(created.phone).slice(-10) || null } } });
+          full_name: created.name, username: created.username || null, contact_email: created.email || null, phone: digits(created.phone).slice(-10) || null, reg_office: '1' } } });
         if (r.error || !r.data.user) throw (r.error || new Error('Could not create the account.'));
         try { await tmp.auth.signOut(); } catch (e) {}
         rekey(created.id, r.data.user.id);
@@ -682,7 +696,7 @@
       var tmp = window.supabase.createClient(C.url, C.key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'reg-create-tmp' } });
       var r = await tmp.auth.signUp({ email: email, password: throwawayPw(), options: { data: { company: (C.companyId || 'us'), reg_kind: kind,
         reg_sub: kind === 'worker' ? p.subId : null, full_name: p.name, username: p.username, contact_email: email,
-        phone: digits(p.phone).slice(-10) || null, added_by_office: me.id } } });
+        phone: digits(p.phone).slice(-10) || null, added_by_office: me.id, reg_office: '1' } } });
       if (r.error || !r.data.user) return { error: friendly(r.error || 'Could not create the account.') };
       try { await tmp.auth.signOut(); } catch (e) {}
       // server: temporary password (same generator as Reset password), must-change flag, approval, audit row
