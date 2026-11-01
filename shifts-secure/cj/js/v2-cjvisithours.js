@@ -48,7 +48,7 @@
   }
   function who(id) { var u = typeof user === 'function' ? user(id) : null; return u ? u.name : 'Cleaner'; }
   /* clocked duration only – the same hrs() the rest of the app uses. Never adjusted. */
-  function clocked(t) { return (t && t.in && t.out && typeof hrs === 'function') ? hrs(t.in, t.out) : 0; }
+  function clocked(t) { return (t && t.in && t.out && typeof hrs === 'function') ? hrs(t.in, t.out, t.date) : 0; }
   function flagFor(t) {
     if (!t || t.test || !t.in || !t.out || t.lateEntry === 'rejected') return null;
     var code = entrySite(t), s = siteOf(code); if (!s) return null;

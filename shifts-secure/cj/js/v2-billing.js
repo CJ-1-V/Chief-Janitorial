@@ -14,7 +14,7 @@ function subRows(sub,from,to){var ws=users('worker').filter(function(w){return w
   DB.time.forEach(function(t){if(t.test||!t.out||t.date<from||t.date>to)return;if(ws.indexOf(t.userId)<0)return;var sh=DB.shifts.filter(function(s){return s.id===t.shiftId;})[0];if(sh&&sh.test)return;
     rows.push({key:t.key0||('t:'+t.id),date:t.date,site:t.site||(sh&&sh.site),start:t.in,end:t.out,uid:t.userId,temp:!!t.temp,breakMissed:!!t.breakMissed});});
   DB.shifts.forEach(function(sh){if(sh.test||sh.kind!=='crew'||sh.date>today()||sh.date<from||sh.date>to)return;(sh.booked||[]).forEach(function(id){if(ws.indexOf(id)<0)return;if(DB.time.some(function(t){return t.userId===id&&t.shiftId===sh.id&&!t.test;}))return;rows.push({key:'c:'+sh.id+':'+id,date:sh.date,site:sh.site,start:sh.start,end:sh.end,uid:id,crew:true});});});
-  rows.forEach(function(r){r.hours=hrs(r.start,r.end);r.paid=r.hours-unpaidBreak(r.hours,r);var c=latestChange(r.key);r.change=c;r.held=!!(c&&c.status==='Pending');});
+  rows.forEach(function(r){r.hours=hrs(r.start,r.end,r.date);r.paid=r.hours-unpaidBreak(r.hours,r);var c=latestChange(r.key);r.change=c;r.held=!!(c&&c.status==='Pending');});
   return rows.sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.uid<b.uid?-1:1;});}
 VIEWS['sub:workerhours']=function(){var st=PAGE_STATE.wh||{},to=st.to||today(),from=st.from||addDays(to,-29);var rows=subRows(ME,from,to);
   var per={};rows.forEach(function(r){var p=per[r.uid]=per[r.uid]||{days:{},hours:0,paid:0,held:0};p.days[r.date]=1;p.hours+=r.hours;if(r.held)p.held+=r.paid;else p.paid+=r.paid;});
