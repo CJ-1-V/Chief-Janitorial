@@ -40,7 +40,7 @@ function mtTimeSel(name,label,val,o){o=o||{};var x='';for(var m=0;m<1440;m+=15){
 function mtBreakSel(val){return '<div><label class="req">Unpaid break</label><select name="brk" required><option value="taken"'+(val!=='none'?' selected':'')+'>'+BREAK_MIN+'-minute break taken (deducted on shifts of 5 h or more)</option><option value="none"'+(val==='none'?' selected':'')+'>No break taken (nothing deducted)</option></select></div>';}
 function mtReasonSel(val,label){return '<div><label class="req">'+esc(label||'Reason')+'</label><select name="reason" required><option value="">– choose –</option>'+MT_REASONS.map(function(r){return '<option value="'+r[0]+'"'+(r[0]===val?' selected':'')+'>'+esc(r[1])+'</option>';}).join('')+'</select></div>';}
 function mtSpan(a,b){return esc(a)+'–'+esc(b)+plus1H(a,b);}
-function mtPaid(t){var w=hrs(t['in'],t.out);return w-unpaidBreak(w,t);}
+function mtPaid(t){var w=hrs(t["in"],t.out,t.date);return w-unpaidBreak(w,t);}
 
 /* ---------- checks shared by add / edit / crew lead ---------- */
 function mtExported(date){return (DB.payExports||[]).filter(function(x){return x.start<=date&&date<=x.end;})[0]||null;}
@@ -55,9 +55,9 @@ function mtCheck(u,d,exceptId){var E=[],W=[];
   if(!quarterOk(d['in'])||!quarterOk(d.out))E.push('Use quarter-hour times (:00, :15, :30, :45).');
   else if(spanErr(d['in'],d.out))E.push(spanErr(d['in'],d.out));
   if(E.length)return {E:E,W:W};
-  if(hmMsLocal(d.date,d['in'])+hrs(d['in'],d.out)*3600000>Date.now())E.push('This shift would end in the future ('+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'). Hours can only be added after they are worked.');
+  if(hmMsLocal(d.date,d['in'])+hrs(d["in"],d.out,d.date)*3600000>Date.now())E.push('This shift would end in the future ('+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'). Hours can only be added after they are worked.');
   if(overlapsAny(u.id,d.date,d['in'],d.out,exceptId))E.push(u.name+' already has hours that overlap '+d.date+' '+d['in']+'–'+d.out+plus1(d['in'],d.out)+'.');
-  if(hrs(d['in'],d.out)>MT_WARN_H)W.push(u.name+': '+hrs(d['in'],d.out).toFixed(2)+' hours is more than '+MT_WARN_H+' hours.');
+  if(hrs(d["in"],d.out,d.date)>MT_WARN_H)W.push(u.name+': '+hrs(d["in"],d.out,d.date).toFixed(2)+' hours is more than '+MT_WARN_H+' hours.');
   var ex=u.type==='employee'&&mtExported(d.date);if(ex)W.push('The pay period '+ex.start+' to '+ex.end+' was already exported for Wagepoint ('+fmtStamp(ex.at)+' by '+ex.by+'). Payroll must be re-exported or corrected in Wagepoint.');
   var inv=mtInvoiced(d.site,d.date);if(inv)W.push('The client invoice '+inv.number+' for '+inv.periodStart+' to '+(inv.periodEnd||'')+' is already issued. These hours will go on the client\'s next invoice as a late entry.');
   mtLicenceWarn(u,d.date).forEach(function(w){W.push(w);});

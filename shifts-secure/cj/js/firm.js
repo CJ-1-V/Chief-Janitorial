@@ -17,7 +17,7 @@ function firmRows(firm,from,to){var codes=firmCodes(firm),rows=[];
   var map=DB.workerNos=DB.workerNos||{},byDate={};rows.forEach(function(r){(byDate[r.date]=byDate[r.date]||[]).push(r);});
   Object.keys(byDate).forEach(function(dt){var k=firm.id+'|'+dt,m=map[k]=map[k]||{},next=Object.keys(m).reduce(function(a,id){return Math.max(a,m[id]);},0);
     byDate[dt].slice().sort(function(a,b){var x=(a.orig&&a.orig.in)||a.start,y=(b.orig&&b.orig.in)||b.start;return x<y?-1:x>y?1:a.uid<b.uid?-1:a.uid>b.uid?1:0;}).forEach(function(r){if(!m[r.uid])m[r.uid]=++next;});});
-  rows.forEach(function(r){r.no=map[firm.id+'|'+r.date][r.uid];r.hours=hrs(r.start,r.end);r.bill=Math.max(0,r.hours-breakHoursFor(r.hours,!!r.breakMissed));});
+  rows.forEach(function(r){r.no=map[firm.id+'|'+r.date][r.uid];r.hours=hrs(r.start,r.end,r.date);r.bill=Math.max(0,r.hours-breakHoursFor(r.hours,!!r.breakMissed));});
   return rows;}
 function firmReport(firm,from,to){
   var rows={},d=from;while(d<=to){rows[d]={date:d,workers:{},hours:0,bill:0,temp:0};d=addDays(d,1);}
