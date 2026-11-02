@@ -11,11 +11,14 @@
    the shared database until the owner says yes. An unknown column would fail
    the whole site save.
    A completed shift is flagged when its clocked duration (in → out, unchanged) is
-   below min or above max. Nothing is rounded, capped, or rewritten. Pay and invoices
-   are not touched. Sites with no limit are never flagged. typical_hours is a
-   reference only and never flags a visit. Flags show for the owner and admin
-   only. Only the owner can edit the range. Crew, clients and team members do
-   not see the flags. Clock in and clock out are not blocked.
+   below min or above max. A completed shift is also flagged when that same
+   clocked span crosses a daylight-saving change in America/Halifax (the 2 AM
+   change), so the owner can confirm the hours. Nothing is rounded, capped, or
+   rewritten. Pay and invoices are not touched. Sites with no limit are never
+   flagged for range. typical_hours is a reference only and never flags a visit.
+   The clock-change flag does not need a min or max. Flags show for the owner
+   and admin only. Only the owner can edit the range. Crew, clients and team
+   members do not see the flags. Clock in and clock out are not blocked.
    Duration uses the DST-safe hrs(in, out, date) from cursor/cj-bugsweep1 when
    that helper is loaded (hrs.length >= 3). Otherwise hours are computed from
    America/Halifax timestamps for the shift's start date.
@@ -126,6 +129,18 @@
     return hoursFromTimestamps(t.in, t.out, t.date);
   }
   window.vlClocked = clocked;
+  /* True when the clocked span includes both sides of a Halifax clock change.
+     Start and end are the same instants used for the duration. Stored times are not written. */
+  function crossesDst(inn, out, date) {
+    if (!inn || !out || !date || !/^\d{4}-\d{2}-\d{2}/.test(String(date))) return false;
+    var s = hmMin(inn), m = hmMin(out) - s;
+    if (!m) return false;
+    if (m < 0) m += 1440;
+    var start = hfxMs(date, s), end = hfxMs(date, s + m);
+    if (!(end > start)) return false;
+    return hfxOffMin(start) !== hfxOffMin(end);
+  }
+  window.vlCrossesDst = crossesDst;
   function flagFor(t) {
     if (!t || t.test || !t.in || !t.out || t.lateEntry === 'rejected') return null;
     var code = entrySite(t), s = siteOf(code); if (!s) return null;
@@ -136,18 +151,34 @@
     if (L.min != null && h < L.min - 1e-6) return { kind: 'under', limit: L.min, hours: h, site: s, code: code, t: t };
     return null;
   }
+  function dstFlagFor(t) {
+    if (!t || t.test || !t.in || !t.out || t.lateEntry === 'rejected') return null;
+    if (!crossesDst(t.in, t.out, t.date)) return null;
+    var code = entrySite(t), s = siteOf(code);
+    return { kind: 'dst', hours: clocked(t), site: s || { code: code }, code: code, t: t };
+  }
   window.vlFlagFor = flagFor;
+  window.vlDstFlag = dstFlagFor;
   function flagged() {
-    return (DB.time || []).map(flagFor).filter(Boolean).sort(function (a, b) {
+    var list = [];
+    (DB.time || []).forEach(function (t) {
+      var r = flagFor(t); if (r) list.push(r);
+      var d = dstFlagFor(t); if (d) list.push(d);
+    });
+    return list.sort(function (a, b) {
       if (a.t.date !== b.t.date) return a.t.date < b.t.date ? 1 : -1;
-      return (a.t.in || '') < (b.t.in || '') ? 1 : -1;
+      if ((a.t.in || '') !== (b.t.in || '')) return (a.t.in || '') < (b.t.in || '') ? 1 : -1;
+      return a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0;
     });
   }
   function badgeText(f) {
+    if (f.kind === 'dst') return 'Clock change: confirm hours (' + fmtH(f.hours) + 'h)';
     return (f.kind === 'over' ? 'Over max ' : 'Under min ') + fmtH(f.limit) + 'h (' + fmtH(f.hours) + 'h)';
   }
+  function badgeKey(f) { return String(f.t.id) + (f.kind === 'dst' ? ':dst' : ''); }
   function badgeHtml(f) {
-    return '<span class="pill vl-flag ' + (f.kind === 'over' ? 's-warn' : 's-bad') + '" data-vl="' + esc(f.t.id) + '">' + esc(badgeText(f)) + '</span>';
+    var cls = f.kind === 'under' ? 's-bad' : 's-warn';
+    return '<span class="pill vl-flag ' + cls + (f.kind === 'dst' ? ' vl-dst' : '') + '" data-vl="' + esc(badgeKey(f)) + '">' + esc(badgeText(f)) + '</span>';
   }
   function flagsHtml(list) {
     if (!list.length) return '';
@@ -241,13 +272,13 @@
       var nm = typeof cjSiteLabel === 'function' ? cjSiteLabel(f.site) : (f.site && f.site.name && f.site.name !== f.code ? f.code + ' · ' + f.site.name : f.code);
       return '<li class="vl-row"><span class="vl-who"><b>' + esc(who(f.t.userId)) + '</b></span><span class="vl-site">' + esc(nm) + '</span><span class="vl-date">' + esc((typeof shortDay === 'function' ? shortDay(f.t.date) + ' ' : '') + String(f.t.date).slice(0, 4)) + '</span><span class="vl-hrs">' + esc(fmtH(f.hours)) + 'h clocked</span>' + badgeHtml(f) + '</li>';
     }).join('');
-    return '<div class="card vl-card" id="vllimits"><h2>Hours outside site limits' + (all.length ? ' <span class="pill s-warn">' + all.length + '</span>' : '') + '</h2>' +
-      '<p class="small muted">Completed shifts whose clocked hours are under the site’s minimum or over its maximum. This is a flag only – clocked time, pay and invoices are not changed. Sites with no limit are not listed.</p>' +
+    return '<div class="card vl-card" id="vllimits"><h2>Hours to confirm' + (all.length ? ' <span class="pill s-warn">' + all.length + '</span>' : '') + '</h2>' +
+      '<p class="small muted">Completed shifts under a site’s minimum, over its maximum, or whose clocked time crosses a daylight-saving change (2 AM, America/Halifax). This is a flag only. Clocked time, pay and invoices are not changed. Please confirm these hours.</p>' +
       (all.length ? '<ul class="vl-list">' + rows + '</ul>' : '<p class="muted" id="vlnone">None right now.</p>') + '</div>';
   }
 
   function addBadge(cell, f) {
-    if (!cell || cell.querySelector('[data-vl="' + f.t.id + '"]')) return;
+    if (!cell || cell.querySelector('[data-vl="' + badgeKey(f) + '"]')) return;
     var box = cell.querySelector('.vl-flags');
     if (!box) { cell.insertAdjacentHTML('beforeend', '<div class="vl-flags"></div>'); box = cell.querySelector('.vl-flags'); }
     box.insertAdjacentHTML('beforeend', badgeHtml(f));
@@ -317,7 +348,7 @@
           while ((n = w.nextNode())) if (n.nodeValue && n.nodeValue.indexOf(needle) >= 0) hits.push(n);
           hits.forEach(function (node) {
             var hold = node.parentNode;
-            if (!hold || (hold.querySelector && hold.querySelector('[data-vl="' + f.t.id + '"]'))) return;
+            if (!hold || (hold.querySelector && hold.querySelector('[data-vl="' + badgeKey(f) + '"]'))) return;
             var sp = document.createElement('span');
             sp.className = 'vl-flags vl-inline';
             sp.innerHTML = ' ' + badgeHtml(f);

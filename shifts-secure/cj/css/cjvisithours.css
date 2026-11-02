@@ -12,6 +12,7 @@
 .vl-flags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .vl-flags.vl-inline{display:inline;margin-top:0}
 .vl-flag{white-space:normal;line-height:1.3}
+.vl-dst{background:#fff6e0}
 .vl-card h2{margin-top:0}
 .vl-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:0}
 .vl-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.7fr) auto;gap:8px 10px;align-items:center;padding:8px 0;border-top:1px solid #eee}

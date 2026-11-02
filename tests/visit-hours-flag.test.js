@@ -100,6 +100,38 @@ assert.strictEqual(dstFlag.hours, 9, '8h max flags the 9 real hours across the f
 assert.strictEqual(dst.in, '22:00');
 assert.strictEqual(dst.out, '06:00');
 
+assert.strictEqual(ctx.vlCrossesDst('22:00', '06:00', '2026-10-31'), true, 'fall-back night crosses 2 AM');
+assert.strictEqual(ctx.vlCrossesDst('22:00', '01:30', '2026-10-31'), false, 'ends before the 2 AM change');
+assert.strictEqual(ctx.vlCrossesDst('22:00', '06:00', '2026-10-30'), false, 'ordinary night does not cross a clock change');
+assert.strictEqual(ctx.vlCrossesDst('09:00', '17:00', '2026-11-01'), false, 'day shift after the change');
+assert.strictEqual(ctx.vlCrossesDst('01:00', '03:00', '2026-11-01'), true, 'same morning across 2 AM');
+assert.strictEqual(ctx.vlCrossesDst('03:00', '06:00', '2026-11-01'), false, 'after the change has already happened');
+assert.strictEqual(ctx.vlCrossesDst('22:00', '06:00', '2027-03-13'), true, 'spring-forward night crosses 2 AM');
+assert.strictEqual(ctx.vlCrossesDst('22:00', '01:30', '2027-03-13'), false, 'spring night ending before 2 AM');
+
+var fall = { id: 'fall', site: 'CPM105', date: '2026-10-31', in: '22:00', out: '06:00', userId: 'u', test: false };
+var fallSnap = JSON.stringify(fall);
+var fallDst = ctx.vlDstFlag(fall);
+assert.ok(fallDst && fallDst.kind === 'dst', 'clock-change flag with no min/max');
+assert.strictEqual(fallDst.hours, 9);
+assert.strictEqual(ctx.vlFlagFor(fall), null, 'no range flag when the site has no min or max');
+assert.strictEqual(JSON.stringify(fall), fallSnap, 'clock-change flag does not edit stored times');
+assert.strictEqual(fall.in, '22:00');
+assert.strictEqual(fall.out, '06:00');
+
+var both = { id: 'both', site: 'X', date: '2026-10-31', in: '22:00', out: '06:00', userId: 'u', test: false };
+var bothSnap = JSON.stringify(both);
+assert.strictEqual(ctx.vlFlagFor(both).kind, 'over');
+assert.strictEqual(ctx.vlDstFlag(both).kind, 'dst', 'range flag and clock-change flag both apply');
+assert.strictEqual(JSON.stringify(both), bothSnap);
+assert.strictEqual(both.in, '22:00');
+assert.strictEqual(both.out, '06:00');
+
+var early = { id: 'early', site: 'X', date: '2026-10-31', in: '22:00', out: '01:30', userId: 'u', test: false };
+assert.strictEqual(ctx.vlDstFlag(early), null);
+var practice = { id: 'prac', site: 'X', date: '2026-10-31', in: '22:00', out: '06:00', userId: 'u', test: true };
+assert.strictEqual(ctx.vlDstFlag(practice), null, 'a test clock is not flagged');
+
 ctx.DB.sites.push({ code: 'JSON', data: { minHours: 3, maxHours: 6 } });
 var fromJson = ctx.vlLimits(ctx.DB.sites[ctx.DB.sites.length - 1]);
 assert.strictEqual(fromJson.min, 3);
