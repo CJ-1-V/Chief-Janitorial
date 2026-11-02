@@ -1,16 +1,30 @@
 /* v2-keepscroll.js – keep the page where it is when an in-page action rebuilds the screen.
-   Cause: render() replaces #app and then always calls window.scrollTo(0,0) (js/ui.js). Ticking Active cleaner,
-   saving a form, filters, toggles and opening or closing a panel all call render(), so the window jumps to the top.
-   Replacing a focused node (the site-assignments board redraw, closing a panel) can do the same.
-   Fix, in one place: wrap render(). Before the rebuild, remember window scroll, open/closed sections, inner
-   scrollers (tables and any other box that has been scrolled) and the field or control that had focus. After the
-   rebuild, put them back only when it is still the same screen:
-     same screen = same person + same address (#/people, #/invoicesadmin, …, ignoring ?…) + same main heading
-     (digits ignored, so a count change is still the same screen).
+   Causes:
+   - render() replaces #app and then always calls window.scrollTo(0,0) (js/ui.js). Ticking Active cleaner,
+     saving a form, filters, toggles and opening or closing a panel all call render(), so the window jumps to the top.
+   - <a href="#"> is not a screen. The browser follows it, clears the address hash and scrolls to the top. That hash
+     change also runs the original render(), which scrolls to the top again. A link that only repeats the hash you
+     are already on, and does not point at an element, does the same scroll-to-top.
+   - innerHTML / replaceChild / removeChild that throw away a focused button or checkbox make some browsers jump
+     the window (and any scrolled box) to the top, even when that rebuild does not go through render().
+   - Focusing the replacement, or the browser focusing the page after the old control is removed, scrolls that
+     control into view.
+   Fix, still in this one file:
+   - wrap render(). Before the rebuild, remember window scroll, open/closed sections, inner scrollers (tables and
+     any other box that has been scrolled) and the field or control that had focus. After the rebuild, put them
+     back only when it is still the same screen:
+       same screen = same person + same address (#/people, #/invoicesadmin, …, ignoring ?…) + same main heading
+       (digits ignored, so a count change is still the same screen).
+   - cancel the click on a bare "#" link (and on a same-page hash that is not a real element) before the browser
+     scrolls. Route links (#/people and the rest) still navigate.
+   - around a connected innerHTML / replaceChild / removeChild, blur a focused control inside the markup first
+     (so the browser does not scroll it away) and put window and box scroll back. A later jump in the same turn
+     is put back too, unless the address changed or code scrolled on purpose.
    A real navigation to another route still starts at the top (the address change calls the original render, which
    scrolls to the top). The browser Back and Forward buttons keep their own saved position. A screen can force the
    top with PAGE_STATE.ksTop = true before render(). Code that moves the page on purpose after render()
-   (scrollIntoView, or its own scrollTo) still wins. Load last. Turn off: remove this script in index.html. */
+   (scrollIntoView, or its own scrollTo) still wins. Focus is put back with preventScroll. Load last.
+   Turn off: remove this script in index.html. */
 (function () {
   'use strict';
   if (typeof render !== 'function') return;
@@ -76,7 +90,7 @@
   function restore(s) {
     [].forEach.call(document.querySelectorAll('#app ' + SEL_DET), function (d) { var k = detKey(d); if (k && Object.prototype.hasOwnProperty.call(DET, k) && d.open !== DET[k]) d.open = DET[k]; });
     var I = document.querySelectorAll('#app ' + SEL_INNER);
-    s.inner.forEach(function (o) { var el = (o.id && document.getElementById(o.id)) || I[o.i]; if (el) { el.scrollLeft = o.l; el.scrollTop = o.t; } });
+    s.inner.forEach(function (o) { var el = (o.id && document.getElementById(o.id)) || I[o.i]; applyBox(el, o); });
     (s.boxes || []).forEach(function (o) {
       var el = null;
       if (o.id) el = document.getElementById(o.id);
@@ -128,13 +142,16 @@
   var MINE = false, MOVED = 0;
   (function () {
     var w = window, oT = w.scrollTo, oB = w.scrollBy, oI = Element.prototype.scrollIntoView;
-    function mark() { if (!MINE) MOVED = Date.now(); }
+    /* A counter, not a clock: scrollTo(0,0) and a scrollIntoView right after it often share one millisecond,
+       and a clock would treat that on-purpose move as "nobody scrolled" and pull the page back. */
+    function bump() { MOVED++; }
+    function mark() { if (!MINE) bump(); }
     try {
       w.scrollTo = function () { mark(); return oT.apply(this, arguments); };
       w.scrollBy = function () { mark(); return oB.apply(this, arguments); };
       Element.prototype.scrollIntoView = function () { mark(); return oI.apply(this, arguments); };
     } catch (e) {}
-    ['wheel', 'touchstart', 'keydown', 'mousedown', 'pointerdown'].forEach(function (t) { w.addEventListener(t, function () { MOVED = Date.now(); }, { capture: true, passive: true }); });
+    ['wheel', 'touchstart', 'keydown', 'mousedown', 'pointerdown'].forEach(function (t) { w.addEventListener(t, function () { bump(); }, { capture: true, passive: true }); });
   })();
   function own(f) { MINE = true; try { f(); } finally { MINE = false; } }
   function later(s, g, base) {
@@ -149,9 +166,174 @@
   }
   var prev = null;
   function stamp() { var app = document.getElementById('app'); if (app) app.setAttribute('data-ks', curKey()); }
-  var inHash = 0;
+  var inHash = 0, skipHold = 0;
   window.addEventListener('hashchange', function () { inHash++; }, true);
   window.addEventListener('hashchange', function () { setTimeout(function () { inHash = Math.max(0, inHash - 1); }, 0); });
+  /* href="#" (and a repeat of the current hash that is not an element on the page) scrolls to the top
+     and, for "#", clears the route. Stop that click. Real route changes and real in-page targets still run. */
+  function bareHashLink(a) {
+    if (!a || a.tagName !== 'A') return false;
+    if (a.hasAttribute('download')) return false;
+    var tgt = a.getAttribute('target');
+    if (tgt && tgt !== '_self') return false;
+    var raw = a.getAttribute('href');
+    if (raw == null) return false;
+    raw = String(raw).replace(/^\s+|\s+$/g, '');
+    if (raw === '' || raw === '#') return true;
+    var u;
+    try { u = new URL(raw, location.href); } catch (e) { return false; }
+    if (u.origin !== location.origin || u.pathname !== location.pathname || u.search !== location.search) return false;
+    var frag = u.hash || '';
+    if (frag === '' || frag === '#') return true;
+    if (frag !== (location.hash || '')) return false;
+    var id = frag.charAt(0) === '#' ? frag.slice(1) : frag;
+    if (!id || id.charAt(0) === '/') return true;
+    try { id = decodeURIComponent(id); } catch (e2) {}
+    try { if (document.getElementById(id)) return false; } catch (e3) {}
+    return true;
+  }
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var t = e.target, a = t && t.closest && t.closest('a[href]');
+    if (!a || !bareHashLink(a)) return;
+    e.preventDefault();
+  }, true);
+  /* innerHTML / replaceChild / removeChild on a connected node. Blur a focused control first so the
+     browser does not jump, then put window and box scroll back. A jump a moment later is corrected
+     unless the address changed or something scrolled on purpose (scrollTo / scrollIntoView). */
+  function holdOk() {
+    if (skipHold || inHash) return false;
+    try { if (typeof PAGE_STATE !== 'undefined' && PAGE_STATE && PAGE_STATE.ksTop) return false; } catch (e) {}
+    return true;
+  }
+  function connectedHold(el) {
+    try { return !!(el && el.nodeType === 1 && el.isConnected && holdOk()); } catch (e) { return false; }
+  }
+  function blurInside(el) {
+    var ae = document.activeElement;
+    if (!ae || ae === document.body || ae === document.documentElement || !el.contains || !el.contains(ae)) return;
+    var x = window.scrollX || window.pageXOffset || 0, y = window.scrollY || window.pageYOffset || 0;
+    try { ae.blur(); } catch (e) {}
+    if ((window.scrollX || 0) !== x || (window.scrollY || 0) !== y) own(function () { window.scrollTo(x, y); });
+  }
+  function boxesUnder(root) {
+    var out = [], seen = {}, list = [];
+    if (!root || !root.querySelectorAll) return out;
+    try { list = [root].concat([].slice.call(root.querySelectorAll('*'))); } catch (e) { list = [root]; }
+    for (var i = 0; i < list.length; i++) {
+      var el = list[i];
+      if (!el || el === document.body || el === document.documentElement || el === document.scrollingElement) continue;
+      if (!(el.scrollTop || el.scrollLeft)) continue;
+      var id = el.id || '', path = id ? '' : pathOf(el), key = id || path;
+      if (!key || seen[key]) continue;
+      seen[key] = 1;
+      out.push({ id: id, path: path, l: el.scrollLeft, t: el.scrollTop });
+    }
+    return out;
+  }
+  function takeSnap(root) {
+    var self = null;
+    if (root && root !== document.body && root !== document.documentElement && (root.scrollTop || root.scrollLeft)) self = { l: root.scrollLeft, t: root.scrollTop };
+    return { x: window.scrollX || window.pageXOffset || 0, y: window.scrollY || window.pageYOffset || 0, self: self, root: root, boxes: boxesUnder(root), hash: location.hash || '' };
+  }
+  function applyBox(el, o) {
+    if (!el || !o) return;
+    function apply() {
+      if (!el.isConnected) return;
+      if (el.scrollLeft !== o.l) el.scrollLeft = o.l;
+      if (el.scrollTop !== o.t) el.scrollTop = o.t;
+    }
+    apply();
+    /* The box may not have its width yet, so a scrollLeft set in the same turn is clamped to 0. */
+    if (el.isConnected && (el.scrollLeft !== o.l || el.scrollTop !== o.t)) {
+      try { if (window.requestAnimationFrame) requestAnimationFrame(apply); } catch (e) {}
+      setTimeout(apply, 0); setTimeout(apply, 50);
+    }
+  }
+  function putBoxes(boxes) {
+    (boxes || []).forEach(function (o) {
+      var el = null;
+      if (o.id) el = document.getElementById(o.id);
+      if (!el && o.path) { try { el = document.querySelector(o.path); } catch (e) { el = null; } }
+      applyBox(el, o);
+    });
+  }
+  function putSnap(snap) {
+    if (!snap) return;
+    own(function () {
+      if (snap.root && snap.root.isConnected && snap.self) { snap.root.scrollLeft = snap.self.l; snap.root.scrollTop = snap.self.t; }
+      putBoxes(snap.boxes);
+      if ((window.scrollX || 0) !== snap.x || (window.scrollY || 0) !== snap.y) window.scrollTo(snap.x, snap.y);
+    });
+  }
+  function arm(snap, movedAt) {
+    function pass() {
+      if (!holdOk()) return;
+      if ((location.hash || '') !== snap.hash) return;
+      if (MOVED !== movedAt) return;
+      var x = window.scrollX || 0, y = window.scrollY || 0;
+      if (Math.abs(x - snap.x) > 1 || Math.abs(y - snap.y) > 1) putSnap(snap);
+      else putBoxes(snap.boxes);
+    }
+    try { if (window.requestAnimationFrame) requestAnimationFrame(pass); } catch (e) {}
+    setTimeout(pass, 0); setTimeout(pass, 180);
+  }
+  function afterMut(snap, blurred, x1, y1) {
+    if (!snap) return;
+    var jumped = blurred || Math.abs(x1 - snap.x) > 1 || Math.abs(y1 - snap.y) > 1;
+    putSnap(snap);
+    if (jumped) arm(snap, MOVED);
+  }
+  function patchInner() {
+    var desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    if (!desc || !desc.set || desc.set.__ks) return;
+    var nativeSet = desc.set, nativeGet = desc.get;
+    function set(v) {
+      var snap = null, blurred = false;
+      try {
+        if (connectedHold(this)) {
+          snap = takeSnap(this);
+          var ae = document.activeElement;
+          blurred = !!(ae && ae !== document.body && this.contains(ae));
+          if (blurred) blurInside(this);
+        }
+      } catch (e) { snap = null; }
+      try { nativeSet.call(this, v); }
+      catch (err) { try { if (snap) putSnap(snap); } catch (e2) {} throw err; }
+      try { afterMut(snap, blurred, window.scrollX || 0, window.scrollY || 0); } catch (e3) {}
+    }
+    set.__ks = true;
+    try {
+      Object.defineProperty(Element.prototype, 'innerHTML', {
+        configurable: true, enumerable: desc.enumerable,
+        get: function () { return nativeGet.call(this); }, set: set
+      });
+    } catch (e4) {}
+  }
+  function patchMethod(proto, name, oldIndex) {
+    var orig = proto && proto[name];
+    if (!orig || orig.__ks) return;
+    function wrapped() {
+      var node = arguments[oldIndex], snap = null, blurred = false;
+      try {
+        if (connectedHold(node)) {
+          snap = takeSnap(node);
+          var ae = document.activeElement;
+          blurred = !!(ae && ae !== document.body && node.contains(ae));
+          if (blurred) blurInside(node);
+        }
+      } catch (e) { snap = null; }
+      var r = orig.apply(this, arguments);
+      try { afterMut(snap, blurred, window.scrollX || 0, window.scrollY || 0); } catch (e2) {}
+      return r;
+    }
+    wrapped.__ks = true;
+    try { proto[name] = wrapped; }
+    catch (e3) { try { Object.defineProperty(proto, name, { configurable: true, writable: true, value: wrapped }); } catch (e4) {} }
+  }
+  patchInner();
+  patchMethod(Node.prototype, 'replaceChild', 1);
+  patchMethod(Node.prototype, 'removeChild', 0);
   /* Removing the focused control inside a panel (the ×) makes some browsers jump the page to the top. */
   if (typeof closeModal === 'function') {
     var cm = closeModal;
@@ -169,7 +351,10 @@
   var wrapped = function () {
     var s = null; try { s = capture(); } catch (e) { s = null; }
     var top = !!(typeof PAGE_STATE !== 'undefined' && PAGE_STATE && PAGE_STATE.ksTop); if (top && PAGE_STATE) PAGE_STATE.ksTop = false;
-    var r = r0.apply(this, arguments);
+    if (top) skipHold++;
+    var r;
+    try { r = r0.apply(this, arguments); }
+    finally { if (top) skipHold--; }
     try {
       var k = curKey(), h = head();
       if (s && !top && s.key === k) {
