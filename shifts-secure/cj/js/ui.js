@@ -68,7 +68,7 @@ function render(){
     }
   }catch(e){html='<div class="alert bad" id="screenerr"><b>Sorry – this screen could not open.</b> Please go back and try again. If it keeps happening, contact the office.</div>';try{console.warn('[screen error – friendly message shown]',e);}catch(x){}logError(e);}
   app.innerHTML=layout(html);stackTables(app);afterRender(app);window.scrollTo(0,0);
-  var f=document.querySelector('[data-autofocus]');if(f)f.focus();
+  var f=document.querySelector('[data-autofocus]');if(f){try{f.focus({preventScroll:true});}catch(e){f.focus();}}
   if(PAGE_STATE.after){var a=PAGE_STATE.after;PAGE_STATE.after=null;a();}
 }
 function logError(e){try{if(DB&&ME){DB.events.push({u:ME.id,role:ME.type,test:ME.type==='tester',type:'error',screen:location.hash,msg:String(e&&e.message||e),at:new Date().toISOString(),d:today()});save();}}catch(x){}}
