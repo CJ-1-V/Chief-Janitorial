@@ -149,6 +149,10 @@
       if (Array.isArray(row.regHours) && row.regHours.length === 7) o.regular_hours = row.regHours.map(function (h) { return +h || 0; });
       if ('monthlyAmount' in row) o.monthly_amount = num(row.monthlyAmount);
       if ('billingMode' in row) o.billing_mode = row.billingMode === 'flat_monthly' ? 'flat_monthly' : 'standard';  // flatmonthly1 – needs cj-flatmonthly-001.sql
+      // min_hours, max_hours, typical_hours: proposed/sql/028b (NOT applied).
+      // Do not send them until that SQL is on the shared database.
+      // An unknown column fails the whole site save. Values stay in data
+      // (minHours / maxHours / typicalHours) until then.
       return o;
     }
     if (coll === 'clientInvoices') {
