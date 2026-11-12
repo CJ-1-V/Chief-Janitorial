@@ -1,0 +1,9 @@
+/* Flat monthly Bee-Clean invoices. Same invoice sheet as the other CJ invoices (.invdoc). */
+#beequote { margin: 8px 0 12px; }
+.bee-q { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #eee; }
+.bee-q > b { white-space: nowrap; }
+#beeexcluded td { color: #555; }
+.bee-pay { font-size: 14px; margin: 0 0 10px; line-height: 1.45; }
+@media (max-width: 600px) {
+  .bee-q { flex-direction: column; gap: 4px; }
+}

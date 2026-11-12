@@ -19,7 +19,7 @@ function invDoc(i){var f=user(i.firmId),st=invPlain(i),it=clientInvInterest(i),c
   if(i.paidAt&&i.interestCharged)L.push(['r','Interest charged when paid',money(i.interestCharged)]);
   L.push(['rb','Now owing',money(i.paidAt?0:i.total+it.amount)]);L.push(['g']);
   L.push(['s','Payable within '+c.netDays+' days. Interest of '+c.interestPct+'% per month on invoices not paid by the due date (Independent Contractor Service Agreement, s. 3).']);
-  L.push(['s','Worker names are not shown on client invoices.']);return L;}
+  L.push(['s','Worker names are not shown on client invoices.']);if(typeof cjPaymentLines==='function')cjPaymentLines(L);return L;}
 function invHtml(i){return '<div class="invdoc">'+invDoc(i).map(function(l){var k=l[0];if(k==='h')return '<h2 style="margin:0">'+esc(l[1])+'</h2>';if(k==='s')return '<div class="small muted">'+esc(l[1])+'</div>';if(k==='g')return '<hr>';if(k==='b')return '<h3 style="margin:4px 0">'+esc(l[1])+'</h3>';if(k==='t')return '<div>'+esc(l[1])+'</div>';return '<div class="invrow'+(k==='rb'?' tot':'')+'"><span>'+esc(l[1])+'</span><b>'+esc(l[2])+'</b></div>';}).join('')+'</div>';}
 /* tiny local PDF writer (text only, Helvetica) – no libraries, nothing leaves the browser */
 function pdfTxt(s){return String(s).replace(/[–—]/g,'-').replace(/×/g,'x').replace(/[^\x20-\x7E]/g,'').replace(/([\\()])/g,'\\$1');}
@@ -37,7 +37,7 @@ function invPdf(i){var ops=[],pages=[],y=790;var flush=function(){pages.push(ops
   var out='%PDF-1.4\n',off=[];for(var k=1;k<objs.length;k++){off[k]=out.length;out+=k+' 0 obj\n'+objs[k]+'\nendobj\n';}
   var xref=out.length;out+='xref\n0 '+objs.length+'\n0000000000 65535 f \n';for(k=1;k<objs.length;k++)out+=String(off[k]).padStart(10,'0')+' 00000 n \n';
   out+='trailer\n<< /Size '+objs.length+' /Root 1 0 R /Info << /Title ('+pdfTxt('Invoice '+i.number)+') /Producer (Chief Janitorial Inc. - test app) >> >>\nstartxref\n'+xref+'\n%%EOF';return out;}
-function invFileName(i){var f=user(i.firmId);return 'Invoice-'+i.number+'-'+String(f?f.name:'client').replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'')+'-TEST.pdf';}
+function invFileName(i){var f=user(i.firmId);var who=(i.billTo&&i.billTo.name)||(f?f.name:'client');return 'Invoice-'+i.number+'-'+String(who).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'')+'-TEST.pdf';}
 
 VIEWS['firm:invoices']=function(){var l=myInvoices(ME);
   var x='<h1>My invoices</h1><p class="small muted">All your invoices, newest first. Tap one to see it or download a PDF.</p>'+
