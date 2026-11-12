@@ -34,7 +34,7 @@
   function calc(firm, m) {
     // golive2: switched-off sites (active === false, e.g. not started yet / on hold) are NOT billed
     var all = fSites(firm), off = all.filter(function (s) { return s.active === false; }).map(function (s) { return s.code; });
-    var S = all.filter(function (s) { return s.active !== false; }).map(function (s) { var a = amt(s), l = { site: s.code, name: s.name, month: mLabel(m), base: a, amount: a === null ? 0 : a, unset: a === null, test: !!s.monthlyTest }; if (typeof cjfIsFlat === 'function' && cjfIsFlat(s)) l.mode = 'flat_monthly'; return l; });  // flatmonthly1: flat lines tagged
+    var S = all.filter(function (s) { return s.active !== false && !(typeof beeSkipClientBill === 'function' && beeSkipClientBill(s)); }).map(function (s) { var a = amt(s), l = { site: s.code, name: s.name, month: mLabel(m), base: a, amount: a === null ? 0 : a, unset: a === null, test: !!s.monthlyTest }; if (typeof cjfIsFlat === 'function' && cjfIsFlat(s)) l.mode = 'flat_monthly'; return l; });  // flatmonthly1: flat lines tagged. Bee-Clean sites are invoiced on their own, not on this client invoice.
     var J = jobsToBill(firm, m).map(spLine), on = hstOn(firm);
     var sub = r2(S.reduce(function (a, l) { return a + l.amount; }, 0) + J.reduce(function (a, l) { return a + l.amount; }, 0)), hst = on ? r2(sub * 0.15) : 0;
     return { sites: S, jobs: J, sub: sub, hst: hst, total: r2(sub + hst), on: on, unset: S.filter(function (l) { return l.unset; }).map(function (l) { return l.site; }), inactive: off,
@@ -198,6 +198,7 @@
       L.push(['rb', 'Now owing', money(i.paidAt ? 0 : i.total + it.amount)]); L.push(['g']);
       L.push(['s', 'Payable within ' + c.netDays + ' days. Interest of ' + c.interestPct + '% per month on invoices not paid by the due date (Independent Contractor Service Agreement, s. 3).']);
       L.push(['s', 'Worker names are not shown on client invoices.']);
+      if (typeof cjPaymentLines === 'function') cjPaymentLines(L);
       return L;
     };
   }

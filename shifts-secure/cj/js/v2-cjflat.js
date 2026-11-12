@@ -71,7 +71,7 @@
     L.push(['g']);
     L.push(['s', (C.name || 'Chief Janitorial Inc.').toUpperCase() + ' consists of a team of professional cleaners dedicated to helping you maintain a clean and tidy space.']);
     L.push(['s', 'Payment is due within one month of the date this invoice is received by the customer.']);
-    L.push(['s', 'Payment options: Interac e-transfer to ' + (C.email || 'admin@chiefjanitorial.com') + ', or cheque payable to ' + (C.name || 'Chief Janitorial Inc.') + ', mailed to ' + C.address + '.']);
+    if (typeof cjPaymentLines === 'function') cjPaymentLines(L);
     L.push(['s', 'Late payment: interest of 2% per month applies to balances more than 2 months overdue.']);
     L.push(['s', 'Thank you for your business! Please contact us at ' + (C.email || 'admin@chiefjanitorial.com') + ' or ' + (C.phoneShort || C.phone) + ' with any questions about this invoice.']);
     return L;
